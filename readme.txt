@@ -4,7 +4,7 @@ Donate link: https://online.nwf.org/site/Donation2?df_id=6620&6620.donation=form
 Requires at least: 2.3
 Tested up to: 3.0
 Contributors: Keith Graham
-Stable tag: 1.0
+Stable tag: 1.2
 
 Uses the StopForumSpam.com database to validate emails and deny registration to spammers.
 
@@ -25,6 +25,10 @@ A list of the last 20 emails denied access is included under the plugin setup pa
 
 = 1.0 =
 * initial release 
+
+= 1.2 =
+ * renumber releases due to typo
+ 
 
 == Support ==
 This plugin is in active development. All feedback is welcome on "<a href="http://www.blogseye.com/" title="Wordpress plugin: Stop Spammer Registrations Plugin">program development pages</a>".
