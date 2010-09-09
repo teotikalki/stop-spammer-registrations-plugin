@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: Uses the Stop Forum Spam DB to prevent spammers from registering
-Version: 1.2
+Version: 1.3
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -30,24 +30,31 @@ function kpg_stop_sp_reg_fixup($email) {
     * http://www.stopforumspam.com/api?username=MariFoogwoogy
 
 	*/
-	
+	// get the options
+
+	// first check the ip address
+	$ip=$_SERVER['REMOTE_ADDR'];
+	$ipok=='';
+	if (!empty($ip)) {
+		$ipok=kpg_stop_sp_reg_getafile("http://www.stopforumspam.com/api?ip=$ip");
+	}
 	// fix the email 
 	$em=urlencode($email);
 	$query="http://www.stopforumspam.com/api?email=$em";
 	$ansa=kpg_stop_sp_reg_getafile($query);
-	if (empty($ansa)) return $email;
-	if (strpos($ansa,'<appears>yes</appears>')) {
+	if ( empty($ansa) && empty($ipok) ) return $email;
+	if (strpos($ansa,'<appears>yes</appears>')||strpos($ipok,'<appears>yes</appears>')) {
 		// record the last few guys that have  tried to spam
+		// add the bad spammer to the history list
 		$options=get_option('kpg_stop_sp_reg_options');
 		if (empty($options)) $options=array();
 		$spcount=0;
 		if (array_key_exists('spcount',$options)) $spcount=$options['spcount'];
-		$spcount++;
 		$sphist=array();
 		if (array_key_exists('sphist',$options)) $sphist=$options['sphist'];
-		// add the bad spammer to the history list
+		$spcount++;
 		$sphist[count($sphist)]=htmlentities($email);
-		if (count($sphist)>20) array_shift($sphist);
+		if (count($sphist)>30) array_shift($sphist);
 		$options['sphist']=$sphist;
 		$options['spcount']=$spcount;
 		update_option('kpg_stop_sp_reg_options', $options);
