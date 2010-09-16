@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: Uses the Stop Forum Spam DB to prevent spammers from registering
-Version: 1.4
+Version: 1.5
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -52,8 +52,10 @@ function kpg_stop_sp_reg_fixup($email) {
 	$username=''; // log
 	if (!empty($_POST)) {
 		// user_login usr_email 
+		if (!(array_key_exists('user_login',$_POST)||array_key_exists('comment',$_POST))) return email; // only check on comments or registrations
 		if (array_key_exists('user_login',$_POST)) $username=$_POST['user_login'];
 	}
+	
 	//kpg_logit(" '$email', '$username', '$ip' \r\n"); // turn on only during debugging
 	
 	// check the data
@@ -99,7 +101,7 @@ function kpg_stop_sp_reg_fixup($email) {
 	// record the last few guys that have  tried to spam
 	// add the bad spammer to the history list
 	$spcount++;
-	$sphist[count($sphist)]=$email.'|'.date("m/d/y h:i:s A").'|'.$ip.'|'.$username;
+	$sphist[count($sphist)]=$email.'|'.date("m/d/y h:i:s A").'|'.$ip.'|'.$username.'|'.$_SERVER["REQUEST_URI"];
 	if (count($sphist)>30) array_shift($sphist);
 	$options['sphist']=$sphist;
 	$options['spcount']=$spcount;
@@ -133,13 +135,21 @@ function kpg_stop_sp_reg_control()  {
 	if(!current_user_can('manage_options')) {
 		die('Access Denied');
 	}
-	if (array_key_exists('kpg_stop_clear',$_GET)) {
+	if (array_key_exists('kpg_stop_clear_cache',$_GET)) {
 		// clear the cache
 		$options=get_option('kpg_stop_sp_reg_options');
 		if (empty($options)) $options=array();
 		unset($options['badids']);
 		unset($options['badips']);
 		unset($options['badems']);
+		update_option('kpg_stop_sp_reg_options', $options);
+	}
+	if (array_key_exists('kpg_stop_clear_hist',$_GET)) {
+		// clear the cache
+		$options=get_option('kpg_stop_sp_reg_options');
+		if (empty($options)) $options=array();
+		unset($options['sphist']);
+		unset($options['spcount']);
 		update_option('kpg_stop_sp_reg_options', $options);
 	}
 ?>
@@ -149,7 +159,8 @@ function kpg_stop_sp_reg_control()  {
 <h4>The Stop Spammer Registrations Plugin is installed and working correctly.</h4>
 <p>This plugin Uses the Stop Forum Spam DB to prevent spammers from registering or making comments.</p>
 <p>There are no configurations options. The plugin is on when it is installed and enabled. To turn it off just disable the plugin from the plugin menu.. </p>
-<p>If a registration is rejected because of a hit on the StopForumSpam.com db, this plugin caches the userid and IP. If you test the plugin using spammer credentials, it will remember that your IP address was associated with the spammer&apos;s email and deny future registrations from your IP. If you feel compelled to test the plugin, you may lock yourself out of comments and the registration form. If you do get into a problem where you have cached a valid IP, click here: <a href="<?php echo $_SERVER["REQUEST_URI"]; ?>&kpg_stop_clear=true">Clear the Cache.</a></p>
+<p>If a registration is rejected because of a hit on the StopForumSpam.com db, this plugin caches the userid and IP. If you test the plugin using spammer credentials, it will remember that your IP address was associated with the spammer&apos;s email and deny future registrations from your IP. If you feel compelled to test the plugin, you may lock yourself out of comments and the registration form. If you do get into a problem where you have cached a valid IP, click here: <a href="<?php echo $_SERVER["REQUEST_URI"]; ?>&kpg_stop_clear_cache=true">Clear the Cache.</a></p>
+<p>Click here to <a href="<?php echo $_SERVER["REQUEST_URI"]; ?>&kpg_stop_clear_hist=true">Clear History.</a></p>
 <p>Note: StopForumSpam.com limits checks to 5,000 per day for each IP so the plugin may stop validating on very busy sites. I have not seen this happen, yet. Results are cached in order to thwart repeated attempts. You may see your own email in the cache as spammers try to use it to leave comments. You may have to clear the cache to use your own email in that case.</p>
 <hr/>
 <h3>Recent activity</h3)
@@ -180,12 +191,13 @@ function kpg_stop_sp_reg_control()  {
 		$dt=$ln[1];
 		$ip=$ln[2];
 		$un=$ln[3];
-		$pw=$ln[4];
+		$ff=$ln[4];
 		if (!empty($em)) {
 			echo "<li style=\"font-size:.8em;\"><a href=\"http://www.stopforumspam.com/search?q=$em\" target=\"_blank\">email: $em</a>";
 			if (!empty($dt)) echo "; Date: $dt";
 			if (!empty($ip)) echo "; <a href=\"http://www.stopforumspam.com/search?q=$ip\" target=\"_blank\">IP: $ip</a>";
 			if (!empty($un)) echo "; <a href=\"http://www.stopforumspam.com/search?q=$un\" target=\"_blank\">User Name: $un</a>";
+			if (!empty($ff)) echo "; triggered at: $ff";
 			echo "</li>";
 		}
 	}

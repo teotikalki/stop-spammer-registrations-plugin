@@ -4,7 +4,7 @@ Donate link: https://online.nwf.org/site/Donation2?df_id=6620&6620.donation=form
 Requires at least: 2.3
 Tested up to: 3.0
 Contributors: Keith Graham
-Stable tag: 1.4
+Stable tag: 1.5
 
 This plugin Uses the StopForumSpam.com DB to prevent spammers from registering or making comments.
 
@@ -42,6 +42,9 @@ The plugin dispays a list of the last 30 emails, IPs, User names and passwords u
  
 = 1.4 =
  * Checks the user name. Cache failed attempts with option to clear cache. Cleans up after itself when uninstalled. 
+
+= 1.5 =
+* fixed a bug where the the admin user was cached in error.
  
 
 == Support ==
