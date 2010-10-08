@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: Uses the Stop Forum Spam DB to prevent spammers from registering
-Version: 1.6
+Version: 1.7
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -28,7 +28,7 @@ function kpg_stop_sp_reg_fixup($email) {
 	
 	$sname=$_SERVER["SCRIPT_NAME"];
 	
-	if ((!strpos($sname,'wp-comments-post.php')) && (!strpos($sname,'wp-login.php'))) {
+	if ((!strpos($sname,'wp-comments-post.php')) && (!strpos($sname,'wp-login.php'))&& (!strpos($sname,'wp-signup.php'))) {
 		return $email;
 	}
 	// here we validate 
@@ -54,7 +54,28 @@ function kpg_stop_sp_reg_fixup($email) {
 	if (array_key_exists('badems',$options)) $badems=$options['badems'];
 	if (array_key_exists('badips',$options)) $badips=$options['badips'];
 	if (array_key_exists('gdems',$options)) $gdems=$options['gdems'];
+	if (!is_numeric($spcount)) $spcount=0;
 	
+	// clean cache - get rid of older cache items. Need to recheck to see if they have appeared on stopfurumspam
+	foreach ($badems as $key) {
+		$dd=strtotime( $badems[$key]) + (60*60*24);
+		if ($dd<time()) { // more than a day
+			unset($badems[$key]);
+		}
+	}
+	foreach ($badips as $key) {
+		$dd=strtotime( $badips[$key]) + (60*60*24);
+		if ($dd<time()) { // lmore than a day
+			unset($badips[$key]);
+		}
+	}
+	foreach ($gdems as $key) {
+		$dd=strtotime( $gdems[$key]) + (60*60*24);
+		if ($dd<time()) { // lmore than a day
+			unset($gdems[$key]);
+		}
+	}
+	if (empty($spcount)&&(!empty($sphist))) $spcount=count($sphist);
 	
 	// first check the ip address
 	$ip=$_SERVER['REMOTE_ADDR']; 
@@ -66,20 +87,7 @@ function kpg_stop_sp_reg_fixup($email) {
 	// build the check
 	$em=urlencode($email);
 	if (array_key_exists($em,$gdems)) {
-		// check if it has been more than an 24 hours since the last try
-		$dd=strtotime( $gdems[$em]) + (60*60*24);
-		if ($dd>time()) { // less than a day
-			$gdems[$em]= date("m/d/y H:i:s");
-			arsort($gdems);
-			if (count($gdems)>60) array_pop($gdems);
-			$options['badips']=$badips;
-			$options['badems']=$badems;
-			$options['gdems']=$gdems;
-			update_option('kpg_stop_sp_reg_options', $options);
-			return $email;
-		} else {
-			unset($gdems[$em]); // more than a day since the last hit - recheck him.
-		}
+		return $email;
 	}
 	$query="http://www.stopforumspam.com/api?email=$em";
 	if (!empty($ip)) {
@@ -143,7 +151,6 @@ function kpg_stop_sp_reg_fixup($email) {
 	return false;
 	
 ?>
-
 <?php
 }
 
@@ -170,25 +177,31 @@ function kpg_stop_sp_reg_control()  {
 		unset($options['spcount']);
 		update_option('kpg_stop_sp_reg_options', $options);
 	}
+
+	$options=get_option('kpg_stop_sp_reg_options');
+	if (empty($options)) $options=array();
+
 ?>
 
 <div class="wrap">
-<h2>Stop Spammer Registrations Plugin</h2>
-<h4>The Stop Spammer Registrations Plugin is installed and working correctly.</h4>
-<p>This plugin Uses the Stop Forum Spam DB to prevent spammers from registering or making comments.</p>
-<p>There are no configurations options. The plugin is on when it is installed and enabled. To turn it off just disable the plugin from the plugin menu.. </p>
-<p>If a registration or comment is rejected because of a hit on the StopForumSpam.com db, this plugin caches email and IP. If you test the plugin using spammer credentials, it will remember that your IP address was associated with the spammer&apos;s email and deny future registrations from your IP. If you feel compelled to test the plugin, you may lock yourself out of comments and the registration form. If you do get into a problem where you have cached a valid IP, click here: <a href="<?php echo $_SERVER["REQUEST_URI"]; ?>&kpg_stop_clear_cache=true">Clear the Cache.</a></p>
-<p>The plugin also caches good emails, so if a spammer is unknown to StopForumSpam.com it will be entered into the good guys cache. Clear out the cache from time to time to avoid spammers from sneaking into the good guy cache.</p>
-<p>Since the plugin caches the IP address used by a scammer, it is possible for the plugin to reject possible comments from a legitimate user who just happens to come from an ISP who tolerates spammers.<p>
-<p>Click here to <a href="<?php echo $_SERVER["REQUEST_URI"]; ?>&kpg_stop_clear_hist=true">Clear History.</a></p>
-<p>Note: StopForumSpam.com limits checks to 5,000 per day for each IP so the plugin may stop validating on very busy sites. I have not seen this happen, yet. Results are cached in order to thwart repeated attempts. You may see your own email in the cache as spammers try to use it to leave comments. You may have to clear the cache to use your own email in a comment if that is the case.</p>
-<hr/>
-<h3>Recent Activity</h3)
-<?php
+  <h2>Stop Spammer Registrations Plugin</h2>
+  <h4>The Stop Spammer Registrations Plugin is installed and working correctly.</h4>
+  <p>This plugin Uses the Stop Forum Spam DB to prevent spammers from registering or making comments.</p>
+  <p>There are no configurations options. The plugin is on when it is installed and enabled. To turn it off just disable the plugin from the plugin menu.. </p>
+  <p>If a registration or comment is rejected because of a hit on the StopForumSpam.com db, this plugin caches email and IP. If you test the plugin using spammer credentials, it will remember that your IP address was associated with the spammer&apos;s email and deny future registrations from your IP. If you feel compelled to test the plugin, you may lock yourself out of comments and the registration form. If you do get into a problem where you have cached a valid IP, click here: <a href="<?php echo $_SERVER["REQUEST_URI"]; ?>&kpg_stop_clear_cache=true">Clear the Cache.</a> </p>
+  <p>The plugin also caches good emails, so if a spammer is unknown to StopForumSpam.com it will be entered into the good guys cache. Clear out the cache from time to time to avoid spammers from sneaking into the good guy cache. Cached results are kept for 24 hours and then deleted.</p>
+  <p>Since the plugin caches the IP address used by a scammer, it is possible for the plugin to reject possible comments from a legitimate user who just happens to come from an ISP who tolerates spammers.</p>
+  <p>Click here to <a href="<?php echo $_SERVER["REQUEST_URI"]; ?>&kpg_stop_clear_hist=true">Clear History.</a>
+  <p>Note: StopForumSpam.com limits checks to 5,000 per day for each IP so the plugin may stop validating on very busy sites. I have not seen this happen, yet. Results are cached in order to thwart repeated attempts. You may see your own email in the cache as spammers try to use it to leave comments. You may have to clear the cache to use your own email in a comment if that is the case.</p>
+   <hr/>
+  <h3>Recent Activity</h3>
+  <?php
 	$options=get_option('kpg_stop_sp_reg_options');
 	if (empty($options)) $options=array();
 	$spcount=0;
 	if (array_key_exists('spcount',$options)) $spcount=$options['spcount'];
+	if (!is_numeric($spcount)) $spcount=0;
+
 	$sphist=array();
 	if (array_key_exists('sphist',$options)) $sphist=$options['sphist'];
 	$badips=array();
@@ -197,8 +210,9 @@ function kpg_stop_sp_reg_control()  {
 	if (array_key_exists('badems',$options)) $badems=$options['badems'];
 	if (array_key_exists('badips',$options)) $badips=$options['badips'];
 	if (array_key_exists('gdems',$options)) $gdems=$options['gdems'];
+	if (empty($spcount)&&(!empty($sphist))) $spcount=count($sphist);
 
-	if (empty($spcount)||empty($sphist)) {
+	if (empty($sphist)) {
 		echo "<p>No activity Recorded.</p>";
 	} else {
 	echo "<p>Stop Spammer has stopped $spcount registrations.</p>
@@ -223,45 +237,53 @@ function kpg_stop_sp_reg_control()  {
 	echo "</ul>";
 	}
     if (!(empty($badems)&&empty($badips)&&empty($gdems))) {
-?>	<h3>Cached Values</h3>
-<table  >
-	<tr><td>Rejected Emails</td><td>Rejected IPs</td><td>Good Emails</td></tr>
-	<tr>
-	<td  style="border: 1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
+?>
+  <h3>Cached Values (last 24 hours)</h3>
+  <table align="center" width="80%"  >
+    <tr>
+      <td width="35%" align="center">Rejected Emails</td>
+      <td width="30%" align="center">Rejected IPs</td>
+      <td width="35%" align="center">Good Emails</td>
+    </tr>
+    <tr>
+      <td  style="border: 1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 		foreach ($badems as $key => $value) {
-        echo "$key; Date: $value<br/>\r\n";
+			//echo "$key; Date: $value<br/>\r\n";
+			$key=urldecode($key);
+			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_blank\">$key: $value</a><br/>";
 		}
 	?></td>
-	<td  style="border: 1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
+      <td  style="border: 1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 		foreach ($badips as $key => $value) {
-			echo "$key; Date: $value<br/>\r\n";
+			//echo "$key; Date: $value<br/>\r\n";
+			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_blank\">$key: $value</a><br/>";
 		}
 	?></td>
-	<td  style="border: 1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
+      <td  style="border: 1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 		foreach ($gdems as $key => $value) {
-			echo "$key; $value<br/>\r\n";
+			//echo "$key; $value<br/>\r\n";
+			$key=urldecode($key);
+			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_blank\">$key: $value</a><br/>";
 		}
 	?></td>
-	</tr>
-</table>
-<?PHP
+    </tr>
+  </table>
+  <?PHP
     }
 	
 ?>
-<hr/>
-
-<p>This plugin is free and I expect nothing in return. However, a link on your blog to one of my personal sites would be appreciated.</p>
-
-
-<p>Keith Graham</p>
-<p><a target="_blank" href="http://www.cthreepo.com/blog">Wandering Blog </a>(My personal Blog) <br />
-  <a target="_blank"  href="http://www.cthreepo.com">Resources for Science Fiction</a> (Writing Science Fiction) <br />
-  <a target="_blank"  href="http://www.jt30.com">The JT30 Page</a> (Amplified Blues Harmonica) <br />
-  <a target="_blank"  href="http://www.harpamps.com">Harp Amps</a> (Vacuum Tube Amplifiers for Blues) <br />
-  <a target="_blank"  href="http://www.blogseye.com">Blog&apos;s Eye</a> (PHP coding) <br />
-  <a target="_blank"  href="http://www.cthreepo.com/bees">Bee Progress Beekeeping Blog</a> (My adventures as a new beekeeper) </p>
+  <hr/>
+  <p>This plugin is free and I expect nothing in return. However, a link on your blog to one of my personal sites would be appreciated.</p>
+  <p>Keith Graham</p>
+  <p><a target="_blank" href="http://www.cthreepo.com/blog">Wandering Blog </a>(My personal Blog) <br />
+    <a target="_blank"  href="http://www.cthreepo.com">Resources for Science Fiction</a> (Writing Science Fiction) <br />
+    <a target="_blank"  href="http://www.jt30.com">The JT30 Page</a> (Amplified Blues Harmonica) <br />
+    <a target="_blank"  href="http://www.harpamps.com">Harp Amps</a> (Vacuum Tube Amplifiers for Blues) <br />
+    <a target="_blank"  href="http://www.blogseye.com">Blog&apos;s Eye</a> (PHP coding) <br />
+    <a target="_blank"  href="http://www.cthreepo.com/bees">Bee Progress Beekeeping Blog</a> (My adventures as a new beekeeper) </p>
 </div
 
+>
 <?php
 }
 
