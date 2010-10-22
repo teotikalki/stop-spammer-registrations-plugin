@@ -4,12 +4,12 @@ Donate link: https://online.nwf.org/site/Donation2?df_id=6620&6620.donation=form
 Requires at least: 2.3
 Tested up to: 3.0
 Contributors: Keith Graham
-Stable tag: 1.7
+Stable tag: 1.8
 
 This plugin Uses the StopForumSpam.com DB to prevent spammers from registering or making comments.
 
 == Description ==
-The Stop Spammer Registrations Plugin Plugin Accesses the StopForumSpam.com db to check emails, username and IP before a user can register. The StopForumSpam database contains over a million spammer emails, User Names and IPs, and is updated daily. 
+The Stop Spammers Plugin Plugin Accesses the StopForumSpam.com db to check emails, username and IP before a user can register. The StopForumSpam database contains over a million spammer emails, User Names and IPs, and is updated daily. 
 
 The plugin validates Email, IP and User name against the StopForumSpam.com db. It denies login attempts, such as spammers trying to guess passwords or spammers trying to create login ids. It also stops spammers who try to add comments with a spammer email or ip addresses.
 
@@ -52,8 +52,12 @@ The plugin dispays a list of the last 30 emails, IPs, User names and passwords u
 = 1.7 =
 * Included signup form, that I forgot to add before. Cached data is automatically expired after 24 hours.
  
+= 1.8 =
+* fixed the cache cleanup (again). Changed the name in the titles and menus of the plugin to reflect that it does more than stop registrations.
+ 
 
 == Support ==
+I am work ing on a version that can update the stopfprumspam db when a new spammer is identified.
 This plugin is in active development. All feedback is welcome on "<a href="http://www.blogseye.com/" title="Wordpress plugin: Stop Spammer Registrations Plugin">program development pages</a>".
 This plugin is free and I expect nothing in return. However, a link on your blog to one of my personal sites would be appreciated.
 <a target="_blank" href="http://www.cthreepo.com/blog">Wandering Blog </a>(My personal Blog)
