@@ -4,7 +4,7 @@ Donate link: https://online.nwf.org/site/Donation2?df_id=6620&6620.donation=form
 Requires at least: 2.3
 Tested up to: 3.0
 Contributors: Keith Graham
-Stable tag: 1.8
+Stable tag: 1.9
 
 This plugin Uses the StopForumSpam.com DB to prevent spammers from registering or making comments.
 
@@ -22,6 +22,10 @@ Many spam solutions are concerned with comments. This plugin validates email add
 This plugin also stopped spam registations on my WordPress MU site.
 
 The plugin dispays a list of the last 30 emails, IPs, User names and passwords used in failed denied login attempts. It displays the cached results of hits to StopForumSpam.com up to 60 entries.
+
+With the 1.9 release I added a link on the WordPress comments maintenance so you can check a comment against the StopForumSpam.com database. 
+
+If you have a StopForumSpam.com API key you can report spam. This requires that you click the link where it will pre-fill the form for you. At that point you can enter your API key and submit. If you have previously logged in, it will fill in the API key for you and then you can submit the spam. You can easily get an API key after registering at StopForumSpam.com
 
  
 == Installation ==

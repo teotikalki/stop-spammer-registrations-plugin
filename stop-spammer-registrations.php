@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: Uses the Stop Forum Spam DB to prevent spammers from registering
-Version: 1.8
+Version: 1.9
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -197,9 +197,13 @@ function kpg_stop_sp_reg_control()  {
   <p>There are no configurations options. The plugin is on when it is installed and enabled. To turn it off just disable the plugin from the plugin menu.. </p>
   <p>If a registration or comment is rejected because of a hit on the StopForumSpam.com db, this plugin saves the email and IP. If you test the plugin using spammer credentials, it will remember that your IP address was associated with the spammer&apos;s email and deny future registrations and comments from your IP. If you feel compelled to test the plugin, you may lock yourself out of comments and the registration form. If you do get into a problem where you have cached a valid IP, click here: <a href="<?php echo $_SERVER["REQUEST_URI"]; ?>&kpg_stop_clear_cache=true">Clear the Cache.</a> </p>
   <p>The plugin also caches good emails, so if a spammer is unknown to StopForumSpam.com it will be entered into the good guys cache. Cached results are kept for 24 hours and then deleted.</p>
-  <p>Since the plugin caches the IP address used by a scammer, it is possible for the plugin to reject possible comments from a legitimate user who just happens to come from an ISP who tolerates spammers.</p>
+  <p>Since the plugin caches the IP address used by a spammer, it is possible for the plugin to reject possible comments from a legitimate user who just happens to come from an ISP who tolerates spammers.</p>
   <p>Click here to <a href="<?php echo $_SERVER["REQUEST_URI"]; ?>&kpg_stop_clear_hist=true">Clear History.</a>
   <p>Note: StopForumSpam.com limits checks to 5,000 per day for each IP so the plugin may stop validating on very busy sites. I have not seen this happen, yet. Results are cached in order to thwart repeated attempts. You may see your own email in the cache as spammers try to use it to leave comments. You may have to clear the cache to use your own email in a comment if that is the case.</p>
+  
+  <p>I have added a link on the WordPress comments maintenance so you can check a comment against the StopForumSpam.com database.</p> 
+
+  <p>If you have a StopForumSpam.com API key you can report spam. This requires that you click the link where it will pre-fill the form for you. At that point you can enter your API key and submit. If you have previously logged in, it will fill in the API key for you and then you can submit the spam. You can easily get an API key after registering at StopForumSpam.com.</p>
    <hr/>
   <h3>Recent Activity</h3>
   <?php
@@ -233,9 +237,9 @@ function kpg_stop_sp_reg_control()  {
 		$ip=$ln[2];
 		$ff=$ln[3];
 		if (!empty($em)) {
-			echo "<li style=\"font-size:.8em;\"><a href=\"http://www.stopforumspam.com/search?q=$em\" target=\"_blank\">email: $em</a>";
+			echo "<li style=\"font-size:.8em;\"><a href=\"http://www.stopforumspam.com/search?q=$em\" target=\"_stopspam\">email: $em</a>";
 			if (!empty($dt)) echo "; Date: $dt";
-			if (!empty($ip)) echo "; <a href=\"http://www.stopforumspam.com/search?q=$ip\" target=\"_blank\">IP: $ip</a>";
+			if (!empty($ip)) echo "; <a href=\"http://www.stopforumspam.com/search?q=$ip\" target=\"_stopspam\">IP: $ip</a>";
 			if (!empty($ff)) echo "; triggered at: $ff";
 			//if (!empty($data)) echo "; raw: $data";
 			echo "</li>";
@@ -254,27 +258,27 @@ function kpg_stop_sp_reg_control()  {
     <tr>
       <td width="35%" align="center">Rejected Emails</td>
       <td width="30%" align="center">Rejected IPs</td>
-      <td width="35%" align="center">Good Emails</td>
+      <td width="35%" align="center">Passed Emails</td>
     </tr>
     <tr>
       <td  style="border: 1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 		foreach ($badems as $key => $value) {
 			//echo "$key; Date: $value<br/>\r\n";
 			$key=urldecode($key);
-			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_blank\">$key: $value</a><br/>";
+			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a><br/>";
 		}
 	?></td>
       <td  style="border: 1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 		foreach ($badips as $key => $value) {
 			//echo "$key; Date: $value<br/>\r\n";
-			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_blank\">$key: $value</a><br/>";
+			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a><br/>";
 		}
 	?></td>
       <td  style="border: 1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 		foreach ($gdems as $key => $value) {
 			//echo "$key; $value<br/>\r\n";
 			$key=urldecode($key);
-			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_blank\">$key: $value</a><br/>";
+			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a><br/>";
 		}
 	?></td>
     </tr>
@@ -298,6 +302,28 @@ function kpg_stop_sp_reg_control()  {
 >
 <?php
 }
+function kpg_stop_sp_reg_check($actions,$comment) {
+	$email=urlencode($comment->comment_author_email);
+	$action="<a target=\"_stopspam\" href=\"http://www.stopforumspam.com/search.php?q=$email\">Check at StopFurumSpam</a>";
+	$actions['check_spam']=$action;
+	return $actions;
+
+
+}
+function kpg_stop_sp_reg_report($actions,$comment) {
+	// need to add a new action to the list
+	$email=urlencode($comment->comment_author_email);
+	$uname=urlencode($comment->comment_author);
+	$ip=$comment->comment_author_IP;
+	$evidence=get_bloginfo('url');
+	$evidence=urlencode($evidence);
+	$action="<a target=\"_stopspam\" href=\"http://www.stopforumspam.com/add?username=$uname&email=$email&ip_addr=$ip&evidence=$evidence\">Report to StopForumSpam</a>";
+	$actions['report_spam']=$action;
+	return $actions;
+
+}
+
+
 
 
 function kpg_stop_sp_reg_init() {
@@ -311,6 +337,10 @@ function kpg_stop_sp_reg_uninstall() {
 	delete_option('kpg_stop_sp_reg_options'); 
 	return;
 }  
+
+// hook the comment list with a "report Spam" filater
+add_filter('comment_row_actions','kpg_stop_sp_reg_check',1,2);	
+add_filter('comment_row_actions','kpg_stop_sp_reg_report',1,2);	
 
 add_filter('is_email','kpg_stop_sp_reg_fixup');	
 add_action('admin_menu', 'kpg_stop_sp_reg_init');
