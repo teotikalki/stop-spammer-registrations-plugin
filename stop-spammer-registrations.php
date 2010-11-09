@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: Uses the Stop Forum Spam DB to prevent spammers from registering
-Version: 1.9
+Version: 1.10
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -38,7 +38,10 @@ function kpg_stop_sp_reg_fixup($email) {
 	* http://www.stopforumspam.com/api?ip=91.186.18.61
     * http://www.stopforumspam.com/api?email=g2fsehis5e@mail.ru
     * http://www.stopforumspam.com/api?username=MariFoogwoogy
-
+    *
+	* combined
+	*  http://www.stopforumspam.com/api?email=g2fsehis5e@mail.ru&ip=91.186.18.61
+	
 	*/
 	// get the options
 	$options=get_option('kpg_stop_sp_reg_options');
@@ -74,7 +77,7 @@ function kpg_stop_sp_reg_fixup($email) {
 	if (array_key_exists($em,$gdems)) {
 		return $email;
 	}
-	$query="http://www.stopforumspam.com/api?email=$em";
+	$query="http://www.stopforumspam.com/api?email=$em&ip=$ip";
 	if (!empty($ip)) {
 		$query=$query."&ip=$ip";
 	}
@@ -133,9 +136,6 @@ function kpg_stop_sp_reg_fixup($email) {
 	
 	sleep(5); // sleep for 5 seconds to annoy spammers and maybe delay next hit on stopforumspam.com
 	return false;
-	
-?>
-<?php
 }
 function kpg_clear_old_cache($cache) {
 	// the caches are an array that is limited to 60 users and 24 hours
@@ -182,6 +182,36 @@ function kpg_stop_sp_reg_control()  {
 		if (empty($options)) $options=array();
 		unset($options['sphist']);
 		unset($options['spcount']);
+		update_option('kpg_stop_sp_reg_options', $options);
+	}
+	if (array_key_exists('kpg_stop_wl',$_GET)) {
+		// add to whitelist
+		$j=$_GET['kpg_stop_wl'];
+		$options=get_option('kpg_stop_sp_reg_options');
+		if (empty($options)) $options=array();
+		$wlist=array();
+		if (array_key_exists('wlist',$options)) $wlist=$options['wlist'];
+		$sphist=array();
+		if (array_key_exists('sphist',$options)) $sphist=$options['sphist'];
+		$data=$sphist[$j];
+		$ln=explode('|',$data);
+		$em=trim($ln[0]);
+		$dt=$ln[1];
+		$ip=$ln[2];
+		$ff=$ln[3];
+		$id=$ln[4];
+		$wlist[$em]=$ip;
+		$options['wlist']=$wlist;
+		$unset($sphist[$j]); //remove from history
+		// now get the ip and the email out of the caches
+		$badips=array();
+		$gdems=array();
+		if (array_key_exists('badems',$options)) $badems=$options['badems'];
+		if (array_key_exists('badips',$options)) $badips=$options['badips'];
+		unset($badems[$em]);
+		unset($badips[$ip]);
+		$options['badems']=$badems;
+		$options['badips']=$badips;
 		update_option('kpg_stop_sp_reg_options', $options);
 	}
 
@@ -236,12 +266,13 @@ function kpg_stop_sp_reg_control()  {
 		$dt=$ln[1];
 		$ip=$ln[2];
 		$ff=$ln[3];
+		$id=$ln[4];
 		if (!empty($em)) {
-			echo "<li style=\"font-size:.8em;\"><a href=\"http://www.stopforumspam.com/search?q=$em\" target=\"_stopspam\">email: $em</a>";
-			if (!empty($dt)) echo "; Date: $dt";
-			if (!empty($ip)) echo "; <a href=\"http://www.stopforumspam.com/search?q=$ip\" target=\"_stopspam\">IP: $ip</a>";
-			if (!empty($ff)) echo "; triggered at: $ff";
-			//if (!empty($data)) echo "; raw: $data";
+			echo "<li style=\"font-size:.8em;\"><a href=\"http://www.stopforumspam.com/search?q=$em\" target=\"_stopspam\">$em</a>";
+			if (!empty($dt)) echo "; $dt";
+			if (!empty($ip)) echo "; <a href=\"http://www.stopforumspam.com/search?q=$ip\" target=\"_stopspam\">$ip</a>";
+			if (!empty($ff)) echo "; $ff";
+			if (!empty($id)) echo "; <a href=\"".$_SERVER["REQUEST_URI"]."&kpg_stop_wl=$j\">white list</a>";
 			echo "</li>";
 		}
 	}
@@ -297,9 +328,7 @@ function kpg_stop_sp_reg_control()  {
     <a target="_blank"  href="http://www.harpamps.com">Harp Amps</a> (Vacuum Tube Amplifiers for Blues) <br />
     <a target="_blank"  href="http://www.blogseye.com">Blog&apos;s Eye</a> (PHP coding) <br />
     <a target="_blank"  href="http://www.cthreepo.com/bees">Bee Progress Beekeeping Blog</a> (My adventures as a new beekeeper) </p>
-</div
-
->
+</div>
 <?php
 }
 function kpg_stop_sp_reg_check($actions,$comment) {
@@ -348,24 +377,19 @@ if ( function_exists('register_uninstall_hook') ) {
 	register_uninstall_hook(__FILE__, 'kpg_stop_sp_reg_uninstall');
 }
 
+
 function kpg_stop_sp_reg_getafile($f) {
-   // uses fopen or curl depending on "allow_url_fopen = On" being avaialble
-   //first test to see if the ini option allow_url_fopen is on or off
-	if (ini_get('allow_url_fopen')) {
-		// returns the string value of a file using 
-		$rssfile=file($f);
-		$rssfile=implode("\n",$rssfile); // in case it is now one long string
-		return $rssfile;
-	}
-	// try using curl instead to see if it works
-    $ch = curl_init($f);
-	// Set cURL options
-	curl_setopt($ch, CURLOPT_HEADER, false);
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);  
-	$ansa = curl_exec($ch);
-	curl_close($ch);
+	// try this using Wp_Http
+	if( !class_exists( 'WP_Http' ) )
+		include_once( ABSPATH . WPINC. '/class-http.php' );
+	$request = new WP_Http;
+	$result = $request->request( $f );
+	// see if there is anything there
+	if (empty($result)) return '';
+	$ansa=$result['body']; 
 	return $ansa;
 }
+
 // used only during debugging - please ignore the man behind the curtain.
 /* function kpg_logit($line) {
 	$f=fopen('log.txt','a');
