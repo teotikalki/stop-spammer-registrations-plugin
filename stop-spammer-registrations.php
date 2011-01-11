@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: Uses the Stop Forum Spam DB to prevent spammers from registering
-Version: 1.10
+Version: 1.11
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -106,11 +106,22 @@ function kpg_stop_sp_reg_fixup($email) {
 	// clean cache - get rid of older cache items. Need to recheck to see if they have appeared on stopfurumspam
 	$badems=kpg_clear_old_cache($badems);
 	$badips=kpg_clear_old_cache($badips);
-	$gdems=kpg_clear_old_cache($gdems);
+	//$gdems=kpg_clear_old_cache($gdems);
 	
 	// it appears that there is no problem with this login record as a good login
 	if (!$deny) {
 		$gdems[$em]=date("m/d/y H:i:s");
+		if (array_key_exists('author',$_POST)) {
+			$usrid=$_POST["author"];
+			$g=array();
+			$dt=$g['date']=date("m/d/y H:i:s");
+			$g['ip']=$ip;
+			$usrid=$g['usrid'];
+			$evidence=get_bloginfo('url');
+			$evidence=urlencode($evidence);
+			$g['evidence']=$evidence;
+			$gdems[$em]=$g;
+		}
 		$options['badips']=$badips;
 		$options['badems']=$badems;
 		$options['gdems']=$gdems;
@@ -144,7 +155,14 @@ function kpg_clear_old_cache($cache) {
 	// it was a mistake storing the string date in the array and someday I will fix it. But for now I need to 
 	// sort by the string. I will brute force it to integer to get it done
 	foreach($cache as $key=>$value) {
-		$t=strtotime($value);
+		$dt=$value;
+		if (is_array($value)) {
+			$dt=$value['date'];
+			$ip=$value['ip'];
+			$usrid=$value['usrid'];
+			$evidence=$value['evidence'];
+		}
+		$t=strtotime($dt);
 		$cache[$key]=$t;
 		if ($t<time()-24*60*60) {
 			unset($cache[$key]);
@@ -164,59 +182,49 @@ function kpg_clear_old_cache($cache) {
 
 function kpg_stop_sp_reg_control()  {
 // this is the display of information about the page.
+    
 	if(!current_user_can('manage_options')) {
 		die('Access Denied');
 	}
-	if (array_key_exists('kpg_stop_clear_cache',$_GET)) {
-		// clear the cache
-		$options=get_option('kpg_stop_sp_reg_options');
-		if (empty($options)) $options=array();
-		unset($options['badips']);
-		unset($options['badems']);
-		unset($options['gdems']);
-		update_option('kpg_stop_sp_reg_options', $options);
-	}
-	if (array_key_exists('kpg_stop_clear_hist',$_GET)) {
-		// clear the cache
-		$options=get_option('kpg_stop_sp_reg_options');
-		if (empty($options)) $options=array();
-		unset($options['sphist']);
-		unset($options['spcount']);
-		update_option('kpg_stop_sp_reg_options', $options);
-	}
-	if (array_key_exists('kpg_stop_wl',$_GET)) {
-		// add to whitelist
-		$j=$_GET['kpg_stop_wl'];
-		$options=get_option('kpg_stop_sp_reg_options');
-		if (empty($options)) $options=array();
-		$wlist=array();
-		if (array_key_exists('wlist',$options)) $wlist=$options['wlist'];
-		$sphist=array();
-		if (array_key_exists('sphist',$options)) $sphist=$options['sphist'];
-		$data=$sphist[$j];
-		$ln=explode('|',$data);
-		$em=trim($ln[0]);
-		$dt=$ln[1];
-		$ip=$ln[2];
-		$ff=$ln[3];
-		$id=$ln[4];
-		$wlist[$em]=$ip;
-		$options['wlist']=$wlist;
-		$unset($sphist[$j]); //remove from history
-		// now get the ip and the email out of the caches
-		$badips=array();
-		$gdems=array();
-		if (array_key_exists('badems',$options)) $badems=$options['badems'];
-		if (array_key_exists('badips',$options)) $badips=$options['badips'];
-		unset($badems[$em]);
-		unset($badips[$ip]);
-		$options['badems']=$badems;
-		$options['badips']=$badips;
-		update_option('kpg_stop_sp_reg_options', $options);
-	}
+	$nonce='';
+	if (array_key_exists('nonce',$_POST)) $nonce=$_POST['nonce'];
 
 	$options=get_option('kpg_stop_sp_reg_options');
 	if (empty($options)) $options=array();
+	
+	if (array_key_exists('kpg_stop_spammers_control',$_POST)
+			&&wp_verify_nonce($_POST['kpg_stop_spammers_control'],'kpgstopspam_update')) { 
+		if (array_key_exists('kpg_stop_clear_cache',$_POST)) {
+			// clear the cache
+			unset($options['badips']);
+			unset($options['badems']);
+			unset($options['gdems']);
+			update_option('kpg_stop_sp_reg_options', $options);
+			echo "<h2>Cache Cleared</h2>";
+		}
+		if (array_key_exists('kpg_stop_clear_hist',$_POST)) {
+			// clear the cache
+			unset($options['sphist']);
+			unset($options['spcount']);
+			update_option('kpg_stop_sp_reg_options', $options);
+			echo "<h2>History Cleared</h2>";
+		}
+		if (array_key_exists('action',$_POST)) {
+			// check the nonce
+			//echo "got action<br/>";
+			//echo $_POST['kpg_stop_spammers_control'];
+			//echo "in action<br/>";
+			if (array_key_exists('apikey',$_POST)) $apikey=stripslashes($_POST['apikey']);
+			$options['apikey']=$apikey;
+			update_option('kpg_stop_sp_reg_options',$options);
+			echo "<h2>Api Key Updated</h2>";
+		}
+		
+	}
+
+	$apikey='';
+	if (array_key_exists('apikey',$options)) $apikey=$options['apikey'];
+    $nonce=wp_create_nonce('kpgstopspam_update');
 
 ?>
 
@@ -225,11 +233,32 @@ function kpg_stop_sp_reg_control()  {
   <h4>The Stop Spammers Plugin is installed and working correctly.</h4>
   <p>This plugin Uses the Stop Forum Spam DB to prevent spammers from registering or making comments.</p>
   <p>There are no configurations options. The plugin is on when it is installed and enabled. To turn it off just disable the plugin from the plugin menu.. </p>
-  <p>If a registration or comment is rejected because of a hit on the StopForumSpam.com db, this plugin saves the email and IP. If you test the plugin using spammer credentials, it will remember that your IP address was associated with the spammer&apos;s email and deny future registrations and comments from your IP. If you feel compelled to test the plugin, you may lock yourself out of comments and the registration form. If you do get into a problem where you have cached a valid IP, click here: <a href="<?php echo $_SERVER["REQUEST_URI"]; ?>&kpg_stop_clear_cache=true">Clear the Cache.</a> </p>
+  <p>If a registration or comment is rejected because of a hit on the StopForumSpam.com db, this plugin saves the email and IP. If you test the plugin using spammer credentials, it will remember that your IP address was associated with the spammer&apos;s email and deny future registrations and comments from your IP. If you feel compelled to test the plugin, you may lock yourself out of comments and the registration form. If you do get into a problem where you have cached a valid IP, click the &quot;Clear the Cache&quot; button.</p>
   <p>The plugin also caches good emails, so if a spammer is unknown to StopForumSpam.com it will be entered into the good guys cache. Cached results are kept for 24 hours and then deleted.</p>
   <p>Since the plugin caches the IP address used by a spammer, it is possible for the plugin to reject possible comments from a legitimate user who just happens to come from an ISP who tolerates spammers.</p>
-  <p>Click here to <a href="<?php echo $_SERVER["REQUEST_URI"]; ?>&kpg_stop_clear_hist=true">Clear History.</a>
+  <p>Click click the &quot;Clear History button.</p>
   <p>Note: StopForumSpam.com limits checks to 5,000 per day for each IP so the plugin may stop validating on very busy sites. I have not seen this happen, yet. Results are cached in order to thwart repeated attempts. You may see your own email in the cache as spammers try to use it to leave comments. You may have to clear the cache to use your own email in a comment if that is the case.</p>
+  <p>
+  
+
+	<form method="post" action="">
+		<input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
+		<input type="hidden" name="kpg_stop_clear_cache" value="true" />
+		<input value="Clear the Cache" type="submit">
+	</form>
+	<form method="post" action="">
+		<input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
+		<input type="hidden" name="kpg_stop_clear_hist" value="true" />
+		<input value="Clear History" type="submit">
+	</form></p>
+	<form method="post" action="">
+		<input type="hidden" name="action" value="update" />
+		<input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
+		<fieldset style="border:thin black solid;padding:2px;"><legend>Your StopForunSpam.com API Key</legend>
+		<input size="16" name="apikey" type="text" value="<?php echo $apikey; ?>"/> (optional)</fieldset>
+		<p class="submit"><input class="button-primary" value="Save Changes" type="submit"></p>
+	</form>
+  
   
   <p>I have added a link on the WordPress comments maintenance so you can check a comment against the StopForumSpam.com database.</p> 
 
@@ -272,7 +301,7 @@ function kpg_stop_sp_reg_control()  {
 			if (!empty($dt)) echo "; $dt";
 			if (!empty($ip)) echo "; <a href=\"http://www.stopforumspam.com/search?q=$ip\" target=\"_stopspam\">$ip</a>";
 			if (!empty($ff)) echo "; $ff";
-			if (!empty($id)) echo "; <a href=\"".$_SERVER["REQUEST_URI"]."&kpg_stop_wl=$j\">white list</a>";
+			//if (!empty($id)) echo "; <a href=\"".esc_url($_SERVER["REQUEST_URI"])."&kpg_stop_wl=$j\">white list</a>";
 			echo "</li>";
 		}
 	}
@@ -280,7 +309,7 @@ function kpg_stop_sp_reg_control()  {
 	}
 	$badems=kpg_clear_old_cache($badems);
 	$badips=kpg_clear_old_cache($badips);
-	$gdems=kpg_clear_old_cache($gdems);
+	//$gdems=kpg_clear_old_cache($gdems);
    if (!(empty($badems)&&empty($badips)&&empty($gdems))) {
 
 ?>
@@ -308,8 +337,19 @@ function kpg_stop_sp_reg_control()  {
       <td  style="border: 1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 		foreach ($gdems as $key => $value) {
 			//echo "$key; $value<br/>\r\n";
-			$key=urldecode($key);
-			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a><br/>";
+			$dt=$value;
+			if (is_array($value)) {
+				$dt=$value['date'];
+				$ip=$value['ip'];
+				$usrid=$value['usrid'];
+				$evidence=$value['evidence'];
+			}
+			$key=escape_url(urldecode($key));
+			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $dt</a><br/>";
+			if (is_array($value)) {
+				// working on more info for reporting spam
+				//echo "<a target=\"_stopspam\" //href=\"http://www.stopforumspam.com/add?username=$usrid&email=$key&ip_addr=$ip&evidence=$evidence&api_key=$apikey\">Report $key</a><br>";
+			}
 		}
 	?></td>
     </tr>
@@ -321,6 +361,8 @@ function kpg_stop_sp_reg_control()  {
   <hr/>
   <p>This plugin is free and I expect nothing in return. However, a link on your blog to one of my personal sites would be appreciated.</p>
   <p>Keith Graham</p>
+ <p>Please check out the books and stories that I've written on Amazon: <br/>
+<a targe="_blank" href="http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30page&linkCode=as2&camp=1789&creative=390957&creativeASIN=1456336584">Error Message Eyes: A Programmer's Guide to the Digital Soul</a></p>
   <p><a target="_blank" href="http://www.WestNyackHoney.com">West Nyack Honey</a> (I keep bees and sell the honey)<br />
    <a target="_blank" href="http://www.cthreepo.com/blog">Wandering Blog </a> (My personal Blog) <br />
     <a target="_blank"  href="http://www.cthreepo.com">Resources for Science Fiction</a> (Writing Science Fiction) <br />
@@ -341,12 +383,17 @@ function kpg_stop_sp_reg_check($actions,$comment) {
 }
 function kpg_stop_sp_reg_report($actions,$comment) {
 	// need to add a new action to the list
+	$options=get_option('kpg_stop_sp_reg_options');
+	if (empty($options)) $options=array();
+	$apikey='';
+	if (array_key_exists('apikey',$options)) $apikey=$options['apikey'];
+
 	$email=urlencode($comment->comment_author_email);
 	$uname=urlencode($comment->comment_author);
 	$ip=$comment->comment_author_IP;
-	$evidence=get_bloginfo('url');
+	$evidence=home_url();
 	$evidence=urlencode($evidence);
-	$action="<a target=\"_stopspam\" href=\"http://www.stopforumspam.com/add?username=$uname&email=$email&ip_addr=$ip&evidence=$evidence\">Report to StopForumSpam</a>";
+	$action="<a target=\"_stopspam\" href=\"http://www.stopforumspam.com/add?username=$uname&email=$email&ip_addr=$ip&evidence=$evidence&api_key=$apikey\">Report to StopForumSpam</a>";
 	$actions['report_spam']=$action;
 	return $actions;
 

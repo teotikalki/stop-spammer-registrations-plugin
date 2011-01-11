@@ -4,7 +4,7 @@ Donate link: https://online.nwf.org/site/Donation2?df_id=6620&6620.donation=form
 Requires at least: 2.3
 Tested up to: 3.0
 Contributors: Keith Graham
-Stable tag: 1.10
+Stable tag: 1.11
 
 This plugin Uses the StopForumSpam.com DB to prevent spammers from registering or making comments.
 
@@ -65,14 +65,14 @@ If you have a StopForumSpam.com API key you can report spam. This requires that 
 = 1.10 =
 * Improved the access to StopForumSpam.com database. Fixed white space at end of plugin.
  
+= 1.11 =
+* Stored the StopForumSpam API Key. Fixed a possible security hole on the settings page.
+ 
 
 == Support ==
-I am work ing on a version that can update the stopfprumspam db when a new spammer is identified.
+I am work ing on a version that can update the stopforumspam db when a new spammer is identified.
 This plugin is in active development. All feedback is welcome on "<a href="http://www.blogseye.com/" title="Wordpress plugin: Stop Spammer Registrations Plugin">program development pages</a>".
-This plugin is free and I expect nothing in return. However, a link on your blog to one of my personal sites would be appreciated.
-<a target="_blank" href="http://www.cthreepo.com/blog">Wandering Blog </a>(My personal Blog)
-<a target="_blank"  href="http://www.cthreepo.com">Resources for Science Fiction</a> (Writing Science Fiction)
-<a target="_blank"  href="http://www.jt30.com">The JT30 Page</a> (Amplified Blues Harmonica)
-<a target="_blank"  href="http://www.harpamps.com">Harp Amps</a> (Vacuum Tube Amplifiers for Blues)
-<a target="_blank"  href="http://www.blogseye.com">Blog&apos;s Eye</a> (PHP coding)
-<a target="_blank"  href="http://www.cthreepo.com/bees">Bee Progress Beekeeping Blog</a> (My adventures as a new beekeeper)
+This plugin is free and I expect nothing in return. 
+Please check out the books and stories that I've written on Amazon: 
+<a href="http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30page&linkCode=as2&camp=1789&creative=390957&creativeASIN=1456336584">Error Message Eyes: A Programmer's Guide to the Digital Soul</a>
+
