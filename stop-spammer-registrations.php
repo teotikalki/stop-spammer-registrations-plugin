@@ -344,7 +344,7 @@ function kpg_stop_sp_reg_control()  {
 				$usrid=$value['usrid'];
 				$evidence=$value['evidence'];
 			}
-			$key=escape_url(urldecode($key));
+			$key=urldecode($key);
 			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $dt</a><br/>";
 			if (is_array($value)) {
 				// working on more info for reporting spam
