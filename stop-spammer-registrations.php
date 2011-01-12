@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: Uses the Stop Forum Spam DB to prevent spammers from registering
-Version: 1.11
+Version: 1.12
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 

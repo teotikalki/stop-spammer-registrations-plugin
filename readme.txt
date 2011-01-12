@@ -4,7 +4,7 @@ Donate link: https://online.nwf.org/site/Donation2?df_id=6620&6620.donation=form
 Requires at least: 2.3
 Tested up to: 3.0
 Contributors: Keith Graham
-Stable tag: 1.11
+Stable tag: 1.12
 
 This plugin Uses the StopForumSpam.com DB to prevent spammers from registering or making comments.
 
@@ -65,8 +65,12 @@ If you have a StopForumSpam.com API key you can report spam. This requires that 
 = 1.10 =
 * Improved the access to StopForumSpam.com database. Fixed white space at end of plugin.
  
+
 = 1.11 =
 * Stored the StopForumSpam API Key. Fixed a possible security hole on the settings page.
+ 
+= 1.12 =
+* Fixed typo error.
  
 
 == Support ==
