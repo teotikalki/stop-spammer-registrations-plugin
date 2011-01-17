@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: Uses the Stop Forum Spam DB to prevent spammers from registering
-Version: 1.12
+Version: 1.13
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -111,7 +111,9 @@ function kpg_stop_sp_reg_fixup($email) {
 	// it appears that there is no problem with this login record as a good login
 	if (!$deny) {
 		$gdems[$em]=date("m/d/y H:i:s");
-		if (array_key_exists('author',$_POST)) {
+		/* 
+			// take this out for now - use in 2.0 release
+			if (array_key_exists('author',$_POST)) {
 			$usrid=$_POST["author"];
 			$g=array();
 			$dt=$g['date']=date("m/d/y H:i:s");
@@ -121,7 +123,7 @@ function kpg_stop_sp_reg_fixup($email) {
 			$evidence=urlencode($evidence);
 			$g['evidence']=$evidence;
 			$gdems[$em]=$g;
-		}
+		} */
 		$options['badips']=$badips;
 		$options['badems']=$badems;
 		$options['gdems']=$gdems;
@@ -385,13 +387,16 @@ function kpg_stop_sp_reg_report($actions,$comment) {
 	// need to add a new action to the list
 	$options=get_option('kpg_stop_sp_reg_options');
 	if (empty($options)) $options=array();
+	if (!is_array($options)) $options=array();
 	$apikey='';
 	if (array_key_exists('apikey',$options)) $apikey=$options['apikey'];
 
 	$email=urlencode($comment->comment_author_email);
 	$uname=urlencode($comment->comment_author);
 	$ip=$comment->comment_author_IP;
-	$evidence=home_url();
+	$evidence=$comment->comment_author_url;
+	if (empty($evidence)) $evidence=$comment->comment_content;
+	
 	$evidence=urlencode($evidence);
 	$action="<a target=\"_stopspam\" href=\"http://www.stopforumspam.com/add?username=$uname&email=$email&ip_addr=$ip&evidence=$evidence&api_key=$apikey\">Report to StopForumSpam</a>";
 	$actions['report_spam']=$action;
