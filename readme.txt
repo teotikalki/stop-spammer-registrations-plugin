@@ -1,10 +1,10 @@
 === Stop Spammer Registrations Plugin ===
 Tags: spam, registration, spammers, MU
-Donate link: https://online.nwf.org/site/Donation2?df_id=6620&6620.donation=form1
+Donate link: http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30page&linkCode=as2&camp=1789&creative=390957&creativeASIN=1456336584
 Requires at least: 2.8
 Tested up to: 3.0
 Contributors: Keith Graham
-Stable tag: 1.13
+Stable tag: 1.14
 
 This plugin Uses the StopForumSpam.com DB to prevent spammers from registering or making comments.
 
@@ -73,13 +73,15 @@ If you have a StopForumSpam.com API key you can report spam. This requires that 
 * Fixed typo error.
  
 = 1.13 =
-* Changed Evicence field to spam url or content
+* Changed Evidence field to spam url or content
+
+= 1.14 =
+* Changes suggested by Paul at StopForumSpam. Fix bug in zero history data. There has been much interest in the plugin so there has been lots of feedback. I am sorry for all the updates, but they are all good stuff.
  
 
 == Support ==
-I am work ing on a version that can update the stopforumspam db when a new spammer is identified.
+Version 2.0 is being developed. It will check against additional spam databases and fully support MU blogs from one panel.
 This plugin is in active development. All feedback is welcome on "<a href="http://www.blogseye.com/" title="Wordpress plugin: Stop Spammer Registrations Plugin">program development pages</a>".
-This plugin is free and I expect nothing in return. 
-Please check out the books and stories that I've written on Amazon: 
+This plugin is free and I expect nothing in return. If you wisht to support my programming, buy they book: 
 <a href="http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30page&linkCode=as2&camp=1789&creative=390957&creativeASIN=1456336584">Error Message Eyes: A Programmer's Guide to the Digital Soul</a>
 

@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: Uses the Stop Forum Spam DB to prevent spammers from registering
-Version: 1.13
+Version: 1.14
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -57,6 +57,12 @@ function kpg_stop_sp_reg_fixup($email) {
 	if (array_key_exists('badems',$options)) $badems=$options['badems'];
 	if (array_key_exists('badips',$options)) $badips=$options['badips'];
 	if (array_key_exists('gdems',$options)) $gdems=$options['gdems'];
+	
+	if (!is_array($badips)) $badips=array();
+	if (!is_array($badems)) $badems=array();
+	if (!is_array($sphist)) $sphist=array();
+	if (!is_array($gdems)) $gdems=array();
+	
 	if (!is_numeric($spcount)) $spcount=0;
 	
 	// clean cache - get rid of older cache items. Need to recheck to see if they have appeared on stopfurumspam
@@ -275,13 +281,19 @@ function kpg_stop_sp_reg_control()  {
 	if (!is_numeric($spcount)) $spcount=0;
 
 	$sphist=array();
-	if (array_key_exists('sphist',$options)) $sphist=$options['sphist'];
 	$badips=array();
 	$badems=array();
 	$gdems=array();
+	if (array_key_exists('sphist',$options)) $sphist=$options['sphist'];
 	if (array_key_exists('badems',$options)) $badems=$options['badems'];
 	if (array_key_exists('badips',$options)) $badips=$options['badips'];
 	if (array_key_exists('gdems',$options)) $gdems=$options['gdems'];
+	if (!is_array($badips)) $badips=array();
+	if (!is_array($badems)) $badems=array();
+	if (!is_array($sphist)) $sphist=array();
+	if (!is_array($gdems)) $gdems=array();
+
+	
 	if (empty($spcount)&&(!empty($sphist))) $spcount=count($sphist);
 
 	if (empty($sphist)) {
@@ -303,7 +315,6 @@ function kpg_stop_sp_reg_control()  {
 			if (!empty($dt)) echo "; $dt";
 			if (!empty($ip)) echo "; <a href=\"http://www.stopforumspam.com/search?q=$ip\" target=\"_stopspam\">$ip</a>";
 			if (!empty($ff)) echo "; $ff";
-			//if (!empty($id)) echo "; <a href=\"".esc_url($_SERVER["REQUEST_URI"])."&kpg_stop_wl=$j\">white list</a>";
 			echo "</li>";
 		}
 	}
@@ -361,10 +372,9 @@ function kpg_stop_sp_reg_control()  {
 	
 ?>
   <hr/>
-  <p>This plugin is free and I expect nothing in return. However, a link on your blog to one of my personal sites would be appreciated.</p>
-  <p>Keith Graham</p>
- <p>Please check out the books and stories that I've written on Amazon: <br/>
+  <p>This plugin is free and I expect nothing in return. If you would like to support my programmin, you can buy my book of short stories.<br/>
 <a targe="_blank" href="http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30page&linkCode=as2&camp=1789&creative=390957&creativeASIN=1456336584">Error Message Eyes: A Programmer's Guide to the Digital Soul</a></p>
+<p>A link on your blog to one of my personal sites would be appreciated.</p>
   <p><a target="_blank" href="http://www.WestNyackHoney.com">West Nyack Honey</a> (I keep bees and sell the honey)<br />
    <a target="_blank" href="http://www.cthreepo.com/blog">Wandering Blog </a> (My personal Blog) <br />
     <a target="_blank"  href="http://www.cthreepo.com">Resources for Science Fiction</a> (Writing Science Fiction) <br />
@@ -394,10 +404,20 @@ function kpg_stop_sp_reg_report($actions,$comment) {
 	$email=urlencode($comment->comment_author_email);
 	$uname=urlencode($comment->comment_author);
 	$ip=$comment->comment_author_IP;
-	$evidence=$comment->comment_author_url;
-	if (empty($evidence)) $evidence=$comment->comment_content;
+	// code added as per Paul at sto Forum Spam
+	$content=$comment->comment_content;
 	
-	$evidence=urlencode($evidence);
+	$evidence=$comment->comment_author_url;
+	if (empty($evidence)) $evidence='';
+	preg_match_all('@((https?://)?([-\w]+\.[-\w\.]+)+\w(:\d+)?(/([-\w/_\.]*(\?\S+)?)?)*)@',$content, $post, PREG_PATTERN_ORDER);
+	if (is_array($post)&&is_array($post[1])) $urls1 = array_unique($post[1]); else $urls1 = ''; 
+	//bbcode
+	preg_match_all('/\[url=(.+)\]/iU', $content, $post, PREG_PATTERN_ORDER);
+	if (is_array($post)&&is_array($post[0])) $urls2 = array_unique($post[0]); else $urls2 = ''; 
+    if (is_array($urls1)) $evidence.="\r\n".implode("\r\n",$urls1);	
+    if (is_array($urls2)) $evidence.="\r\n".implode("\r\n",$urls2);	
+	
+	$evidence=urlencode(trim($evidence,"\r\n"));
 	$action="<a target=\"_stopspam\" href=\"http://www.stopforumspam.com/add?username=$uname&email=$email&ip_addr=$ip&evidence=$evidence&api_key=$apikey\">Report to StopForumSpam</a>";
 	$actions['report_spam']=$action;
 	return $actions;
