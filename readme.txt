@@ -82,6 +82,6 @@ If you have a StopForumSpam.com API key you can report spam. This requires that 
 == Support ==
 Version 2.0 is being developed. It will check against additional spam databases and fully support MU blogs from one panel.
 This plugin is in active development. All feedback is welcome on "<a href="http://www.blogseye.com/" title="Wordpress plugin: Stop Spammer Registrations Plugin">program development pages</a>".
-This plugin is free and I expect nothing in return. If you wisht to support my programming, buy they book: 
+This plugin is free and I expect nothing in return. If you wisht to support my programming, buy the book: 
 <a href="http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30page&linkCode=as2&camp=1789&creative=390957&creativeASIN=1456336584">Error Message Eyes: A Programmer's Guide to the Digital Soul</a>
 

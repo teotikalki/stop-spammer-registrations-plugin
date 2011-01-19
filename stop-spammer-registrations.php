@@ -372,7 +372,7 @@ function kpg_stop_sp_reg_control()  {
 	
 ?>
   <hr/>
-  <p>This plugin is free and I expect nothing in return. If you would like to support my programmin, you can buy my book of short stories.<br/>
+  <p>This plugin is free and I expect nothing in return. If you would like to support my programming, you can buy my book of short stories.<br/>
 <a targe="_blank" href="http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30page&linkCode=as2&camp=1789&creative=390957&creativeASIN=1456336584">Error Message Eyes: A Programmer's Guide to the Digital Soul</a></p>
 <p>A link on your blog to one of my personal sites would be appreciated.</p>
   <p><a target="_blank" href="http://www.WestNyackHoney.com">West Nyack Honey</a> (I keep bees and sell the honey)<br />
