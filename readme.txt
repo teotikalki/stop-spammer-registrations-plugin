@@ -4,7 +4,7 @@ Donate link: http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30p
 Requires at least: 2.8
 Tested up to: 3.0
 Contributors: Keith Graham
-Stable tag: 1.15
+Stable tag: 1.16
 
 This plugin Uses the StopForumSpam.com DB to prevent spammers from registering or making comments.
 
@@ -88,6 +88,8 @@ There is a white list option so that you can bypass the database check for some 
 = 1.15 =
 Options added. 1) Reject if Accept header not found. Spammers use some kind of lazy approach that does not send the HTTP_ACCEPT header. All real browsers have this header. 2) Check on BL Blacklist. If for some reason the ip and email pass on the StopForumSpam db you can have a second check on Project Honeypot. 3) Added a white list in case there are IPs or emails that have problems. 4) Stopped checking for Usernames because of too many false positives. 4) Made checking for emails optional. Most spammers use bogus or random emails anyway. 5) Ability to recheck comments against the HoneyPot db from the comments admin form.
 
+= 1.16 =
+Added RoboScout.com spam check to ip address. Added limits to checking to allow know spammers who are not recent spammers or do not have many spam reported. Added a complete list of passed and rejected login attempts. Fixed a bug introduced in 1.15. Fixed check on accept headers that prevented it from working.
 
 == Support ==
 Version 2.0 is being developed. It will check against additional spam databases and fully support MU blogs from one panel.

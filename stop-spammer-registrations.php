@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: Uses the Stop Forum Spam DB to prevent spammers from registering
-Version: 1.15
+Version: 1.16
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -60,18 +60,24 @@ function kpg_stop_sp_reg_fixup($email) {
 	$sphist=array();
 	$gdems=array();
 	$wlist=array();
+	$hist=array();
 	$honeyapi='';
+	$botscoutapi='';
 	$spcount=0;
+	$spmcount=0;
 	$accept='Y';
 	$chkemail='Y';
 	if (array_key_exists('spcount',$options)) $spcount=$options['spcount'];
+	if (array_key_exists('spmcount',$options)) $spmcount=$options['spmcount'];
 	if (array_key_exists('accept',$options)) $accept=$options['accept'];
 	if (array_key_exists('sphist',$options)) $sphist=$options['sphist'];
 	if (array_key_exists('badems',$options)) $badems=$options['badems'];
 	if (array_key_exists('badips',$options)) $badips=$options['badips'];
 	if (array_key_exists('gdems',$options)) $gdems=$options['gdems'];
+	if (array_key_exists('hist',$options)) $hist=$options['hist'];
 	if (array_key_exists('wlist',$options)) $wlist=$options['wlist'];
 	if (array_key_exists('honeyapi',$options)) $honeyapi=$options['honeyapi'];
+	if (array_key_exists('botscoutapi',$options)) $botscoutapi=$options['botscoutapi'];
 	if (array_key_exists('apikey',$options)) $apikey=$options['apikey'];
 	if (array_key_exists('chkemail',$options)) $chkemail=$options['chkemail'];
 	
@@ -81,26 +87,47 @@ function kpg_stop_sp_reg_fixup($email) {
 	if (!is_array($badems)) $badems=array();
 	if (!is_array($sphist)) $sphist=array();
 	if (!is_array($gdems)) $gdems=array();
+	if (!is_array($hist)) $hist=array();
 	if (!is_array($wlist)) $wlist=array();
 	if (empty($honeyapi)) $honeyapi='';
+	if (empty($botscoutapi)) $botscoutapi='';
 	if (empty($apikey)) $apikey='';
 	
 	if (!is_numeric($spcount)) $spcount=0;
+	if (!is_numeric($spmcount)) $spmcount=0;
 
 	// clean cache - get rid of older cache items. Need to recheck to see if they have appeared on stopfurumspam
 	$badems=kpg_clear_old_cache($badems);
 	$badips=kpg_clear_old_cache($badips);
 	$gdems=kpg_clear_old_cache($gdems);
-	if (empty($spcount)&&(!empty($sphist))) $spcount=count($sphist);
+	while(count($hist)>60) {
+		array_shift($hist);
+	}
+	while(count($sphist)>60) {
+		array_shift($sphist);
+	}
 	
+	// clean up history
+	if (empty($spcount)&&(!empty($sphist))) $spcount=count($sphist);
+	if (empty($spmcount)&&(!empty($sphist))) $spmcount=count($sphist);
+	$now=date('Y/m/d H:i:s');
 	// first check the ip address
 	$ip=$_SERVER['REMOTE_ADDR']; 
+	
+	// set up hist channel
+	$hist[$now]=array($ip,$email,$author,$sname,'begin');
 	$accept_head=false; 
 	if (array_key_exists('HTTP_ACCEPT',$_SERVER)) $accept_head=true; // real browsers send HTTP_ACCEPT
 	if (in_array($ip,$wlist)) {
+	    $hist[$now][4]='White List IP';
+		$options['hist']=$hist;
+		update_option('kpg_stop_sp_reg_options', $options);
 		return $email;
 	}
 	if (in_array($email,$wlist)) {
+	    $hist[$now][4]='White List EMAIL';
+		$options['hist']=$hist;
+		update_option('kpg_stop_sp_reg_options', $options);
 		return $email;
 	}
 
@@ -111,49 +138,38 @@ function kpg_stop_sp_reg_fixup($email) {
 	// build the check
 	$em=urlencode($email);
 	if (array_key_exists($em,$gdems)) {
+	    $hist[$now][4]='Passed email cache';
+		$options['hist']=$hist;
+		update_option('kpg_stop_sp_reg_options', $options);
 		return $email;
 	}
-	if ($accept=='Y'&&!$accept_head) {
-		// no accept header - real browsers send the HTTP_ACCEPT header
-		$whodunnit='No Accept header';
-		$deny=true;
-	}
-	$query="http://www.stopforumspam.com/api?ip=$ip";
-	if ($chkemail=='Y') {
-		$query=$query."&email=$email";
-	}
 	// check to see if the results have been cached
-	$deny=false;
 	if (array_key_exists($em,$badems)) {
-		$badems[$em]=date("m/d/y H:i:s");
+		$badems[$em]=date("Y/m/d H:i:s");
 		$deny=true;
-		$whodunnit='Cached bad email';
+		$whodunnit.='Cached bad email';
 	} 
 	if (array_key_exists($ip,$badips)) {
-		$badips[$ip]=date("m/d/y H:i:s");
-		$whodunnit='Cached bad ip';
+		$badips[$ip]=date("Y/m/d H:i:s");
+		$whodunnit.='Cached bad ip';
 		$deny=true;
 	} 
-	if (!$deny&&$apikey!='') {
+
+	if (!$deny&&$accept=='Y'&&!$accept_head) {
+		// no accept header - real browsers send the HTTP_ACCEPT header
+		$whodunnit.='No Accept header;';
+		$deny=true;
+	}
+
+	if (!$deny) {
+		$query="http://www.stopforumspam.com/api?ip=$ip";
+		if ($chkemail=='Y') {
+			$query=$query."&email=$email";
+		}
 		$check=kpg_stop_sp_reg_getafile($query);
 		//kpg_logit(" '$query', '$check' \r\n"); // turn on only during debugging
 		$n=strpos($check,'<appears>yes</appears>');
 		if ($n) {
-			// get lastseen and frequency
-			// ip is always forst
-			/*
-				<response success="true">
-					<type>ip</type>
-					<appears>no</appears>
-					<frequency>0</frequency>
-					<type>email</type>
-					<appears>yes</appears>
-
-					<lastseen>2011-03-27 03:26:11</lastseen>
-					<frequency>8</frequency>
-				</response>
-
-*/
 			$k=strpos($check,'<lastseen>',$n);
 			$k+=10;
 			$j=strpos($check,'</lastseen>',$k);
@@ -166,44 +182,51 @@ function kpg_stop_sp_reg_fixup($email) {
 			if (($j-$k)>0&&($j-$k)<7) $frequency=substr($check,$k,$j-$k); // should be a number greater than 0 and probablu no more than a few thousand.
 			// have freqency and lastseen date - make these options in next release
 				$deny=true;
-				$whodunnit="SFS hit, last=$lastseen, freq=$frequency";
+				$whodunnit.="SFS hit, last=$lastseen, freq=$frequency;";
 		} 
 	} 
 	if (!$deny&&$honeyapi!='') {
 		// do a further check on project honeypot here
 		$lookup = $honeyapi . '.' . implode('.', array_reverse(explode ('.', $ip ))) . '.dnsbl.httpbl.org';
 		$result = explode( '.', gethostbyname($lookup));
-		if ($result[0] == 127) {
-			// query successful
-			// 127 is a good lookup
-			//  [3] = type of threat - we are only interested in comment spam at this point - if user demand I will change.
-			// [2] is the threat level. 25 is recommended
-			// [1] is numbr of days since last report
-			//if ($result[2]>25&&$result[3]==4) { // 4 - comment spam, threat level 25 is average. 
-			if ($result[1]<60&&$result[2]>5&&$result[3]>=4) { // 4 - comment spam, threat level 25 is average. 
-				$deny=true;
-				$whodunnit='HTTP:bl hit: Age:'.$result[1].', Threat Level:'.$result[2].', Threat Type '.$result[3];
+		if (count($result)>2) {
+			if ($result[0] == 127) {
+				// query successful
+				// 127 is a good lookup
+				//  [3] = type of threat - we are only interested in comment spam at this point - if user demand I will change.
+				// [2] is the threat level. 25 is recommended
+				// [1] is numbr of days since last report
+				//if ($result[2]>25&&$result[3]==4) { // 4 - comment spam, threat level 25 is average. 
+				if ($result[1]<60&&$result[2]>5&&$result[3]>=4) { // 4 - comment spam, threat level 25 is average. 
+					$deny=true;
+					$whodunnit.='HTTP:bl hit: Age:'.$result[1].', Threat Level:'.$result[2].', Threat Type '.$result[3];
+				} 
 			} 
-		} 
+		}
 	}
-	
-	// clean cache - get rid of older cache items. Need to recheck to see if they have appeared on stopfurumspam
-	$badems=kpg_clear_old_cache($badems);
-	$badips=kpg_clear_old_cache($badips);
-	$gdems=kpg_clear_old_cache($gdems);
-	
+	if (!$deny&&$botscoutapi!='') {
+		// try the ip on botscoutapi
+	    $query="http://botscout.com/test/?ip=$ip&key=$botscoutapi";
+		$check=kpg_stop_sp_reg_getafile($query);
+		if(strpos($check,'|')) {
+			$result=explode('|',$check);
+			if (count($result)>2) {
+				//  Y|IP|3 - found, type, database occurences
+				if ($result[0]=='Y'&&$result[2]>1) {
+					$deny=true;
+					$whodunnit.='BotScout# hits:'.$result[2];
+				}
+			}
+		}
+	}
+	$hist[$now][4]=$whodunnit;
 	// it appears that there is no problem with this login record as a good login
 	if (!$deny) {
-	    // add the check and report
-		$chk=" <a href=\"http://www.stopforumspam.com/search?q=$ip\" target=\"_stopspam\">Check</a>";
-		if (!empty($apikey) && !empty($author)) {
-			$surl='email='.urlencode($email).'&ip_addr='.$ip.'&username='.urlencode($author).'&api_key='.$apikey;
-			$chk.=', <a href="http://www.stopforumspam.com/add?'.$surl.'"  target="_stopspam">Report</a>';
-		}
-		$gdems[$em]=date("m/d/y H:i:s");// don't add the check in for now until we figure out how to sort the thing ---.$chk;
+		$gdems[$em]=date("Y/m/d H:i:s");
 		$options['badips']=$badips;
 		$options['badems']=$badems;
 		$options['gdems']=$gdems;
+		$options['hist']=$hist;
 		update_option('kpg_stop_sp_reg_options', $options);
 		return $email;
 	}
@@ -212,25 +235,30 @@ function kpg_stop_sp_reg_fixup($email) {
 	// record the last few guys that have  tried to spam
 	// add the bad spammer to the history list
 	$spcount++;
-	$sphist[count($sphist)]=$email.'|'.date("m/d/y H:i:s").'|'.$ip.'|'.$_SERVER["SCRIPT_NAME"]." - $whodunnit";
-	if (count($sphist)>30) array_shift($sphist);
+	$spmcount++;
+	$sphist[count($sphist)]=$email.'|'.date("Y/m/d H:i:s").'|'.$ip.'|'.$_SERVER["SCRIPT_NAME"]." - $whodunnit";
+	while(count($sphist)>60) {
+		array_shift($sphist);
+	}
 	$options['sphist']=$sphist;
 	$options['spcount']=$spcount;
+	$options['spmcount']=$spmcount;
 	// Cache the bad guy
-	$badems[$em]=date("m/d/y H:i:s");
-	if (!empty($ip)) $badips[$ip]=date("m/d/y H:i:s");
+	$badems[$em]=date("Y/m/d H:i:s");
+	if (!empty($ip)) $badips[$ip]=date("Y/m/d H:i:s");
 	// sort the array by date so that the most recent date is last
 	$options['badips']=$badips;
 	$options['badems']=$badems;
+	$options['hist']=$hist;
 	update_option('kpg_stop_sp_reg_options', $options);
-	sleep(5); // sleep for 5 seconds to annoy spammers and maybe delay next hit on stopforumspam.com
+	sleep(2); // sleep for a few seconds to annoy spammers and maybe delay next hit on stopforumspam.com
 	return false;
 }
 
 function kpg_clear_old_cache($cache) {
 	// the caches are an array that is limited to 60 users and 24 hours
 	// it is int form of $cache[$key]=date;
-	// unfortunately I made it date("m/d/y H:i:s");
+	// unfortunately I made it date("Y/m/d H:i:s");
 	// it was a mistake storing the string date in the array and someday I will fix it. But for now I need to 
 	// sort by the string. I will brute force it to integer to get it done
 	
@@ -254,7 +282,7 @@ function kpg_clear_old_cache($cache) {
 		array_shift($cache);	
 	}
 	foreach($cache as $key=>$value) {
-		$cache[$key]=date("m/d/y H:i:s",$value);
+		$cache[$key]=date("Y/m/d H:i:s",$value);
 	}
 	return $cache;
 }
@@ -264,6 +292,7 @@ function kpg_stop_sp_reg_control()  {
 // this is the display of information about the page.
     $apikey='';
     $honeyapi='';
+    $botscoutapi='';
     $chkemail='Y';
 	$wlist=array();
 	if(!current_user_can('manage_options')) {
@@ -290,6 +319,7 @@ function kpg_stop_sp_reg_control()  {
 			// clear the cache
 			unset($options['sphist']);
 			unset($options['spcount']);
+			unset($options['hist']);
 			update_option('kpg_stop_sp_reg_options', $options);
 			echo "<h2>History Cleared</h2>";
 		}
@@ -315,6 +345,8 @@ function kpg_stop_sp_reg_control()  {
 			$options['apikey']=$apikey;
 			if (array_key_exists('honeyapi',$_POST)) $honeyapi=stripslashes($_POST['honeyapi']);
 			$options['honeyapi']=$honeyapi;
+			if (array_key_exists('botscoutapi',$_POST)) $botscoutapi=stripslashes($_POST['botscoutapi']);
+			$options['botscoutapi']=$botscoutapi;
 			if (array_key_exists('wlist',$_POST)) {
 				$wlist=stripslashes($_POST['wlist']);
 			    $wlist=str_replace("\r\n","\n",$wlist);
@@ -335,6 +367,7 @@ function kpg_stop_sp_reg_control()  {
 	if ($accept!='Y') $accept='N';
 	if (array_key_exists('apikey',$options)) $apikey=$options['apikey'];
 	if (array_key_exists('honeyapi',$options)) $honeyapi=$options['honeyapi'];
+	if (array_key_exists('botscoutapi',$options)) $botscoutapi=$options['botscoutapi'];
 	if (array_key_exists('wlist',$options)) $wlist=$options['wlist'];
     $nonce=wp_create_nonce('kpgstopspam_update');
 
@@ -360,6 +393,9 @@ function kpg_stop_sp_reg_control()  {
     <p>Project Honeypot API Key:
       <input size="32" name="honeyapi" type="text" value="<?php echo $honeyapi; ?>"/>
       (For HTTP:bl blacklist lookup, if not blank)</p>
+    <p>BotScout API Key:
+      <input size="32" name="botscoutapi" type="text" value="<?php echo $botscoutapi; ?>"/>
+      (For BotScout.com lookup, if not blank)</p>
     <p>Block Spam missing the HTTP_ACCEPT header:
       <input name="accept" type="checkbox" value="Y" <? if ($accept=='Y') echo  'checked="true"';?>/>
       Blocks users who have incomplete headers. (optional)</p>
@@ -385,23 +421,34 @@ function kpg_stop_sp_reg_control()  {
 	$badips=array();
 	$badems=array();
 	$gdems=array();
+	$hist=array();
 	$spcount=0;
+	$spmcount=0;
 	$options=get_option('kpg_stop_sp_reg_options');
 	if (array_key_exists('spcount',$options)) $spcount=$options['spcount'];
 	if (!is_numeric($spcount)) $spcount=0;
+	if (array_key_exists('spmcount',$options)) $spmcount=$options['spmcount'];
+	if (!is_numeric($spmcount)) $spmcount=0;
 
 	if (array_key_exists('sphist',$options)) $sphist=$options['sphist'];
 	if (array_key_exists('badems',$options)) $badems=$options['badems'];
 	if (array_key_exists('badips',$options)) $badips=$options['badips'];
 	if (array_key_exists('gdems',$options)) $gdems=$options['gdems'];
+	if (array_key_exists('hist',$options)) $hist=$options['hist'];
 	if (!is_array($badips)) $badips=array();
 	if (!is_array($badems)) $badems=array();
 	if (!is_array($sphist)) $sphist=array();
 	if (!is_array($gdems)) $gdems=array();
+	if (!is_array($hist)) $hist=array();
 
 	
 	if (empty($spcount)&&(!empty($sphist))) $spcount=count($sphist);
-	if (!empty($sphist)) {
+	if (empty($spmcount)&&(!empty($sphist))) $spmcount=count($sphist);
+?>
+  <p>Stop Spammers has stopped <?php echo $spmcount; ?> spammers since installation</p>
+
+<?php
+	if (!empty($sphist)||!empty($hist)) {
   ?>
   <hr/>
   <h3>Recent Activity</h3>
@@ -414,32 +461,55 @@ function kpg_stop_sp_reg_control()  {
   <?php
 
 	if (empty($sphist)) {
-		echo "<p>No activity Recorded.</p>";
+		echo "<p>No Rejections Recorded.</p>";
 	} else {
-	echo "<p>Stop Spammers has stopped $spcount registration or comment attempts.</p>
-	<p>Recent blocked email registration or comment attempts</p>";
-	echo "<ul>";
-	for ($j=0;$j<count($sphist);$j++) {
-		$data=$sphist[$j];
-		$ln=explode('|',$data);
-		$em=trim($ln[0]);
-		$dt=$ln[1];
-		$ip=$ln[2];
-		$ff=$ln[3];
-		$id=$ln[4];
-		if (!empty($em)) {
-			echo "<li style=\"font-size:.8em;\"><a href=\"http://www.stopforumspam.com/search?q=$em\" target=\"_stopspam\">$em</a>";
-			if (!empty($dt)) echo "; $dt";
-			if (!empty($ip)) echo "; <a href=\"http://www.stopforumspam.com/search?q=$ip\" target=\"_stopspam\">$ip</a>";
-			if (!empty($ff)) echo "; $ff";
-			echo "</li>";
+		echo "<p>Stop Spammers has stopped $spcount registration or comment attempts.</p>
+		<p>Recent blocked email registration or comment attempts</p>";
+		echo "<ul>";
+		for ($j=0;$j<count($sphist);$j++) {
+			$data=$sphist[$j];
+			$ln=explode('|',$data);
+			$em=trim($ln[0]);
+			$dt=$ln[1];
+			$ip=$ln[2];
+			$ff=$ln[3];
+			$id=$ln[4];
+			if (!empty($em)) {
+				echo "<li style=\"font-size:.8em;\"><a href=\"http://www.stopforumspam.com/search?q=$em\" target=\"_stopspam\">$em</a>";
+				if (!empty($dt)) echo "; $dt";
+				if (!empty($ip)) echo "; <a href=\"http://www.stopforumspam.com/search?q=$ip\" target=\"_stopspam\">$ip</a>";
+				if (!empty($ff)) echo "; $ff";
+				echo "</li>";
+			}
 		}
-	}
-	echo "</ul>";
-	}
+		
+		echo "</ul>";
+	}	
+
+		echo "<p>All recent attempts</p>";
+		echo "<ul>";
+		foreach($hist as $key=>$data) {
+			//$hist[$now]=array($ip,$email,$author,$sname,'begin');
+			$em=trim($data[1]);
+			$dt=$key;
+			$ip=$data[0];
+			$au=$data[2];
+			$id=$data[3];
+			$reason=$data[4];
+			if(empty($reason)) $reason="passed";
+			if (!empty($em)) {
+				echo "<li style=\"font-size:.8em;\">";
+				echo "$dt: $em, $ip, $au, $id, $reason";
+				echo "</li>";
+			}
+		}
+		
+		echo "</ul>";
+		
+		
 	$badems=kpg_clear_old_cache($badems);
 	$badips=kpg_clear_old_cache($badips);
-	//$gdems=kpg_clear_old_cache($gdems);
+	$gdems=kpg_clear_old_cache($gdems);
    }
    if (!(empty($badems)&&empty($badips)&&empty($gdems))) {
 ?>
@@ -522,6 +592,8 @@ function kpg_stop_sp_reg_report($actions,$comment) {
 	if (array_key_exists('apikey',$options)) $apikey=$options['apikey'];
 	$honeyapi='';
 	if (array_key_exists('honeyapi',$options)) $honeyapi=$options['honeyapi'];
+	$botscoutapi='';
+	if (array_key_exists('botscoutapi',$options)) $botscoutapi=$options['botscoutapi'];
 
 	$email=urlencode($comment->comment_author_email);
 	$uname=urlencode($comment->comment_author);
