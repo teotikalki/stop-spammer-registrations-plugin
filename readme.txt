@@ -4,7 +4,7 @@ Donate link: http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30p
 Requires at least: 2.8
 Tested up to: 3.0
 Contributors: Keith Graham
-Stable tag: 1.16
+Stable tag: 1.17
 
 This plugin Uses the StopForumSpam.com DB to prevent spammers from registering or making comments.
 
@@ -90,6 +90,11 @@ Options added. 1) Reject if Accept header not found. Spammers use some kind of l
 
 = 1.16 =
 Added RoboScout.com spam check to ip address. Added limits to checking to allow know spammers who are not recent spammers or do not have many spam reported. Added a complete list of passed and rejected login attempts. Fixed a bug introduced in 1.15. Fixed check on accept headers that prevented it from working.
+
+= 1.17 =
+Fixed another bad bug. Added a warning if the host does not allow url fopens. Reduced memory requirements. Cache less information.
+This has some functions partially complete, but I had to release as is to fix the bugs that appear on new install. It's my own fault, because last time I did not test from a clean WP install.
+
 
 == Support ==
 Version 2.0 is being developed. It will check against additional spam databases and fully support MU blogs from one panel.

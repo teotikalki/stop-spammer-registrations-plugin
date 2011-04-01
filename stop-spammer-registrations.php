@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: Uses the Stop Forum Spam DB to prevent spammers from registering
-Version: 1.16
+Version: 1.17
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -11,6 +11,19 @@ This software is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
+// can't install if opening urls is forbidden
+function kpg_stop_sp_reg_act_ch(){
+	//if (!ini_get('allow_url_fopen')) {
+	//	$oo=ini_get('allow_url_fopen');
+	//	deactivate_plugins(basename(__FILE__)); // Deactivate ourself
+	//	echo("<h3 style=\"color:red;\">WARNING! This plugin requires that PHP.INI has the line: allow_url_fopen = On.<br/>
+	//		If you have PHP5, create a php.ini file with the line:<br/>
+	//		allow_url_fopen = On<br/>
+	//		and place that in the wp-admin folder and the root folder of your blog.</h3>");
+	//}
+}
+register_activation_hook(__FILE__, 'kpg_stop_sp_reg_act_ch');
+
 
 /************************************************************
 * 	kpg_stop_sp_reg_fixup()
@@ -35,7 +48,10 @@ function kpg_stop_sp_reg_fixup($email) {
 		(!strpos($sname,'wp-signup.php'))&& 
 		(!strpos($sname,'xmlrpc.php'))&& 
 		(!strpos($sname,'ms.php'))&& 
-		(!strpos($sname,'edit-comments.php'))
+		(!strpos($sname,'edit-comments.php'))&&
+		(!strpos($sname,'comment'))&& // letting custom scripts with word comment, login or signup get checked
+		(!strpos($sname,'signup'))&&
+		(!strpos($sname,'login'))
 	) {
 		return $email;
 	}
@@ -57,7 +73,6 @@ function kpg_stop_sp_reg_fixup($email) {
 	// cache bad cases
 	$badips=array();
 	$badems=array();
-	$sphist=array();
 	$gdems=array();
 	$wlist=array();
 	$hist=array();
@@ -67,10 +82,35 @@ function kpg_stop_sp_reg_fixup($email) {
 	$spmcount=0;
 	$accept='Y';
 	$chkemail='Y';
+	
+	$sfsfreq=0;
+	$hnyfreq=0;
+	$botfreq=0;
+	$sfsage=9999;
+	$hnyage=9999;
+	$botage=9999;
+	if (array_key_exists('sfsfreq',$options)) $sfsfreq=$options['sfsfreq'];
+	if (array_key_exists('hnyfreq',$options)) $hnyfreq=$options['hnyfreq'];
+	if (array_key_exists('botfreq',$options)) $botfreq=$options['botfreq'];
+	if (array_key_exists('sfsage',$options)) $sfsage=$options['sfsage'];
+	if (array_key_exists('hnyage',$options)) $hnyage=$options['hnyage'];
+	if (array_key_exists('botage',$options)) $botage=$options['botage'];
+	
+	if (empty($sfsfreq)) $sfsfreq=0;
+	if (empty($hnyfreq)) $hnyfreq=0;
+	if (empty($botfreq)) $botfreq=0;
+	if (empty($sfsage)) $sfsage=9999;
+	if (empty($hnyage)) $hnyage=9999;
+	if (empty($botage)) $botage=9999;
+	
+	
 	if (array_key_exists('spcount',$options)) $spcount=$options['spcount'];
 	if (array_key_exists('spmcount',$options)) $spmcount=$options['spmcount'];
 	if (array_key_exists('accept',$options)) $accept=$options['accept'];
-	if (array_key_exists('sphist',$options)) $sphist=$options['sphist'];
+	if (array_key_exists('gdems',$options)) { // no longer use this - get rid of it
+		unset($options['sphist']);
+		update_option('kpg_stop_sp_reg_options', $options);
+	}
 	if (array_key_exists('badems',$options)) $badems=$options['badems'];
 	if (array_key_exists('badips',$options)) $badips=$options['badips'];
 	if (array_key_exists('gdems',$options)) $gdems=$options['gdems'];
@@ -85,7 +125,6 @@ function kpg_stop_sp_reg_fixup($email) {
 	if ($chkemail!='Y') $chkemail='N';
 	if (!is_array($badips)) $badips=array();
 	if (!is_array($badems)) $badems=array();
-	if (!is_array($sphist)) $sphist=array();
 	if (!is_array($gdems)) $gdems=array();
 	if (!is_array($hist)) $hist=array();
 	if (!is_array($wlist)) $wlist=array();
@@ -100,16 +139,11 @@ function kpg_stop_sp_reg_fixup($email) {
 	$badems=kpg_clear_old_cache($badems);
 	$badips=kpg_clear_old_cache($badips);
 	$gdems=kpg_clear_old_cache($gdems);
-	while(count($hist)>60) {
+	while(count($hist)>30) {
 		array_shift($hist);
-	}
-	while(count($sphist)>60) {
-		array_shift($sphist);
 	}
 	
 	// clean up history
-	if (empty($spcount)&&(!empty($sphist))) $spcount=count($sphist);
-	if (empty($spmcount)&&(!empty($sphist))) $spmcount=count($sphist);
 	$now=date('Y/m/d H:i:s');
 	// first check the ip address
 	$ip=$_SERVER['REMOTE_ADDR']; 
@@ -144,12 +178,12 @@ function kpg_stop_sp_reg_fixup($email) {
 		return $email;
 	}
 	// check to see if the results have been cached
-	if (array_key_exists($em,$badems)) {
+	if (!$deny&&array_key_exists($em,$badems)) {
 		$badems[$em]=date("Y/m/d H:i:s");
 		$deny=true;
 		$whodunnit.='Cached bad email';
 	} 
-	if (array_key_exists($ip,$badips)) {
+	if (!$deny&&array_key_exists($ip,$badips)) {
 		$badips[$ip]=date("Y/m/d H:i:s");
 		$whodunnit.='Cached bad ip';
 		$deny=true;
@@ -173,16 +207,23 @@ function kpg_stop_sp_reg_fixup($email) {
 			$k=strpos($check,'<lastseen>',$n);
 			$k+=10;
 			$j=strpos($check,'</lastseen>',$k);
-			$lastseen='error';
+			$lastseen=date('Y-m-d',time());
 			if (($j-$k)>12&&($j-$k)<24) $lastseen=substr($check,$k,$j-$k); // should be about 20 characters
 			$k=strpos($check,'<frequency>',$n);
 			$k+=11;
 			$j=strpos($check,'</frequency',$k);
-			$frequency='error';
-			if (($j-$k)>0&&($j-$k)<7) $frequency=substr($check,$k,$j-$k); // should be a number greater than 0 and probablu no more than a few thousand.
+			$frequency='9999';
+			
+			if (($j-$k)&&($j-$k)<7) $frequency=substr($check,$k,$j-$k); // should be a number greater than 0 and probably no more than a few thousand.
 			// have freqency and lastseen date - make these options in next release
+			// check freq and age
+
+			if (($frequency>=$sfsfreq) && (strtotime($lastseen)>(time()-(60*60*24*$sfsage))) )   { 
+			// frequency we got from the db, sfsfreq is the min we'll accept (default 0)
+			// sfsage is the age in days. we get lastscene from
 				$deny=true;
 				$whodunnit.="SFS hit, last=$lastseen, freq=$frequency;";
+			}
 		} 
 	} 
 	if (!$deny&&$honeyapi!='') {
@@ -197,7 +238,7 @@ function kpg_stop_sp_reg_fixup($email) {
 				// [2] is the threat level. 25 is recommended
 				// [1] is numbr of days since last report
 				//if ($result[2]>25&&$result[3]==4) { // 4 - comment spam, threat level 25 is average. 
-				if ($result[1]<60&&$result[2]>5&&$result[3]>=4) { // 4 - comment spam, threat level 25 is average. 
+				if ($result[1]<180&&$result[2]>2&&$result[3]>=4) { // 4 - comment spam, threat level 25 is average. 
 					$deny=true;
 					$whodunnit.='HTTP:bl hit: Age:'.$result[1].', Threat Level:'.$result[2].', Threat Type '.$result[3];
 				} 
@@ -212,7 +253,7 @@ function kpg_stop_sp_reg_fixup($email) {
 			$result=explode('|',$check);
 			if (count($result)>2) {
 				//  Y|IP|3 - found, type, database occurences
-				if ($result[0]=='Y'&&$result[2]>1) {
+				if ($result[0]=='Y'&&$result[2]>0) {
 					$deny=true;
 					$whodunnit.='BotScout# hits:'.$result[2];
 				}
@@ -225,6 +266,7 @@ function kpg_stop_sp_reg_fixup($email) {
 		$gdems[$em]=date("Y/m/d H:i:s");
 		$options['badips']=$badips;
 		$options['badems']=$badems;
+		$options['badems']=$badems;
 		$options['gdems']=$gdems;
 		$options['hist']=$hist;
 		update_option('kpg_stop_sp_reg_options', $options);
@@ -236,11 +278,6 @@ function kpg_stop_sp_reg_fixup($email) {
 	// add the bad spammer to the history list
 	$spcount++;
 	$spmcount++;
-	$sphist[count($sphist)]=$email.'|'.date("Y/m/d H:i:s").'|'.$ip.'|'.$_SERVER["SCRIPT_NAME"]." - $whodunnit";
-	while(count($sphist)>60) {
-		array_shift($sphist);
-	}
-	$options['sphist']=$sphist;
 	$options['spcount']=$spcount;
 	$options['spmcount']=$spmcount;
 	// Cache the bad guy
@@ -290,10 +327,36 @@ function kpg_clear_old_cache($cache) {
 
 function kpg_stop_sp_reg_control()  {
 // this is the display of information about the page.
+?>
+<div class="wrap">
+  <h2>Stop Spammers Plugin</h2>
+<?php
+	if (!ini_get('allow_url_fopen')) {
+		$oo=ini_get('allow_url_fopen');
+		//deactivate_plugins(basename(__FILE__)); // Deactivate ourself
+?>		
+	<h4>WARNING! This plugin maay require that the PHP.INI has the line: &quot;allow_url_fopen = On&quot;.<br/>
+	If you have PHP5, create a php.ini file with this line:<blockquote>
+	<pre>allow_url_fopen = On</pre></blockquote>
+	and place that in the wp-admin folder and the root folder of your blog.</h4>
+<?php
+	} else {
+?>
+	<h4>The Stop Spammers Plugin is installed and working correctly.</h4>
+<?php
+	
+	}
+
     $apikey='';
     $honeyapi='';
     $botscoutapi='';
     $chkemail='Y';
+	$sfsfreq='0';
+	$hnyfreq='0';
+	$botfreq='0';
+	$sfsage=9999;
+	$hnyage=9999;
+	$botage=9999;
 	$wlist=array();
 	if(!current_user_can('manage_options')) {
 		die('Access Denied');
@@ -303,10 +366,17 @@ function kpg_stop_sp_reg_control()  {
 
 	$options=get_option('kpg_stop_sp_reg_options');
 	if (empty($options)) $options=array();
+	if (!is_array($options)) $options=array();
 	$accept='Y';
 	
 	if (array_key_exists('kpg_stop_spammers_control',$_POST)
 			&&wp_verify_nonce($_POST['kpg_stop_spammers_control'],'kpgstopspam_update')) { 
+		if (array_key_exists('kpg_stop_clear_passed',$_POST)) {
+			// clear the cache
+			unset($options['gdems']);
+			update_option('kpg_stop_sp_reg_options', $options);
+			echo "<h2>Cache Cleared</h2>";
+		}
 		if (array_key_exists('kpg_stop_clear_cache',$_POST)) {
 			// clear the cache
 			unset($options['badips']);
@@ -357,6 +427,21 @@ function kpg_stop_sp_reg_control()  {
 					$wlist[$k]=trim($wlist[$k]);
 				}	
 			}
+			// update the freq and age options
+			if (array_key_exists('sfsfreq',$_POST)) $sfsfreq=stripslashes($_POST['sfsfreq']);
+			if (array_key_exists('hnyfreq',$_POST)) $hnyfreq=stripslashes($_POST['hnyfreq']);
+			if (array_key_exists('botfreq',$_POST)) $sfsfreq=stripslashes($_POST['botfreq']);
+			if (array_key_exists('sfsage',$_POST)) $sfsage=stripslashes($_POST['sfsage']);
+			if (array_key_exists('hnyage',$_POST)) $hnyage=stripslashes($_POST['hnyage']);
+			if (array_key_exists('botage',$_POST)) $botage=stripslashes($_POST['botage']);
+			$options['sfsfreq']=$sfsfreq;
+			$options['hnyfreq']=$hnyfreq;
+			$options['botfreq']=$botfreq;
+			$options['sfsage']=$sfsage;
+			$options['hnyage']=$hnyage;
+			$options['botage']=$botage;
+			
+			
 			update_option('kpg_stop_sp_reg_options',$options);
 			echo "<h2>Options Updated</h2>";
 		}
@@ -369,12 +454,24 @@ function kpg_stop_sp_reg_control()  {
 	if (array_key_exists('honeyapi',$options)) $honeyapi=$options['honeyapi'];
 	if (array_key_exists('botscoutapi',$options)) $botscoutapi=$options['botscoutapi'];
 	if (array_key_exists('wlist',$options)) $wlist=$options['wlist'];
+	
+	if (array_key_exists('sfsfreq',$options)) $sfsfreq=$options['sfsfreq'];
+	if (array_key_exists('hnyfreq',$options)) $hnyfreq=$options['hnyfreq'];
+	if (array_key_exists('botfreq',$options)) $botfreq=$options['botfreq'];
+	if (array_key_exists('sfsage',$options)) $sfsage=$options['sfsage'];
+	if (array_key_exists('hnyage',$options)) $hnyage=$options['hnyage'];
+	if (array_key_exists('botage',$options)) $botage=$options['botage'];
+	
+	if (empty($sfsfreq)) $sfsfreq=0;
+	if (empty($hnyfreq)) $hnyfreq=0;
+	if (empty($botfreq)) $botfreq=0;
+	if (empty($sfsage)) $sfsage=9999;
+	if (empty($hnyage)) $hnyage=9999;
+	if (empty($botage)) $botage=9999;
+	
     $nonce=wp_create_nonce('kpgstopspam_update');
 
 ?>
-<div class="wrap">
-  <h2>Stop Spammers Plugin</h2>
-  <h4>The Stop Spammers Plugin is installed and working correctly.</h4>
   <p>This plugin Uses the Stop Forum Spam DB to prevent spammers from registering or making comments.</p>
   <p>Watch the video! <a href="http://www.youtube.com/watch?v=EKrUX0hHAx8" target="_blank">http://www.youtube.com/watch?v=EKrUX0hHAx8</a>. The video shows one of my plugins that anti-spam cops use. They run honey pots or sites that do nothing but attract spammers. These sites report as many as 500 spammers per hour to the same database that this plugin checks.</p>
   <p>The plugin is on when it is installed and enabled. To turn it off just disable the plugin from the plugin menu.. </p>
@@ -417,7 +514,6 @@ function kpg_stop_sp_reg_control()  {
   <p>If you have a StopForumSpam.com API key you can report spam. You can easily get an API key after registering at <a href="http://www.StopForumSpam.com" target="_blank">StopForumSpam.com</a>.</p>
   <p>When you include the Project Honeypot API key each user will be validated against the HTTP:bl blacklist. You can get an api key at <a href="http://www.projecthoneypot.org" target="_blank">http://www.projecthoneypot.org</a></p>
   <?php
-	$sphist=array();
 	$badips=array();
 	$badems=array();
 	$gdems=array();
@@ -425,30 +521,29 @@ function kpg_stop_sp_reg_control()  {
 	$spcount=0;
 	$spmcount=0;
 	$options=get_option('kpg_stop_sp_reg_options');
+	if (empty($options)) $options=array();
+	if (!is_array($options)) $options=array();
+	
 	if (array_key_exists('spcount',$options)) $spcount=$options['spcount'];
 	if (!is_numeric($spcount)) $spcount=0;
 	if (array_key_exists('spmcount',$options)) $spmcount=$options['spmcount'];
 	if (!is_numeric($spmcount)) $spmcount=0;
 
-	if (array_key_exists('sphist',$options)) $sphist=$options['sphist'];
 	if (array_key_exists('badems',$options)) $badems=$options['badems'];
 	if (array_key_exists('badips',$options)) $badips=$options['badips'];
 	if (array_key_exists('gdems',$options)) $gdems=$options['gdems'];
 	if (array_key_exists('hist',$options)) $hist=$options['hist'];
 	if (!is_array($badips)) $badips=array();
 	if (!is_array($badems)) $badems=array();
-	if (!is_array($sphist)) $sphist=array();
 	if (!is_array($gdems)) $gdems=array();
 	if (!is_array($hist)) $hist=array();
 
 	
-	if (empty($spcount)&&(!empty($sphist))) $spcount=count($sphist);
-	if (empty($spmcount)&&(!empty($sphist))) $spmcount=count($sphist);
 ?>
   <p>Stop Spammers has stopped <?php echo $spmcount; ?> spammers since installation</p>
-
+<p><a href="#" onclick="window.location.href=window.location.href;return false;">Refresh</a></p>
 <?php
-	if (!empty($sphist)||!empty($hist)) {
+	if (!empty($hist)) {
   ?>
   <hr/>
   <h3>Recent Activity</h3>
@@ -460,52 +555,41 @@ function kpg_stop_sp_reg_control()  {
   </p>
   <?php
 
-	if (empty($sphist)) {
-		echo "<p>No Rejections Recorded.</p>";
+	if (empty($hist)) {
+		echo "<p>No Activity Recorded.</p>";
 	} else {
-		echo "<p>Stop Spammers has stopped $spcount registration or comment attempts.</p>
-		<p>Recent blocked email registration or comment attempts</p>";
-		echo "<ul>";
-		for ($j=0;$j<count($sphist);$j++) {
-			$data=$sphist[$j];
-			$ln=explode('|',$data);
-			$em=trim($ln[0]);
-			$dt=$ln[1];
-			$ip=$ln[2];
-			$ff=$ln[3];
-			$id=$ln[4];
-			if (!empty($em)) {
-				echo "<li style=\"font-size:.8em;\"><a href=\"http://www.stopforumspam.com/search?q=$em\" target=\"_stopspam\">$em</a>";
-				if (!empty($dt)) echo "; $dt";
-				if (!empty($ip)) echo "; <a href=\"http://www.stopforumspam.com/search?q=$ip\" target=\"_stopspam\">$ip</a>";
-				if (!empty($ff)) echo "; $ff";
-				echo "</li>";
-			}
-		}
-		
-		echo "</ul>";
-	}	
-
-		echo "<p>All recent attempts</p>";
-		echo "<ul>";
+	?><p>Recent History</p>
+		<table style="background-color:#eeeeee;" cellspacing="2">
+		<tr style="background-color:ivory;"><td>date/time</td><td>email</td><td>IP</td><td>user id</td><td>script</td><td>reason</td></tr>
+	
+	<?php
 		foreach($hist as $key=>$data) {
 			//$hist[$now]=array($ip,$email,$author,$sname,'begin');
-			$em=trim($data[1]);
-			$dt=$key;
+			$em=strip_tags(trim($data[1]));
+			$dt=strip_tags($key);
 			$ip=$data[0];
-			$au=$data[2];
-			$id=$data[3];
+			$au=strip_tags($data[2]);
+			$id=strip_tags($data[3]);
+			if (empty($au)) $au='none';
 			$reason=$data[4];
 			if(empty($reason)) $reason="passed";
 			if (!empty($em)) {
-				echo "<li style=\"font-size:.8em;\">";
-				echo "$dt: $em, $ip, $au, $id, $reason";
-				echo "</li>";
+				echo "<tr style=\"background-color:white;\">
+					<td style=\"font-size:.8em;\">$dt</td>
+					<td style=\"font-size:.8em;\">$em</td>
+					<td style=\"font-size:.8em;\">$ip</td>
+					<td style=\"font-size:.8em;\">$au</td>
+					<td style=\"font-size:.8em;\">$id</td>
+					<td style=\"font-size:.8em;\">$reason</td>
+				</tr>";
 			}
 		}
+	?>
+		</table>
+	<?php
 		
-		echo "</ul>";
-		
+	}	
+
 		
 	$badems=kpg_clear_old_cache($badems);
 	$badips=kpg_clear_old_cache($badips);
@@ -514,11 +598,19 @@ function kpg_stop_sp_reg_control()  {
    if (!(empty($badems)&&empty($badips)&&empty($gdems))) {
 ?>
   <h3>Cached Values (last 24 hours)</h3>
+  <table><tr><td>
   <form method="post" action="">
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <input type="hidden" name="kpg_stop_clear_cache" value="true" />
     <input value="Clear the Cache" type="submit">
   </form>
+  </td><td>
+  <form method="post" action="">
+    <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
+    <input type="hidden" name="kpg_stop_clear_passed" value="true" />
+    <input value="Clear the Passed Emails" type="submit">
+  </form>
+  </td></tr></table>
   <table align="center" width="95%"  >
     <tr>
       <td width="35%" align="center">Rejected Emails</td>
@@ -576,8 +668,8 @@ function kpg_stop_sp_reg_control()  {
 function kpg_stop_sp_reg_check($actions,$comment) {
 	$email=urlencode($comment->comment_author_email);
 	$ip=$comment->comment_author_IP;
-	$action="<a target=\"_stopspam\" href=\"http://www.stopforumspam.com/search.php?q=$ip\">Check: StopFurumSpam</a> |
-	 <a target=\"_stopspam\" href=\"http://www.projecthoneypot.org/search_ip.php?ip=$ip\">Check: Project Honeypot</a>";
+	$action="<a title=\"Check Stop Forum Spam (SFS)\" target=\"_stopspam\" href=\"http://www.stopforumspam.com/search.php?q=$ip\">Check FSF</a> |
+	 <a title=\"Check Project HoneyPot\" target=\"_stopspam\" href=\"http://www.projecthoneypot.org/search_ip.php?ip=$ip\">Check proj HoneyPot</a>";
 	$actions['check_spam']=$action;
 	return $actions;
 
@@ -612,7 +704,7 @@ function kpg_stop_sp_reg_report($actions,$comment) {
     if (is_array($urls2)) $evidence.="\r\n".implode("\r\n",$urls2);	
 	
 	$evidence=urlencode(trim($evidence,"\r\n"));
-	$action="<a target=\"_stopspam\" href=\"http://www.stopforumspam.com/add?username=$uname&email=$email&ip_addr=$ip&evidence=$evidence&api_key=$apikey\">Report to StopForumSpam</a>";
+	$action="<a title=\"Report to Stop Forum Spam (SFS)\"target=\"_stopspam\" href=\"http://www.stopforumspam.com/add?username=$uname&email=$email&ip_addr=$ip&evidence=$evidence&api_key=$apikey\">Report to SFS</a>";
 	$actions['report_spam']=$action;
 	return $actions;
 
