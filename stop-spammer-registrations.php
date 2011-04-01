@@ -335,7 +335,7 @@ function kpg_stop_sp_reg_control()  {
 		$oo=ini_get('allow_url_fopen');
 		//deactivate_plugins(basename(__FILE__)); // Deactivate ourself
 ?>		
-	<h4>WARNING! This plugin maay require that the PHP.INI has the line: &quot;allow_url_fopen = On&quot;.<br/>
+	<h4>WARNING! This plugin may require that the PHP.INI has the line: &quot;allow_url_fopen = On&quot;.<br/>
 	If you have PHP5, create a php.ini file with this line:<blockquote>
 	<pre>allow_url_fopen = On</pre></blockquote>
 	and place that in the wp-admin folder and the root folder of your blog.</h4>
