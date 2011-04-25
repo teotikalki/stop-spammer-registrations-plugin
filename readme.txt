@@ -4,35 +4,38 @@ Donate link: http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30p
 Requires at least: 2.8
 Tested up to: 3.0
 Contributors: Keith Graham
-Stable tag: 1.17
+Stable tag: 2.0
 
-This plugin Uses the StopForumSpam.com DB to prevent spammers from registering or making comments.
+This plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments.
 
 == Description ==
-The Stop Spammers Plugin Plugin Accesses the StopForumSpam.com db to check emails, username and IP before a user can register. The StopForumSpam database contains over a million spammer emails, User Names and IPs, and is updated daily. 
+This plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments.
 
-Watch the video! http://www.youtube.com/watch?v=EKrUX0hHAx8. The video shows one of my plugins that anti-spam cops use. They run honey pots or sites that do nothing but attract spammers. These sites report as many as 1,000 spammers per hour to the same database that this plugin checks.
+The Stop Spammer Registrations plugin works by checking the IP address, email and user id of anyone who tries to register, login, or leave a comment. This effectively blocks spammers who try to register on blogs or leave spam. It checks a users credentials against up to three databases: <a href="http://www.stopforumspam.com/">Stop Forum Spam</a>, <a href="http://www.projecthoneypot.org/">Project Honeypot</a>, and <a href="http://www.botscout.com/">BotScout</a>. In order to use the Project HoneyPot or BotScout spam databases you will need to register at those sites and get a free API key. Stop Forum Spam does not require a key so this plugin will work immediately without getting a key. The API key for Stop Forum Spam is only used for reporting spam.
 
-The plugin validates Email, IP and User name against the StopForumSpam.com db. It denies login attempts, such as spammers trying to guess passwords or spammers trying to create login ids. It also stops spammers who try to add comments with a spammer email or ip addresses.
+This plugin keeps track of the last 25 spammer emails and IP addresses in a cache to avoid pinging databases more often than necessary. The results of the last 25 checks are saved and displayed.
 
-The plugin caches 60 spam results to avoid hits on StopForumSpam.com. It remembers the Username, IP and Email of any request that fails on any part of Username, IP and Email, so be careful when testing because an invalid Email will also invalidate your IP or test username. You may have to clear the cache in order to clear out a mistake.
+In case a user results in a false positive on one of the spam databases there is a white list that can be entered of email address or IP addresses. This will allow such users to register, login and comment on the bog.
 
-The plugin will optionally stop spammers who do not send the HTTP_ACCEPT header from the browser. Since all normal browsers use this header, it is safe to assume that anyone who does not send it is hitting you with a robot.
+Requirements: The plugin uses the WP_Http class to query the spam databases. Normally, if WordPress is working, then this class can access the databases. If, however, the system administrator has turned off the ability to open a url, then the plugin will not work. Sometimes placing a php.ini file in the blog’s root directory with the line “allow_url_fopen=On” will solve this.
 
-StopForumSpam.com limits hits on its database to 10,000 a day, so if you are being hit hard by spammers you may not be able to effectively block them. I have yet to see this many hits on any of my sites. 
+The plugin is ON when it is installed and enabled. To turn it off just disable the plugin from the plugin menu..
 
-Many spam solutions are concerned with comments. This plugin validates email addresses and is primarily concerned with registrations. I have a website where I needed to allow registrations, but the users would probably not comment. This plugin kept the flood of registrations down to a manageable few. It works when Wordpress Validates an email address so it will also work when users enter an email address in comments.
+The plugin keeps a count of the spammers that it has blocked and displays this on the WordPress dashboard. It also displays the last 25 hits on email or IP and it also shows a history of the last 25 times it has made a check, showing rejections, passing emails and errors. When there is data to display there will also be a button to clear out the data.
 
-This plugin also stopped spam registations on my WordPress MU site.
+The plugin will also reject registrations, comments and pings where the HTTP_ACCEPT header is missing. This header is present in all browsers and its absence indicates that a program, not a human, is attempting to leave spam.
 
-The plugin dispays a list of the last 30 emails, IPs, User names and passwords used in failed denied login attempts. It displays the cached results of hits to StopForumSpam.com up to 60 entries.
+If you are running a networked WPMU system of blogs, you can optionally control this plugin from the control panel of the main blog. By checking the “Networked ON” radio button, the individual blogs will not see the options page. The API keyes will only have to entered in one place and the history will only appear in one place, making the plugin easier to use for administrating many blogs. The comments, however, still must be maintained from each blog. The Network buttons only appear if you have a Networked installation.
 
-If you have a StopForumSpam.com API key you can report spam. You can easily get an API key after registering at StopForumSpam.com.
+The plugin adds links to the Comment Moderation page to check a comment's credentials agains the spam databases. If you have entered the Stop Forum Spam API key you can also report the spammer to the SFS database. Please make sure that the comment is actually spam and not from some clueless commentor who likes to salt his comments with spammy links. (I find that comments that do not specifically reference the post are always spam. "Nice Blog" comments I tend to report immediately.)
 
-When you include the Project Honeypot API key each user will be validated against the HTTP:bl blacklist. You can get an api key at http://www.projecthoneypot.org
+Problems: In systems with constraints on memory and many other plugins, this plugin will sometimes fail trying to retrieve its options. This results in resetting the configuration. The plugin uses two or three thousand bytes to store the history, cache, and settings. This is not very much, but some plugins use much more memory, and they will cause this plugin to fail. The solution is to remove or disable some of the plugins that are hogging all the memory.
 
-There is a white list option so that you can bypass the database check for some users.
+StopForumSpam.com limits checks to 10,000 per day for each IP so the plugin may stop validating on very busy sites. I have not seen this happen, yet. Results are cached in order to thwart repeated attempts.
 
+You may see your own email in the cache as spammers try to use it to leave comments. You may have to white list your own email if that is the case, to keep the plugin from locking you out.
+
+Watch the <a href="http://www.youtube.com/watch?v=EKrUX0hHAx8" target="_blank">youtube spam trap video!</a> The video shows one of my plugins that anti-spam cops use. They run honey pots or sites that do nothing but attract spammers. These sites report as many as 500 spammers per hour to the same database that this plugin checks. 
  
 == Installation ==
 1. Download the plugin.
@@ -95,10 +98,12 @@ Added RoboScout.com spam check to ip address. Added limits to checking to allow 
 Fixed another bad bug. Added a warning if the host does not allow url fopens. Reduced memory requirements. Cache less information.
 This has some functions partially complete, but I had to release as is to fix the bugs that appear on new install. It's my own fault, because last time I did not test from a clean WP install.
 
+= 2.0 =
+Made the plugin WPMU aware. Streamlined some of the code. Limited the cached spam sizes to reduce memory overhead.
+Changed the way that the plugin decides when to check an ip and email. This will help it when working with other plugins. It also checks in multiple places in case the is_email() function is not called. It allows admins to change the minimum requirements for spam, forgiving spammers who have few incidents or have not spammed for a period of time.
+
 
 == Support ==
-Version 2.0 is being developed. It will check against additional spam databases and fully support MU blogs from one panel.
-This plugin is in active development. All feedback is welcome on "<a href="http://www.blogseye.com/" title="Wordpress plugin: Stop Spammer Registrations Plugin">program development pages</a>".
 This plugin is free and I expect nothing in return. If you wish to support my programming, buy the book: 
 <a href="http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30page&linkCode=as2&camp=1789&creative=390957&creativeASIN=1456336584">Error Message Eyes: A Programmer's Guide to the Digital Soul</a>
 

@@ -2,8 +2,9 @@
 /*
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
-Description: Uses the Stop Forum Spam DB to prevent spammers from registering
-Version: 1.17
+Description: This plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments.
+.
+Version: 2.0
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -11,48 +12,82 @@ This software is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
-// can't install if opening urls is forbidden
-function kpg_stop_sp_reg_act_ch(){
-	//if (!ini_get('allow_url_fopen')) {
-	//	$oo=ini_get('allow_url_fopen');
-	//	deactivate_plugins(basename(__FILE__)); // Deactivate ourself
-	//	echo("<h3 style=\"color:red;\">WARNING! This plugin requires that PHP.INI has the line: allow_url_fopen = On.<br/>
-	//		If you have PHP5, create a php.ini file with the line:<br/>
-	//		allow_url_fopen = On<br/>
-	//		and place that in the wp-admin folder and the root folder of your blog.</h3>");
-	//}
-}
-register_activation_hook(__FILE__, 'kpg_stop_sp_reg_act_ch');
+
+
+/************************************************************
+* 	Set the hooks and filters
+*	Primary hook is is_email()
+*	other hooks:  pre_user_email, user_registration_email 
+*	The theory being I'll catch somebody on one of them.
+*	each hook has to remove the other hooks to prevent multiple entries into the code 
+*
+*************************************************************/
+add_filter('is_email','kpg_stop_sp_reg_fixup');	
+add_filter('user_registration_email','kpg_stop_sp_reg_fixup');	
+add_filter('pre_user_email','kpg_stop_sp_reg_fixup');	
+
+
 
 
 /************************************************************
 * 	kpg_stop_sp_reg_fixup()
-*	Uses the Stop Forum Spam DB to prevent spammers from registering
+*	Hooked from is_email() 
 *
 *************************************************************/
 function kpg_stop_sp_reg_fixup($email) {
+	$author='';
+	if (array_key_exists('author',$_POST)) {
+		$author=$_POST['author'];
+	} else if (array_key_exists('user_name',$_POST)) {
+		$author=$_POST['user_name'];
+	}
+	remove_filter( 'is_email', 'kpg_stop_sp_reg_fixup' );
+	remove_filter( 'user_registration_email', 'kpg_stop_sp_reg_fixup' );
+	remove_filter( 'pre_user_email', 'kpg_stop_sp_reg_fixup' );
+	$author=sanitize_user($author);
+	
+	return kpg_stop_sp_reg_check_email($email,$author);
+}
+
+function kpg_stop_sp_reg_mpmu_sanitize($email, $emailb='', $mess='') {
 	if (empty($email)) return $email;
+	return(kpg_stop_sp_reg_fixup($email));
+}
+
+
+/************************************************************
+* 	kpg_stop_sp_reg_check_email()
+*	This is the generic email check so that it can be called
+*	from several different hooks
+*
+*************************************************************/
+function kpg_stop_sp_reg_check_email($email,$author='') {
+
+ 	if (empty($email)) return $email;
+	$email=trim($email);
+	$email=strip_tags($email);
+ 	if (empty($email)) return $email;
 	// this is the Stop Spammer Registrations functionality.
 	// email as the email to validate
 	
 	// only check in wp-comments-post.php or wp-login.php
 	
-	$author='';
-	if (array_key_exists('author',$_POST)) $author=$_POST['author'];
 	$sname='.'.$_SERVER["SCRIPT_NAME"];
 	$whodunnit='';
 	$apikey='';
-	if (
-		(!strpos($sname,'wp-comments-post.php')) && 
-		(!strpos($sname,'wp-login.php'))&& 
-		(!strpos($sname,'wp-signup.php'))&& 
-		(!strpos($sname,'xmlrpc.php'))&& 
-		(!strpos($sname,'ms.php'))&& 
-		(!strpos($sname,'edit-comments.php'))&&
-		(!strpos($sname,'comment'))&& // letting custom scripts with word comment, login or signup get checked
-		(!strpos($sname,'signup'))&&
-		(!strpos($sname,'login'))
+	sfs_errorsonoff();
+	// some plugins call is_email on every page and in admin. We'll ignore some of them
+	if (strpos($sname,'/wp-admin/')||
+		strpos($sname,'index.php')||
+		strpos($sname,'archive.php')||
+		strpos($sname,'archives.php')||
+		strpos($sname,'links.php')||
+		strpos($sname,'pages.php')||
+		strpos($sname,'seach.php')||
+		strpos($sname,'single.php')||
+		strpos($sname,'page.php')
 	) {
+		sfs_errorsonoff('off');
 		return $email;
 	}
 	// here we validate 
@@ -68,12 +103,11 @@ function kpg_stop_sp_reg_fixup($email) {
 	
 	*/
 	// get the options
-	$options=get_option('kpg_stop_sp_reg_options');
+	$options=kpg_sp_get_option();
 	if (empty($options)||!is_array($options)) $options=array();
 	// cache bad cases
 	$badips=array();
 	$badems=array();
-	$gdems=array();
 	$wlist=array();
 	$hist=array();
 	$honeyapi='';
@@ -81,51 +115,35 @@ function kpg_stop_sp_reg_fixup($email) {
 	$spcount=0;
 	$spmcount=0;
 	$accept='Y';
+	$nobuy='N';
 	$chkemail='Y';
 	
 	$sfsfreq=0;
-	$hnyfreq=0;
+	$hnyage=9999;
 	$botfreq=0;
 	$sfsage=9999;
-	$hnyage=9999;
+	$hnylevel=5;
 	$botage=9999;
-	if (array_key_exists('sfsfreq',$options)) $sfsfreq=$options['sfsfreq'];
-	if (array_key_exists('hnyfreq',$options)) $hnyfreq=$options['hnyfreq'];
-	if (array_key_exists('botfreq',$options)) $botfreq=$options['botfreq'];
-	if (array_key_exists('sfsage',$options)) $sfsage=$options['sfsage'];
-	if (array_key_exists('hnyage',$options)) $hnyage=$options['hnyage'];
-	if (array_key_exists('botage',$options)) $botage=$options['botage'];
-	
-	if (empty($sfsfreq)) $sfsfreq=0;
-	if (empty($hnyfreq)) $hnyfreq=0;
-	if (empty($botfreq)) $botfreq=0;
-	if (empty($sfsage)) $sfsage=9999;
-	if (empty($hnyage)) $hnyage=9999;
-	if (empty($botage)) $botage=9999;
-	
-	
-	if (array_key_exists('spcount',$options)) $spcount=$options['spcount'];
-	if (array_key_exists('spmcount',$options)) $spmcount=$options['spmcount'];
-	if (array_key_exists('accept',$options)) $accept=$options['accept'];
-	if (array_key_exists('gdems',$options)) { // no longer use this - get rid of it
-		unset($options['sphist']);
-		update_option('kpg_stop_sp_reg_options', $options);
+	$blog=1;
+	global $blog_id;
+	if (isset($blog_id)) {
+		$blog=$blog_id;
 	}
-	if (array_key_exists('badems',$options)) $badems=$options['badems'];
-	if (array_key_exists('badips',$options)) $badips=$options['badips'];
-	if (array_key_exists('gdems',$options)) $gdems=$options['gdems'];
-	if (array_key_exists('hist',$options)) $hist=$options['hist'];
-	if (array_key_exists('wlist',$options)) $wlist=$options['wlist'];
-	if (array_key_exists('honeyapi',$options)) $honeyapi=$options['honeyapi'];
-	if (array_key_exists('botscoutapi',$options)) $botscoutapi=$options['botscoutapi'];
-	if (array_key_exists('apikey',$options)) $apikey=$options['apikey'];
-	if (array_key_exists('chkemail',$options)) $chkemail=$options['chkemail'];
 	
-	if ($accept!='Y') $accept='N';
-	if ($chkemail!='Y') $chkemail='N';
+	// apply the options array
+	extract($options);
+	if (array_key_exists('sphist',$options)) { // no longer use this - get rid of it
+		unset($options['sphist']);
+		unset($sphist);
+		kpg_sp_update_option($options);
+	}
+	if (array_key_exists('gdems',$options)) { // no longer use this - get rid of it
+		unset($options['gdems']);
+		unset($gdems);
+		kpg_sp_update_option($options);
+	}
 	if (!is_array($badips)) $badips=array();
 	if (!is_array($badems)) $badems=array();
-	if (!is_array($gdems)) $gdems=array();
 	if (!is_array($hist)) $hist=array();
 	if (!is_array($wlist)) $wlist=array();
 	if (empty($honeyapi)) $honeyapi='';
@@ -134,34 +152,45 @@ function kpg_stop_sp_reg_fixup($email) {
 	
 	if (!is_numeric($spcount)) $spcount=0;
 	if (!is_numeric($spmcount)) $spmcount=0;
+	if ($nobuy!='Y') $nobuy='N';
 
 	// clean cache - get rid of older cache items. Need to recheck to see if they have appeared on stopfurumspam
 	$badems=kpg_clear_old_cache($badems);
 	$badips=kpg_clear_old_cache($badips);
-	$gdems=kpg_clear_old_cache($gdems);
-	while(count($hist)>30) {
+	while(count($hist)>25) {
 		array_shift($hist);
 	}
 	
 	// clean up history
 	$now=date('Y/m/d H:i:s');
-	// first check the ip address
 	$ip=$_SERVER['REMOTE_ADDR']; 
+	// cleanup the input that is breaking the serialize functions here (I hope)
 	
+	$em=sanitize_email(strip_tags($email));
+	$em=sanitize_text_field($em);
+	$em=remove_accents($em);
+	
+	$author=sanitize_text_field($author);
+	$author=remove_accents($author);
+	// think of other things that might kill the serialize functions
+	if (strlen($author)>32) $author=substr($author,0,29).'...';
 	// set up hist channel
-	$hist[$now]=array($ip,$email,$author,$sname,'begin');
+	$hist[$now]=array($ip,mysql_real_escape_string($em),mysql_real_escape_string($author),$sname,'begin',$blog);
 	$accept_head=false; 
 	if (array_key_exists('HTTP_ACCEPT',$_SERVER)) $accept_head=true; // real browsers send HTTP_ACCEPT
+	// first check the ip address
 	if (in_array($ip,$wlist)) {
 	    $hist[$now][4]='White List IP';
 		$options['hist']=$hist;
-		update_option('kpg_stop_sp_reg_options', $options);
+		kpg_sp_update_option($options);
+		sfs_errorsonoff('off');
 		return $email;
 	}
 	if (in_array($email,$wlist)) {
 	    $hist[$now][4]='White List EMAIL';
 		$options['hist']=$hist;
-		update_option('kpg_stop_sp_reg_options', $options);
+		kpg_sp_update_option($options);
+		sfs_errorsonoff('off');
 		return $email;
 	}
 
@@ -170,21 +199,22 @@ function kpg_stop_sp_reg_fixup($email) {
 	// check the data
 	$deny=false;
 	// build the check
-	$em=urlencode($email);
-	if (array_key_exists($em,$gdems)) {
-	    $hist[$now][4]='Passed email cache';
-		$options['hist']=$hist;
-		update_option('kpg_stop_sp_reg_options', $options);
-		return $email;
-	}
 	// check to see if the results have been cached
 	if (!$deny&&array_key_exists($em,$badems)) {
-		$badems[$em]=date("Y/m/d H:i:s");
+		$badems[mysql_real_escape_string($em)]=date("Y/m/d H:i:s");
+		$badips[$ip]=date("Y/m/d H:i:s");
 		$deny=true;
 		$whodunnit.='Cached bad email';
 	} 
+	if (strlen($email)>48) {
+		$badems[mysql_real_escape_string($em)]=date("Y/m/d H:i:s");
+		$deny=true;
+		$whodunnit.='email too long to be real';
+	}
+
 	if (!$deny&&array_key_exists($ip,$badips)) {
 		$badips[$ip]=date("Y/m/d H:i:s");
+		$badems[mysql_real_escape_string($em)]=date("Y/m/d H:i:s");
 		$whodunnit.='Cached bad ip';
 		$deny=true;
 	} 
@@ -201,6 +231,9 @@ function kpg_stop_sp_reg_fixup($email) {
 			$query=$query."&email=$email";
 		}
 		$check=kpg_stop_sp_reg_getafile($query);
+		if (substr($check,0,4)=="ERR:") {
+			$whodunnit.=$check.', ';
+		}
 		//kpg_logit(" '$query', '$check' \r\n"); // turn on only during debugging
 		$n=strpos($check,'<appears>yes</appears>');
 		if ($n) {
@@ -217,12 +250,11 @@ function kpg_stop_sp_reg_fixup($email) {
 			if (($j-$k)&&($j-$k)<7) $frequency=substr($check,$k,$j-$k); // should be a number greater than 0 and probably no more than a few thousand.
 			// have freqency and lastseen date - make these options in next release
 			// check freq and age
-
 			if (($frequency>=$sfsfreq) && (strtotime($lastseen)>(time()-(60*60*24*$sfsage))) )   { 
 			// frequency we got from the db, sfsfreq is the min we'll accept (default 0)
 			// sfsage is the age in days. we get lastscene from
 				$deny=true;
-				$whodunnit.="SFS hit, last=$lastseen, freq=$frequency;";
+				$whodunnit.="SFS, $lastseen, $frequency;";
 			}
 		} 
 	} 
@@ -238,9 +270,9 @@ function kpg_stop_sp_reg_fixup($email) {
 				// [2] is the threat level. 25 is recommended
 				// [1] is numbr of days since last report
 				//if ($result[2]>25&&$result[3]==4) { // 4 - comment spam, threat level 25 is average. 
-				if ($result[1]<180&&$result[2]>2&&$result[3]>=4) { // 4 - comment spam, threat level 25 is average. 
+				if ($result[1]<$hnyage&&$result[2]>$hnylevel&&$result[3]>=4) { // 4 - comment spam, threat level 25 is average. 
 					$deny=true;
-					$whodunnit.='HTTP:bl hit: Age:'.$result[1].', Threat Level:'.$result[2].', Threat Type '.$result[3];
+					$whodunnit.='HTTP:bl, '.$result[1].', '.$result[2].', '.$result[3];
 				} 
 			} 
 		}
@@ -249,13 +281,16 @@ function kpg_stop_sp_reg_fixup($email) {
 		// try the ip on botscoutapi
 	    $query="http://botscout.com/test/?ip=$ip&key=$botscoutapi";
 		$check=kpg_stop_sp_reg_getafile($query);
+		if (substr($check,0,4)=="ERR:") {
+			$whodunnit.=$check.', ';
+		}
 		if(strpos($check,'|')) {
 			$result=explode('|',$check);
 			if (count($result)>2) {
 				//  Y|IP|3 - found, type, database occurences
-				if ($result[0]=='Y'&&$result[2]>0) {
+				if ($result[0]=='Y'&&$result[2]>$botfreq) {
 					$deny=true;
-					$whodunnit.='BotScout# hits:'.$result[2];
+					$whodunnit.='BotScout, '.$result[2];
 				}
 			}
 		}
@@ -263,13 +298,9 @@ function kpg_stop_sp_reg_fixup($email) {
 	$hist[$now][4]=$whodunnit;
 	// it appears that there is no problem with this login record as a good login
 	if (!$deny) {
-		$gdems[$em]=date("Y/m/d H:i:s");
-		$options['badips']=$badips;
-		$options['badems']=$badems;
-		$options['badems']=$badems;
-		$options['gdems']=$gdems;
 		$options['hist']=$hist;
-		update_option('kpg_stop_sp_reg_options', $options);
+		kpg_sp_update_option($options);
+		sfs_errorsonoff('off');
 		return $email;
 	}
 	
@@ -287,39 +318,23 @@ function kpg_stop_sp_reg_fixup($email) {
 	$options['badips']=$badips;
 	$options['badems']=$badems;
 	$options['hist']=$hist;
-	update_option('kpg_stop_sp_reg_options', $options);
+	kpg_sp_update_option($options);
 	sleep(2); // sleep for a few seconds to annoy spammers and maybe delay next hit on stopforumspam.com
+	sfs_errorsonoff('off');
 	return false;
 }
 
 function kpg_clear_old_cache($cache) {
-	// the caches are an array that is limited to 60 users and 24 hours
+	// the caches are an array that is limited to 30 users and 24 hours
 	// it is int form of $cache[$key]=date;
 	// unfortunately I made it date("Y/m/d H:i:s");
 	// it was a mistake storing the string date in the array and someday I will fix it. But for now I need to 
 	// sort by the string. I will brute force it to integer to get it done
 	
-	foreach($cache as $key=>$value) {
-		$dt=$value;
-		if (is_array($value)) {
-			$dt=$value['date'];
-			$ip=$value['ip'];
-			$usrid=$value['usrid'];
-			$evidence=$value['evidence'];
-		}
-		$t=strtotime($dt);
-		$cache[$key]=$t;
-		if ($t<time()-24*60*60) {
-			unset($cache[$key]);
-		}
-	}
 	// sort the array by the time
 	arsort($cache);
-	while (count($cache)>60) {
+	while (count($cache)>25) {
 		array_shift($cache);	
-	}
-	foreach($cache as $key=>$value) {
-		$cache[$key]=date("Y/m/d H:i:s",$value);
 	}
 	return $cache;
 }
@@ -327,62 +342,75 @@ function kpg_clear_old_cache($cache) {
 
 function kpg_stop_sp_reg_control()  {
 // this is the display of information about the page.
+	sfs_errorsonoff();
 ?>
 <div class="wrap">
   <h2>Stop Spammers Plugin</h2>
 <?php
-	if (!ini_get('allow_url_fopen')) {
-		$oo=ini_get('allow_url_fopen');
-		//deactivate_plugins(basename(__FILE__)); // Deactivate ourself
-?>		
-	<h4>WARNING! This plugin may require that the PHP.INI has the line: &quot;allow_url_fopen = On&quot;.<br/>
-	If you have PHP5, create a php.ini file with this line:<blockquote>
-	<pre>allow_url_fopen = On</pre></blockquote>
-	and place that in the wp-admin folder and the root folder of your blog.</h4>
-<?php
-	} else {
-?>
-	<h4>The Stop Spammers Plugin is installed and working correctly.</h4>
-<?php
-	
-	}
-
-    $apikey='';
-    $honeyapi='';
-    $botscoutapi='';
-    $chkemail='Y';
-	$sfsfreq='0';
-	$hnyfreq='0';
-	$botfreq='0';
-	$sfsage=9999;
-	$hnyage=9999;
-	$botage=9999;
+	$options=kpg_sp_get_option();
+	if (empty($options)||!is_array($options)) $options=array();
+	// cache bad cases
+	$badips=array();
+	$badems=array();
 	$wlist=array();
+	$hist=array();
+	$honeyapi='';
+	$botscoutapi='';
+	$spcount=0;
+	$spmcount=0;
+	$accept='Y';
+	$nobuy='N';
+	$chkemail='Y';
+	$muswitch='N';
+	
+	$sfsfreq=0;
+	$hnyage=9999;
+	$botfreq=0;
+	$sfsage=9999;
+	$hnylevel=5;
+	$botage=9999;
+	
+	// apply the options array
+	extract($options);
+	if (array_key_exists('sphist',$options)) { // no longer use this - get rid of it
+		unset($options['sphist']);
+		unset($sphist);
+		kpg_sp_update_option($options);
+	}
+	if (array_key_exists('gdems',$options)) { // no longer use this - get rid of it
+		unset($options['gdems']);
+		unset($gdems);
+		kpg_sp_update_option($options);
+	}
+	if (!is_array($badips)) $badips=array();
+	if (!is_array($badems)) $badems=array();
+	if (!is_array($hist)) $hist=array();
+	if (!is_array($wlist)) $wlist=array();
+	if (empty($honeyapi)) $honeyapi='';
+	if (empty($botscoutapi)) $botscoutapi='';
+	if (empty($apikey)) $apikey='';
+	if (empty($muswitch)) $muswitch='N';
+	if ($muswitch!='Y') $muswitch='N';
+	if ($nobuy!='Y') $nobuy='N';
+
+	if (!is_numeric($spcount)) $spcount=0;
+	if (!is_numeric($spmcount)) $spmcount=0;
 	if(!current_user_can('manage_options')) {
 		die('Access Denied');
 	}
 	$nonce='';
 	if (array_key_exists('nonce',$_POST)) $nonce=$_POST['nonce'];
 
-	$options=get_option('kpg_stop_sp_reg_options');
-	if (empty($options)) $options=array();
-	if (!is_array($options)) $options=array();
-	$accept='Y';
 	
 	if (array_key_exists('kpg_stop_spammers_control',$_POST)
 			&&wp_verify_nonce($_POST['kpg_stop_spammers_control'],'kpgstopspam_update')) { 
-		if (array_key_exists('kpg_stop_clear_passed',$_POST)) {
-			// clear the cache
-			unset($options['gdems']);
-			update_option('kpg_stop_sp_reg_options', $options);
-			echo "<h2>Cache Cleared</h2>";
-		}
 		if (array_key_exists('kpg_stop_clear_cache',$_POST)) {
 			// clear the cache
 			unset($options['badips']);
 			unset($options['badems']);
-			unset($options['gdems']);
-			update_option('kpg_stop_sp_reg_options', $options);
+			kpg_sp_update_option($options);
+			$badems=array();
+			$badips=array();
 			echo "<h2>Cache Cleared</h2>";
 		}
 		if (array_key_exists('kpg_stop_clear_hist',$_POST)) {
@@ -390,7 +418,10 @@ function kpg_stop_sp_reg_control()  {
 			unset($options['sphist']);
 			unset($options['spcount']);
 			unset($options['hist']);
-			update_option('kpg_stop_sp_reg_options', $options);
+			$hist=array();
+			$sphist=array();
+			$spcount=0;
+			kpg_sp_update_option($options);
 			echo "<h2>History Cleared</h2>";
 		}
 		if (array_key_exists('action',$_POST)) {
@@ -405,12 +436,19 @@ function kpg_stop_sp_reg_control()  {
 				$chkemail='N';
 			}
 			$options['chkemail']=$chkemail;
+			if (array_key_exists('nobuy',$_POST)) {
+				$nobuy=stripslashes($_POST['nobuy']);
+			} else {
+				$nobuy='N';
+			}
+			if ($nobuy!='Y') $nobuy='N';
 			if (array_key_exists('accept',$_POST)) {
 				$accept=stripslashes($_POST['accept']);
 			} else {
 				$accept='N';
 			}
 			$options['accept']=$accept;
+			$options['nobuy']=$nobuy;
 			if (array_key_exists('apikey',$_POST)) $apikey=stripslashes($_POST['apikey']);
 			$options['apikey']=$apikey;
 			if (array_key_exists('honeyapi',$_POST)) $honeyapi=stripslashes($_POST['honeyapi']);
@@ -428,78 +466,152 @@ function kpg_stop_sp_reg_control()  {
 				}	
 			}
 			// update the freq and age options
-			if (array_key_exists('sfsfreq',$_POST)) $sfsfreq=stripslashes($_POST['sfsfreq']);
-			if (array_key_exists('hnyfreq',$_POST)) $hnyfreq=stripslashes($_POST['hnyfreq']);
-			if (array_key_exists('botfreq',$_POST)) $sfsfreq=stripslashes($_POST['botfreq']);
-			if (array_key_exists('sfsage',$_POST)) $sfsage=stripslashes($_POST['sfsage']);
-			if (array_key_exists('hnyage',$_POST)) $hnyage=stripslashes($_POST['hnyage']);
-			if (array_key_exists('botage',$_POST)) $botage=stripslashes($_POST['botage']);
+			if (array_key_exists('sfsfreq',$_POST)) $sfsfreq=trim(stripslashes($_POST['sfsfreq']));
+			if (array_key_exists('hnyage',$_POST)) $hnyage=trim(stripslashes($_POST['hnyage']));
+			if (array_key_exists('botfreq',$_POST)) $botfreq=trim(stripslashes($_POST['botfreq']));
+			if (array_key_exists('sfsage',$_POST)) $sfsage=trim(stripslashes($_POST['sfsage']));
+			if (array_key_exists('hnylevel',$_POST)) $hnylevel=trim(stripslashes($_POST['hnylevel']));
+			if (array_key_exists('botage',$_POST)) $botage=trim(stripslashes($_POST['botage']));
+			if (array_key_exists('muswitch',$_POST)) $muswitch=trim(stripslashes($_POST['muswitch']));
+			// check for numerics in the fields
+			if (!is_numeric($sfsfreq)) $sfsfreq=0; 
+			if (!is_numeric($hnyage)) $hnyage=0;
+			if (!is_numeric($botfreq)) $botfreq=0; 
+			if (!is_numeric($hnylevel)) $hnylevel=5;
+			if (!is_numeric($botage)) $botage=9999; 
+			if (!is_numeric($sfsage)) $sfsage=9999;	
 			$options['sfsfreq']=$sfsfreq;
-			$options['hnyfreq']=$hnyfreq;
+			$options['hnyage']=$hnyage;
 			$options['botfreq']=$botfreq;
 			$options['sfsage']=$sfsage;
-			$options['hnyage']=$hnyage;
+			$options['hnylevel']=$hnylevel;
 			$options['botage']=$botage;
+			if (empty($muswitch)) $muswitch='N';
+			if ($muswitch!='Y') $muswitch='N';
+			$options['muswitch']=$muswitch;
 			
 			
-			update_option('kpg_stop_sp_reg_options',$options);
+			kpg_sp_update_option($options);
 			echo "<h2>Options Updated</h2>";
 		}
-		
+		extract($options);
 	}
-
-	if (array_key_exists('accept',$options)) $accept=$options['accept'];
-	if ($accept!='Y') $accept='N';
-	if (array_key_exists('apikey',$options)) $apikey=$options['apikey'];
-	if (array_key_exists('honeyapi',$options)) $honeyapi=$options['honeyapi'];
-	if (array_key_exists('botscoutapi',$options)) $botscoutapi=$options['botscoutapi'];
-	if (array_key_exists('wlist',$options)) $wlist=$options['wlist'];
-	
-	if (array_key_exists('sfsfreq',$options)) $sfsfreq=$options['sfsfreq'];
-	if (array_key_exists('hnyfreq',$options)) $hnyfreq=$options['hnyfreq'];
-	if (array_key_exists('botfreq',$options)) $botfreq=$options['botfreq'];
-	if (array_key_exists('sfsage',$options)) $sfsage=$options['sfsage'];
-	if (array_key_exists('hnyage',$options)) $hnyage=$options['hnyage'];
-	if (array_key_exists('botage',$options)) $botage=$options['botage'];
-	
-	if (empty($sfsfreq)) $sfsfreq=0;
-	if (empty($hnyfreq)) $hnyfreq=0;
-	if (empty($botfreq)) $botfreq=0;
-	if (empty($sfsage)) $sfsage=9999;
-	if (empty($hnyage)) $hnyage=9999;
-	if (empty($botage)) $botage=9999;
-	
-    $nonce=wp_create_nonce('kpgstopspam_update');
-
+	if (function_exists('is_multisite') && is_multisite()) {
+		global $blog_id;
+		if (!isset($blog_id)||$blog_id!=1) {
+			if ($muswitch=='Y') {
+				?>
+  <h3>Stop Spammers is configured so that settings are available only on the Main Blog.</h3>
+				<?php
+				return;
+			}		
+		}
+	}
+   $nonce=wp_create_nonce('kpgstopspam_update');
+	if ($spmcount>0) {
 ?>
-  <p>This plugin Uses the Stop Forum Spam DB to prevent spammers from registering or making comments.</p>
-  <p>Watch the video! <a href="http://www.youtube.com/watch?v=EKrUX0hHAx8" target="_blank">http://www.youtube.com/watch?v=EKrUX0hHAx8</a>. The video shows one of my plugins that anti-spam cops use. They run honey pots or sites that do nothing but attract spammers. These sites report as many as 500 spammers per hour to the same database that this plugin checks.</p>
-  <p>The plugin is on when it is installed and enabled. To turn it off just disable the plugin from the plugin menu.. </p>
-  <p>If a registration or comment is rejected because of a hit on the StopForumSpam.com db, this plugin saves the email and IP. If you test the plugin using spammer credentials, it will remember that your IP address was associated with the spammer&apos;s email and deny future registrations and comments from your IP. If you feel compelled to test the plugin, you may lock yourself out of comments and the registration form. If you do get into a problem where you have cached a valid IP, click the &quot;Clear the Cache&quot; button.</p>
-  <p>The plugin also caches good emails, so if a spammer is unknown to StopForumSpam.com it will be entered into the good guys cache. Cached results are kept for 24 hours and then deleted.</p>
-  <p>Since the plugin caches the IP address used by a spammer, it is possible for the plugin to reject possible comments from a legitimate user who just happens to come from an ISP who tolerates spammers.</p>
-  <p>The plugin will optionally stop spammers who do not send the HTTP_ACCEPT header from the browser. Since all normal browsers use this header, it is safe to assume that anyone who does not send it is hitting you with a robot.</p>
-  <p>Note: StopForumSpam.com limits checks to 5,000 per day for each IP so the plugin may stop validating on very busy sites. I have not seen this happen, yet. Results are cached in order to thwart repeated attempts. You may see your own email in the cache as spammers try to use it to leave comments. You may have to clear the cache to use your own email in a comment if that is the case.</p>
-  <p>
+  <h3>Stop Spammers has stopped <?php echo $spmcount; ?> spammers since installation</h3>
+<?php 
+	} 
+	$num_comm = wp_count_comments( );
+	$num = number_format_i18n($num_comm->spam);
+	if ($num_comm->spam>0) {	
+?>
+  <p>There are <a href='edit-comments.php?comment_status=spam'><?php echo $num; ?></a> spam comments waiting for you to report them</p>
+<?php 
+	}
+?>
+  	<p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
+<p>This plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments.
+</p>
+
+<p>The Stop Spammer Registrations plugin works by checking the IP address, email and user id of anyone who tries to register, login, or leave a comment. This effectively blocks spammers who try to register on blogs or leave spam. It checks a users credentials against up to three databases: <a href="http://www.stopforumspam.com/">Stop Forum Spam</a>, <a href="http://www.projecthoneypot.org/">Project Honeypot</a>, and <a href="http://www.botscout.com/">BotScout</a>. In order to use the Project HoneyPot or BotScout spam databases you will need to register at those sites and get a free API key. Stop Forum Spam does not require a key so this plugin will work immediately without a key. The API key for Stop Forum Spam is only used for reporting spam.</p>
+<p>
+The Stop Spammer Registrations plugin keeps track of the last 25 spammer emails and IP addresses in a cache to avoid pinging databases more often than necessary. The results of the last 25 checks are saved and displayed. </p><p>
+In case a user check results in a false positive on one of the spam databases there is a white list where email address or IP addresses can be entered. This will allow such users to register, login and comment on the bog.</p><p>
+Requirements: The plugin uses the WP_Http class to query the spam databases. Normally, if WordPress is working, then this class can access the databases. If, however, the system administrator has turned off the ability to open a url, then the plugin will not work. Sometimes placing a php.ini file in the blog&rsquo;s root directory with the line &ldquo;allow_url_fopen=On&rdquo; will solve this.</p>
+<?php
+	if ($nobuy=='N') {
+?>
+<div style="position:relative;float:right;width:40%;background-color:ivory;border:#333333 medium groove;padding-left:6px;">
+ <p>This plugin is free and I expect nothing in return. If you would like to support my programming, you can buy my book of short stories.</p><p>Some plugin authors ask for a donation. I ask you to spend a very small amount for something that you will enjoy. eBook versions for the Kindle and other book readers start at 99&cent;. The book is much better than you might think, and it has some very good science fiction writers saying some very nice things. <br/>
+ <a target="_blank" href="http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30page&linkCode=as2&camp=1789&creative=390957&creativeASIN=1456336584">Error Message Eyes: A Programmer's Guide to the Digital Soul</a></p>
+ <p>A link on your blog to one of my personal sites would also be appreciated.</p>
+ <p><a target="_blank" href="http://www.WestNyackHoney.com">West Nyack Honey</a> (I keep bees and sell the honey)<br />
+	<a target="_blank" href="http://www.cthreepo.com/blog">Wandering Blog </a> (My personal Blog) <br />
+	<a target="_blank" href="http://www.cthreepo.com">Resources for Science Fiction</a> (Writing Science Fiction) <br />
+	<a target="_blank" href="http://www.jt30.com">The JT30 Page</a> (Amplified Blues Harmonica) <br />
+	<a target="_blank" href="http://www.harpamps.com">Harp Amps</a> (Vacuum Tube Amplifiers for Blues) <br />
+	<a target="_blank" href="http://www.blogseye.com">Blog&apos;s Eye</a> (PHP coding) <br />
+	<a target="_blank" href="http://www.cthreepo.com/bees">Bee Progress Beekeeping Blog</a> (My adventures as a new beekeeper) </p>
+</div>
+<?php
+	}
+?>
+<p>The Stop Spammer Registrations plugin is ON when it is installed and enabled. To turn it off just disable the plugin from the plugin menu.. </p>
+<p>The Stop Spammer Registrations plugin keeps a count of the spammers that it has blocked and displays this on the WordPress dashboard. It also displays the last 25 hits on email or IP and it also shows a history of the last 25 times it has made a check, showing rejections, passing emails and errors. When there is data to display there will also be a button to clear out the data.</p>
+<p>The plugin will also reject registrations, comments and pings where the HTTP_ACCEPT header is missing. This header is present in all browsers and its absence indicates that a program, not a human, is attempting to leave spam.</p>
+<p>If you are running a networked WPMU system of blogs, you can optionally control this plugin from the control panel of the main blog. By checking the &ldquo;Networked ON&rdquo; radio button, the individual blogs will not see the options page. The API keyes will only have to entered in one place and the history will only appear in one place, making the plugin easier to use for administrating many blogs. The comments, however, still must be maintained from each blog. The Network buttons only appear if you have a Networked installation.</p>
+<p>The Stop Spammer Registrations plugin adds links to the Comment Moderation page to check a comment's credentials agains the spam databases. If you have entered the Stop Forum Spam API key you can also report the spammer to the SFS database. Please make sure that the comment is actually spam and not from some clueless commentor who likes to salt his comments with spammy links. (I find that comments that do not specifically reference the post are always spam.)</p>
+<p> StopForumSpam.com limits checks to 10,000 per day for each IP so the plugin may stop validating on very busy sites. I have not seen this happen, yet.</p>
+<p> You may see your own email in the cache as spammers try to use it to leave comments. You may have to white list your own email if that is the case, to keep the plugin from locking you out.</p>
+<p>Watch the <a href="http://www.youtube.com/watch?v=EKrUX0hHAx8" target="_blank">youtube spam trap video</a>! The video shows one of my plugins that anti-spam cops use. They run honey pots or sites that do nothing but attract spammers. These sites report as many as 500 spammers per hour to the same database that this plugin checks. </p>
+<hr/>
+<h4>For questions and support please check my website <a href="http://www.blogseye.com/i-make-plugins/stop-spammer-registrations-plugin/">BlogsEye.com</a>.</h4>
+ <p>
   <form method="post" action="">
     <input type="hidden" name="action" value="update" />
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
-    <p>Your StopForunSpam.com API Key:
+	<?php
+		if (function_exists('is_multisite') && is_multisite()) {
+	?>
+	<fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;"><legend>Network Blog Option</legend>
+    Select how you want to control options in a networked blog environment: <br />
+	  Networked ON:
+		  <input name="muswitch" type="radio" value='Y'  <?php if ($muswitch=='Y') echo "checked=\"true\""; ?> /> 
+		  | Networked OFF:
+		  <input name="muswitch" type="radio" value='N' <?php if ($muswitch!='Y') echo "checked=\"true\""; ?>  /> 
+	<br />
+    If you are running WPMU and want to control all options and logs through the main log admin panel, select on. 
+	</fieldset>
+	<br/>
+	<?php
+		}
+	?>
+	<fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;"><legend>API Keys</legend>
+   Your StopForunSpam.com API Key:
       <input size="32" name="apikey" type="text" value="<?php echo $apikey; ?>"/>
-      (optional)</p>
-    <p>Project Honeypot API Key:
+      (optional)
+    <br/>Project Honeypot API Key:
       <input size="32" name="honeyapi" type="text" value="<?php echo $honeyapi; ?>"/>
-      (For HTTP:bl blacklist lookup, if not blank)</p>
-    <p>BotScout API Key:
+      (For HTTP:bl blacklist lookup, if not blank)
+     <br/>BotScout API Key:
       <input size="32" name="botscoutapi" type="text" value="<?php echo $botscoutapi; ?>"/>
-      (For BotScout.com lookup, if not blank)</p>
-    <p>Block Spam missing the HTTP_ACCEPT header:
+      (For BotScout.com lookup, if not blank)
+	</fieldset>
+	<br/>
+	<fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;"><legend>Spam Limits</legend>
+	You can set the minimum settings to allow possible spammers to use your site. <br/>
+    <br/>
+    You may wish to forgive spammers with few incidents or no recent activity. I would recommend that to be on the safe side you should block users who appear on the spam database unless they specifically ask to be white listed. Allowed values are 0 to 9999. Only numbers are accepted.
+	<br />
+	<br/>
+	Deny spammers found on Stop Forum Span with more than 
+	<input size="3" name="sfsfreq" type="text" value="<?php echo $sfsfreq; ?>"/> incidents, and occuring less than <input size="4" name="sfsage" type="text" value="<?php echo $sfsage; ?>"/> days ago. 
+	<br/>
+	<br/>Deny spammers found on Project HoneyPot with incidents less than <input size="3" name="hnyage" type="text" value="<?php echo $hnyage; ?>"/> days ago, and with more than <input size="4" name="hnylevel" type="text" value="<?php echo $hnylevel; ?>"/> threat level. (25 threat level is average, threat level 5 is fairly low.) 
+	<br/>
+	<br/>Deny spammers found on BotScout with more than <input size="3" name="botfreq" type="text" value="<?php echo $botfreq; ?>"/> incidents. 
+	</fieldset>
+	<br/>
+	<fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;"><legend>Other Checks</legend>
+     Block Spam missing the HTTP_ACCEPT header:
       <input name="accept" type="checkbox" value="Y" <? if ($accept=='Y') echo  'checked="true"';?>/>
-      Blocks users who have incomplete headers. (optional)</p>
-   <p>Check email address in addition to IP at StopForumSpam:
+      Blocks users who have incomplete headers. (optional)
+    <br/><br/>Check email address in addition to IP at StopForumSpam:
       <input name="chkemail" type="checkbox" value="Y" <? if ($chkemail=='Y') echo  'checked="true"';?>/>
-      Most spammers use random, faked or other people's email. (optional)</p>
-	 <p>White List - put IP address or emails here that you don't want blocked. One email or IP to a line.<br/>
+      Most spammers use random, faked or other people's email. (optional)
+	  <br/><br/>White List - put IP address or emails here that you don't want blocked. One email or IP to a line.<br/>
 <textarea style="border:medium solid #66CCFF;" name="wlist" cols="40" rows="8"><?php 
     for ($k=0;$k<count($wlist);$k++) {
 		echo $wlist[$k]."\r\n";
@@ -507,62 +619,58 @@ function kpg_stop_sp_reg_control()  {
 	?>
 </textarea>	 
 	 </p>
-	 <p class="submit"><input class="button-primary" value="Save Changes" type="submit"></p>
+    </fieldset>
+	<br/>
+	<fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
+	<legend>Remove &quot;Buy The Book&quot;</legend> 
+		<input type="checkbox" name ="nobuy" value="Y" <?php if ($nobuy=='Y') echo 'checked="true"'; ?> > 
+		<?php 
+		if ($nobuy=='Y')  {
+			echo "Thanks";		
+		} else {
+		?>
+		Check if you are tired of seeing the <a target="_blank" href="http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30page&linkCode=as2&camp=1789&creative=390957&creativeASIN=1456336584">Buy Keith's Book</a> links. 
+	 <?php 
+		}
+	?>
+    </fieldset>
+	<br/>
+	<p class="submit"><input class="button-primary" value="Save Changes" type="submit"></p>
 
   </form>
-  <p>I have added a link on the WordPress comments maintenance so you can check a comment against the StopForumSpam.com database.</p>
-  <p>If you have a StopForumSpam.com API key you can report spam. You can easily get an API key after registering at <a href="http://www.StopForumSpam.com" target="_blank">StopForumSpam.com</a>.</p>
-  <p>When you include the Project Honeypot API key each user will be validated against the HTTP:bl blacklist. You can get an api key at <a href="http://www.projecthoneypot.org" target="_blank">http://www.projecthoneypot.org</a></p>
+  <p>&nbsp;</p>
+
+  
+  
   <?php
-	$badips=array();
-	$badems=array();
-	$gdems=array();
-	$hist=array();
-	$spcount=0;
-	$spmcount=0;
-	$options=get_option('kpg_stop_sp_reg_options');
-	if (empty($options)) $options=array();
-	if (!is_array($options)) $options=array();
-	
-	if (array_key_exists('spcount',$options)) $spcount=$options['spcount'];
-	if (!is_numeric($spcount)) $spcount=0;
-	if (array_key_exists('spmcount',$options)) $spmcount=$options['spmcount'];
-	if (!is_numeric($spmcount)) $spmcount=0;
-
-	if (array_key_exists('badems',$options)) $badems=$options['badems'];
-	if (array_key_exists('badips',$options)) $badips=$options['badips'];
-	if (array_key_exists('gdems',$options)) $gdems=$options['gdems'];
-	if (array_key_exists('hist',$options)) $hist=$options['hist'];
-	if (!is_array($badips)) $badips=array();
-	if (!is_array($badems)) $badems=array();
-	if (!is_array($gdems)) $gdems=array();
-	if (!is_array($hist)) $hist=array();
-
 	
 ?>
-  <p>Stop Spammers has stopped <?php echo $spmcount; ?> spammers since installation</p>
 <p><a href="#" onclick="window.location.href=window.location.href;return false;">Refresh</a></p>
 <?php
-	if (!empty($hist)) {
+	if (count($hist)==0 || $spcount==0) {
+		echo "<p>No Activity Recorded.</p>";
+	} else {
   ?>
   <hr/>
-  <h3>Recent Activity</h3>
+  <h3>Recent Activity (last 25)</h3>
   <form method="post" action="">
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <input type="hidden" name="kpg_stop_clear_hist" value="true" />
     <input value="Clear Recent Activity" type="submit">
   </form>
   </p>
-  <?php
-
-	if (empty($hist)) {
-		echo "<p>No Activity Recorded.</p>";
-	} else {
-	?><p>Recent History</p>
+		<p><?php echo $spcount; ?> spammers stopped since last reset</p>
 		<table style="background-color:#eeeeee;" cellspacing="2">
-		<tr style="background-color:ivory;"><td>date/time</td><td>email</td><td>IP</td><td>user id</td><td>script</td><td>reason</td></tr>
-	
-	<?php
+		<tr style="background-color:ivory;text-align:center;"><td>date/time</td><td>email</td><td>IP</td><td>user id</td><td>script</td><td>reason
+<?php
+	if (function_exists('is_multisite') && is_multisite()) {
+?>		
+		</td><td>blog</td>
+<?php
+}
+?>		
+		</tr>
+<?php
 		foreach($hist as $key=>$data) {
 			//$hist[$now]=array($ip,$email,$author,$sname,'begin');
 			$em=strip_tags(trim($data[1]));
@@ -572,77 +680,64 @@ function kpg_stop_sp_reg_control()  {
 			$id=strip_tags($data[3]);
 			if (empty($au)) $au='none';
 			$reason=$data[4];
+			$blog=1;
+			if (count($data)>5) $blog=$data[5];
+			if (empty($blog)) $blog=1;
 			if(empty($reason)) $reason="passed";
 			if (!empty($em)) {
 				echo "<tr style=\"background-color:white;\">
-					<td style=\"font-size:.8em;\">$dt</td>
-					<td style=\"font-size:.8em;\">$em</td>
-					<td style=\"font-size:.8em;\">$ip</td>
-					<td style=\"font-size:.8em;\">$au</td>
-					<td style=\"font-size:.8em;\">$id</td>
-					<td style=\"font-size:.8em;\">$reason</td>
-				</tr>";
+					<td style=\"font-size:.8em;padding:2px;\">$dt</td>
+					<td style=\"font-size:.8em;padding:2px;\">$em</td>
+					<td style=\"font-size:.8em;padding:2px;\">$ip</td>
+					<td style=\"font-size:.8em;padding:2px;\">$au</td>
+					<td style=\"font-size:.8em;padding:2px;\">$id</td>
+					<td style=\"font-size:.8em;padding:2px;\">$reason</td>";
+				if (function_exists('is_multisite') && is_multisite()) {
+				    $blogname=get_blog_option( $blog, 'blogname' );
+					$blogadmin=esc_url( get_admin_url($blog) );
+					echo "<td style=\"font-size:.8em;padding:2px;\" align=\"center\"><a href=\"$blogadmin/edit-comments.php?comment_status=spam\">$blogname</a></td>";
+				}
+				echo "</tr>";
 			}
 		}
 	?>
 		</table>
-	<?php
+<?php
 		
-	}	
-
-		
-	$badems=kpg_clear_old_cache($badems);
-	$badips=kpg_clear_old_cache($badips);
-	$gdems=kpg_clear_old_cache($gdems);
+	
    }
-   if (!(empty($badems)&&empty($badips)&&empty($gdems))) {
+   if (count($badems)==0&&count($badips)==0) {
 ?>
-  <h3>Cached Values (last 24 hours)</h3>
+ 	<p>Nothing in the cache.</p>
+  
+<?php
+   } else {
+?>
+  <h3>Cached Values (last 25)</h3>
   <table><tr><td>
   <form method="post" action="">
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <input type="hidden" name="kpg_stop_clear_cache" value="true" />
     <input value="Clear the Cache" type="submit">
   </form>
-  </td><td>
-  <form method="post" action="">
-    <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
-    <input type="hidden" name="kpg_stop_clear_passed" value="true" />
-    <input value="Clear the Passed Emails" type="submit">
-  </form>
   </td></tr></table>
   <table align="center" width="95%"  >
     <tr>
       <td width="35%" align="center">Rejected Emails</td>
       <td width="30%" align="center">Rejected IPs</td>
-      <td width="35%" align="center">Passed Emails</td>
     </tr>
     <tr>
-      <td  style="border: 1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
+      <td style="border:1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 		foreach ($badems as $key => $value) {
 			//echo "$key; Date: $value<br/>\r\n";
 			$key=urldecode($key);
 			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a><br/>";
 		}
 	?></td>
-      <td  style="border: 1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
+      <td  style="border:1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 		foreach ($badips as $key => $value) {
 			//echo "$key; Date: $value<br/>\r\n";
 			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a><br/>";
-		}
-	?></td>
-      <td  style="border: 1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
-		foreach ($gdems as $key => $value) {
-			//echo "$key; $value<br/>\r\n";
-			$dt=$value;
-			if (is_array($value)) {
-				$dt=$value['date'];
-				$ip=$value['ip'];
-				$usrid=$value['usrid'];
-				$evidence=$value['evidence'];
-			}
-			$key=urldecode($key);
-			echo "$key: $dt<br/>";
 		}
 	?></td>
     </tr>
@@ -652,32 +747,22 @@ function kpg_stop_sp_reg_control()  {
 	
 ?>
   <hr/>
-  <p>This plugin is free and I expect nothing in return. If you would like to support my programming, you can buy my book of short stories.<br/>
-    <a target="_blank" href="http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30page&linkCode=as2&camp=1789&creative=390957&creativeASIN=1456336584">Error Message Eyes: A Programmer's Guide to the Digital Soul</a></p>
-  <p>A link on your blog to one of my personal sites would be appreciated.</p>
-  <p><a target="_blank" href="http://www.WestNyackHoney.com">West Nyack Honey</a> (I keep bees and sell the honey)<br />
-    <a target="_blank" href="http://www.cthreepo.com/blog">Wandering Blog </a> (My personal Blog) <br />
-    <a target="_blank"  href="http://www.cthreepo.com">Resources for Science Fiction</a> (Writing Science Fiction) <br />
-    <a target="_blank"  href="http://www.jt30.com">The JT30 Page</a> (Amplified Blues Harmonica) <br />
-    <a target="_blank"  href="http://www.harpamps.com">Harp Amps</a> (Vacuum Tube Amplifiers for Blues) <br />
-    <a target="_blank"  href="http://www.blogseye.com">Blog&apos;s Eye</a> (PHP coding) <br />
-    <a target="_blank"  href="http://www.cthreepo.com/bees">Bee Progress Beekeeping Blog</a> (My adventures as a new beekeeper) </p>
 </div>
 <?php
+	sfs_errorsonoff('off');
+
 }
 function kpg_stop_sp_reg_check($actions,$comment) {
 	$email=urlencode($comment->comment_author_email);
 	$ip=$comment->comment_author_IP;
-	$action="<a title=\"Check Stop Forum Spam (SFS)\" target=\"_stopspam\" href=\"http://www.stopforumspam.com/search.php?q=$ip\">Check FSF</a> |
+	$action="<a title=\"Check Stop Forum Spam (SFS)\" target=\"_stopspam\" href=\"http://www.stopforumspam.com/search.php?q=$ip\">Check SFS</a> |
 	 <a title=\"Check Project HoneyPot\" target=\"_stopspam\" href=\"http://www.projecthoneypot.org/search_ip.php?ip=$ip\">Check proj HoneyPot</a>";
 	$actions['check_spam']=$action;
 	return $actions;
-
-
 }
 function kpg_stop_sp_reg_report($actions,$comment) {
 	// need to add a new action to the list
-	$options=get_option('kpg_stop_sp_reg_options');
+	$options=kpg_sp_get_option();
 	if (empty($options)) $options=array();
 	if (!is_array($options)) $options=array();
 	$apikey='';
@@ -686,8 +771,9 @@ function kpg_stop_sp_reg_report($actions,$comment) {
 	if (array_key_exists('honeyapi',$options)) $honeyapi=$options['honeyapi'];
 	$botscoutapi='';
 	if (array_key_exists('botscoutapi',$options)) $botscoutapi=$options['botscoutapi'];
-
+    
 	$email=urlencode($comment->comment_author_email);
+	if (empty($email)) return $actions;
 	$uname=urlencode($comment->comment_author);
 	$ip=$comment->comment_author_IP;
 	// code added as per Paul at sto Forum Spam
@@ -711,26 +797,83 @@ function kpg_stop_sp_reg_report($actions,$comment) {
 }
 
 
-
-
 function kpg_stop_sp_reg_init() {
-   add_options_page('Stop Spammers', 'Stop Spammers', 'manage_options',__FILE__,'kpg_stop_sp_reg_control');
+	// we need to find out if it is OK to add the init
+	if(!current_user_can('manage_options')) return;
+	
+	$options=kpg_sp_get_option();
+	if (empty($options)) $options=array();
+	if (!is_array($options)) $options=array();
+	$muswitch='Y';
+	if (array_key_exists('muswitch',$options)) $muswitch=$options['muswitch'];
+	
+	if (function_exists('is_multisite') && is_multisite()) {
+		add_action('mu_rightnow_end','kpg_sp_rightnow');
+	} 
+	global $blog_id;
+	if (!isset($blog_id)||$blog_id==1) {
+		add_options_page('Stop Spammers', 'Stop Spammers', 'manage_options',__FILE__,'kpg_stop_sp_reg_control');
+		add_filter('comment_row_actions','kpg_stop_sp_reg_check',1,2);	
+		add_filter('comment_row_actions','kpg_stop_sp_reg_report',1,2);	
+		add_action('rightnow_end', 'kpg_sp_rightnow');
+		add_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links', 10, 2 );
+
+		return;
+	}
+	if ($muswitch!='Y') return; // we are already not at blog 1 so if wpmu switch is Y get out and don't show options.
+	add_options_page('Stop Spammers', 'Stop Spammers', 'manage_options',__FILE__,'kpg_stop_sp_reg_control');
+	add_filter('comment_row_actions','kpg_stop_sp_reg_check',1,2);	
+	add_filter('comment_row_actions','kpg_stop_sp_reg_report',1,2);	
+	add_action('rightnow_end', 'kpg_sp_rightnow');
+	add_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links', 10, 2 );
+	
+	return;
+
 }
+// stolen from akismet
+function kpg_sp_plugin_action_links( $links, $file ) {
+	if ( basename($file) == basename(__FILE__))  {
+		$me=admin_url('options-general.php?page='.plugin_basename(__FILE__));
+		$links[] = "<a href=\"$me\">".__('Settings').'</a>';
+	}
+
+	return $links;
+}
+
+// stolen from cets
+
+function kpg_stop_sp_siteadmin_page(){
+ // don't restrict this to site admins, because it throws an error if non site admins go to the URL. Instead, control it wtih the site admin test at the next level
+	if (function_exists('is_network_admin')) {
+		//3.1+
+		add_submenu_page('settings.php', 'Stop Spammers', 'Stop Spammers', 'manage_sites', 'kpg_stop_sp_reg_control', 'kpg_stop_sp_reg_control');
+	} else {
+		//-3.1
+		add_submenu_page('ms-admin.php', 'Stop Spammers', 'Stop Spammers', 'manage_sites', 'kpg_stop_sp_reg_control', 'kpg_stop_sp_reg_control');
+	}
+ }
+if (function_exists('is_network_admin')) {
+	//3.1+
+	add_action('network_admin_menu', 'kpg_stop_sp_siteadmin_page');
+} else {
+	//-3.1
+	add_action('admin_menu', 'kpg_stop_sp_siteadmin_page');
+}
+
   
 function kpg_stop_sp_reg_uninstall() {
 	if(!current_user_can('manage_options')) {
 		die('Access Denied');
 	}
-	delete_option('kpg_stop_sp_reg_options'); 
+	kpg_sp_delete_option(); 
 	return;
 }  
 
 // hook the comment list with a "report Spam" filater
-add_filter('comment_row_actions','kpg_stop_sp_reg_check',1,2);	
-add_filter('comment_row_actions','kpg_stop_sp_reg_report',1,2);	
+	add_action('admin_menu', 'kpg_stop_sp_reg_init');
+	add_action('network_admin_menu', 'kpg_stop_sp_reg_init');
 
-add_filter('is_email','kpg_stop_sp_reg_fixup');	
-add_action('admin_menu', 'kpg_stop_sp_reg_init');
+
 if ( function_exists('register_uninstall_hook') ) {
 	register_uninstall_hook(__FILE__, 'kpg_stop_sp_reg_uninstall');
 }
@@ -744,9 +887,140 @@ function kpg_stop_sp_reg_getafile($f) {
 	$result = $request->request( $f );
 	// see if there is anything there
 	if (empty($result)) return '';
-	$ansa=$result['body']; 
-	return $ansa;
+	
+	if (is_array($result)) {
+		$ansa=$result['body']; 
+		return $ansa;
+	}
+	if (is_object($result) ) {
+		$ansa='ERR: '.$result->get_error_message();
+	}
+	return '';
 }
+
+/***********************************************************************
+*
+*  kpg_sp_get_option() and kpg_sp_update_option()
+*
+*	These are use to get and set options in WPMU 
+*	It may be that the admin doesn't want the users to see
+*   the options and stats
+*
+***********************************************************************/
+$kpg_sp_wpmu=''; // bad programing form, but I would like to avoid a db hit here
+function kpg_sp_get_option() {
+	global $kpg_sp_wpmu;
+	$op='kpg_stop_sp_reg_options';
+	if ($kpg_sp_wpmu=='N') {
+		return get_option($op);
+	}
+	if  ($kpg_sp_wpmu=='Y') {
+		switch_to_blog(1);
+		$ansa=get_option( $op );
+		if (empty($ansa)) $ansa=array();
+		if (!is_array($ansa)) $ansa=array();
+		restore_current_blog();
+		return $ansa;
+	}
+	// check to see if we are in an MU envoronment
+	if (function_exists('is_multisite') && is_multisite()) {
+		$kpg_sp_wpmu='Y';
+		switch_to_blog(1);
+		$ansa=get_option( $op );
+		if (empty($ansa)) $ansa=array();
+		if (!is_array($ansa)) $ansa=array();
+		// now we have to see if the mu option is set to 'Y'
+		$muswitch='N';
+		if (array_key_exists('muswitch',$ansa)) $muswitch=$ansa['muswitch'];
+		restore_current_blog();
+		if ($muswitch=='Y') return $ansa;
+	}
+	$kpg_sp_wpmu='N';
+	return get_option($op);
+}
+function kpg_sp_update_option($options) {
+	global $kpg_sp_wpmu;
+	$op='kpg_stop_sp_reg_options';
+	if ($kpg_sp_wpmu=='N') {
+		return update_option($op, $options);	
+	}
+	if  ($kpg_sp_wpmu=='Y') {
+		switch_to_blog(1);
+		$ansa=update_option($op, $options);
+		restore_current_blog();
+		return $ansa;
+	}
+	if (function_exists('is_multisite') && is_multisite()) {
+		$kpg_sp_wpmu='Y';
+		switch_to_blog(1);
+		// now we have to see if the mu option is set to 'Y'
+		$muswitch='N';
+		if (array_key_exists('muswitch',$options)) $muswitch=$options['muswitch'];
+		if ($muswitch=='Y') {
+			$ansa=update_option($op, $options);	
+			restore_current_blog();
+			return $ansa;
+		}
+		// if we are here we do not use the mast blog for data.
+		// but we have to update the master blog to tell it to use the local
+		$ansa=update_option($op, $options);	
+		restore_current_blog();
+		// go back and use the local blog
+	}
+	$kpg_sp_wpmu='N';
+	return update_option($op, $options);	
+}
+function kpg_sp_delete_option() {
+	global $kpg_sp_wpmu;
+	$op='kpg_stop_sp_reg_options';
+	// may leave some stray options around if the blog was not running wpmu aware for a while.
+	if ($kpg_sp_wpmu=='N') {
+		return delete_option($op);	
+	}
+	if  ($kpg_sp_wpmu=='Y') {
+		switch_to_blog(1);
+		$ansa=delete_option($op);
+		restore_current_blog();
+		return $ansa;
+	}
+	if (function_exists(is_multisite) && is_multisite()) {
+		$kpg_sp_wpmu='Y';
+		switch_to_blog(1);
+		$ansa=delete_option($op);	
+		restore_current_blog();
+		return $ansa;
+	}
+	$kpg_sp_wpmu='N';
+	return delete_option($op);	
+
+}
+// special request to add to "right now section of the admin page
+
+// WP 2.5+
+function kpg_sp_rightnow() {
+ 	$options=kpg_sp_get_option();
+	if (empty($options)) $options=array();
+	if (!is_array($options)) $options=array();
+	$spmcount=0;
+    if (array_key_exists('spmcount',$options)) $spmcount=$options['spmcount'];
+ 	if (!is_numeric($spmcount)) $spmcount=0;
+	$nobuy='N';
+	if (array_key_exists('nobuy',$options)) $nobuy=$options['nobuy'];
+    if ($nobuy!='Y') $nobuy='N'; 
+ 		$me=admin_url('options-general.php?page='.plugin_basename(__FILE__));
+   if ($spmcount>0) {
+    // steal the akismet stats css format 
+		// get the path to the plugin
+		echo "<p class='akismet-right-now'><a style=\"font-style:italic\" href=\"$me\">Stop Spammer Registrations</a> has prevented $spmcount spammers from registering or leaving comments.";
+		if ($nobuy=='N') echo "  <a style=\"font-style:italic\" href=\"http://www.blogseye.com/buy-the-book/\">Buy Keith Graham&apos;s Science Fiction Book</a>";
+		echo"</p>";
+	} else {
+		echo "<p class='akismet-right-now'><a style=\"font-style:italic\" href=\"$me\">Stop Spammer Registrations</a> has not stopped any spammers, yet.";
+		if ($nobuy=='N') echo "  <a style=\"font-style:italic\" href=\"http://www.blogseye.com/buy-the-book/\">Buy Keith Graham&apos;s Science Fiction Book</a>";
+		echo"</p>";
+	}
+}
+
 
 // used only during debugging - please ignore the man behind the curtain.
 /* function kpg_logit($line) {
@@ -757,4 +1031,51 @@ function kpg_stop_sp_reg_getafile($f) {
 
 }
 */
+
+// here are the debug functions
+// change the debug=false to debug=true to start debugging.
+// the plugin will drop a file sfs_debug_output.txt in the current directory (root, wp-admin, or network) 
+// directory must be writeable or plugin will crash.
+
+function sfs_errorsonoff($old=null) {
+	$debug=false;  // change to tru to debug
+	if (!$debug) return;
+	if (empty($old)) return set_error_handler("sfs_ErrorHandler");
+	restore_error_handler();
+}
+function sfs_ErrorHandler($errno, $errmsg, $filename, $linenum, $vars) {
+	// write the answers to the file
+	// we are only conserned with the errors and warnings, not the notices
+	//if ($errno!=E_USER_ERROR && $errno!=E_USER_WARNING) return false;
+	$serrno="";
+	if ((strpos($filename,'stop-spammer-registrations')<1)&&(strpos($filename,'options-general.php')<1)) return false;
+	switch ($errno) {
+		case E_ERROR: 
+			$serrno="Fatal run-time errors. These indicate errors that can not be recovered from, such as a memory allocation problem. Execution of the script is halted. ";
+			break;
+		case E_WARNING: 
+			$serrno="Run-time warnings (non-fatal errors). Execution of the script is not halted. ";
+			break;
+		case E_NOTICE: 
+			$serrno="Run-time notices. Indicate that the script encountered something that could indicate an error, but could also happen in the normal course of running a script. ";
+			break;
+		default;
+			$serrno="Unknown Error type $errno";
+	}
+ 
+	$msg="
+	Error number: $errno
+	Error type: $serrno
+	Error Msg: $errmsg
+	File name: $filename
+	Line Number: $linenum
+	---------------------
+	";
+	// write out the error
+	$f=fopen("sfs_debug_output.txt",'a');
+	fwrite($f,$msg);
+	fclose($f);
+	return false;
+}
+	
 ?>
