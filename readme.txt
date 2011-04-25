@@ -2,7 +2,7 @@
 Tags: spam, registration, spammers, MU
 Donate link: http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30page&linkCode=as2&camp=1789&creative=390957&creativeASIN=1456336584
 Requires at least: 2.8
-Tested up to: 3.0
+Tested up to: 3.1
 Contributors: Keith Graham
 Stable tag: 2.0
 
