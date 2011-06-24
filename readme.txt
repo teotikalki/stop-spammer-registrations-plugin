@@ -21,7 +21,7 @@ This plugin keeps track of a number spammer emails and IP addresses in a cache t
 
 In case a user results in a false positive on one of the spam databases there is a white list that can be entered of email address or IP addresses. This will allow such users to register, login and comment on the bog.
 
-Requirements: The plugin uses the WP_Http class to query the spam databases. Normally, if WordPress is working, then this class can access the databases. If, however, the system administrator has turned off the ability to open a url, then the plugin will not work. Sometimes placing a php.ini file in the blog’s root directory with the line “allow_url_fopen=On” will solve this.
+Requirements: The plugin uses the WP_Http class to query the spam databases. Normally, if WordPress is working, then this class can access the databases. If, however, the system administrator has turned off the ability to open a url, then the plugin will not work. Sometimes placing a php.ini file in the blog's root directory with the line "allow_url_fopen=On" will solve this.
 
 The plugin is ON when it is installed and enabled. To turn it off just disable the plugin from the plugin menu..
 
@@ -29,7 +29,7 @@ The plugin keeps a count of the spammers that it has blocked and displays this o
 
 The plugin will also reject registrations, comments and pings where the HTTP_ACCEPT header is missing. This header is present in all browsers and its absence indicates that a program, not a human, is attempting to leave spam.
 
-If you are running a networked WPMU system of blogs, you can optionally control this plugin from the control panel of the main blog. By checking the “Networked ON” radio button, the individual blogs will not see the options page. The API keyes will only have to entered in one place and the history will only appear in one place, making the plugin easier to use for administrating many blogs. The comments, however, still must be maintained from each blog. The Network buttons only appear if you have a Networked installation.
+If you are running a networked WPMU system of blogs, you can optionally control this plugin from the control panel of the main blog. By checking the "Networked ON" radio button, the individual blogs will not see the options page. The API keyes will only have to entered in one place and the history will only appear in one place, making the plugin easier to use for administrating many blogs. The comments, however, still must be maintained from each blog. The Network buttons only appear if you have a Networked installation.
 
 The plugin adds links to the Comment Moderation page to check a comment's credentials agains the spam databases. If you have entered the Stop Forum Spam API key you can also report the spammer to the SFS database. Please make sure that the comment is actually spam and not from some clueless commentor who likes to salt his comments with spammy links. (I find that comments that do not specifically reference the post are always spam. "Nice Blog" comments I tend to report immediately.)
 
