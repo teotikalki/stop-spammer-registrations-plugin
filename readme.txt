@@ -113,6 +113,6 @@ Fixed the way the cache is sorted. Added DNSBL support for spamhaus, dsbl, sorbs
 
 == Support ==
 This plugin is free and I expect nothing in return. Please rate the plugin at http://wordpress.org/extend/plugins/stop-spammer-registrations-plugin/. 
-If you wish to support my programming, please buy my Science Fiction book. THe Kindle version is less thana buck. 
+If you wish to support my programming, please buy my Science Fiction book. The Kindle version is less thana buck. 
 <a href="http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30page&linkCode=as2&camp=1789&creative=390957&creativeASIN=1456336584">Error Message Eyes: A Programmer's Guide to the Digital Soul</a>
 
