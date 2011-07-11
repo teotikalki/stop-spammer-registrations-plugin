@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: This plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments.
-Version: 2.10
+Version: 2.20
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -129,7 +129,8 @@ function kpg_stop_sp_reg_check_email($email,$author='') {
 	if (isset($blog_id)) {
 		$blog=$blog_id;
 	}
-	
+	$ip=$_SERVER['REMOTE_ADDR']; 
+
 	// apply the options array
 	extract($stats);
 	extract($options);
@@ -197,19 +198,57 @@ function kpg_stop_sp_reg_check_email($email,$author='') {
 	while(count($hist)>$kpg_sp_hist) {
 		array_shift($hist);
 	}
+	/*
+		check x forwarded if the local address is one of the non-routable ip addresses.
+		example: X-FORWARDED-FOR: 129.78.138.66, 129.78.64.103
+		
+		check for 10.
+		172.16. - 172.31. (less than 172.32.
+		192.168.
+		
+		note: the x-forwarded-for header is not required and it can be easily spoofed.
+		
+		I cannot test this. Please report if broken.
+	*/
+	if (substr($ip,0,3)=='10.' ||
+		substr($ip,0,8)=='192.168.' ||
+		(substr($ip,0,7)>='172.16.' && substr($ip,0,7)<='172.31.')
+	) {
+		// see if there is a forwarded header
+		if (function_exists('get_headers')) {
+			$hlist=get_headers();
+			// ucase 
+			$ip='';
+			foreach ($hlist as $key => $value) {
+				if (substr(strtoupper($key),0,strlen('X-FORWARDED-FOR'))=='X-FORWARDED-FOR') {
+					// hit on the forwarded ip
+					if (strpos($data,',')>0) {
+						$ips=explode(',',$data);
+					} else {
+						$ips=array($data);
+					}
+					$ip=trim($ips[count($ips)-1]); // gets the last ip - most likely to be spoofed, perhaps the first ip would be better?
+					break;
+				}
+			}
+			if (empty($ip)) return $email;
+		}  else {
+			return $email; // can't process ip for local host or private networks?
+		}
+	}
 	
 	// clean up history
 	$now=date('Y/m/d H:i:s');
-	$ip=$_SERVER['REMOTE_ADDR']; 
 	// cleanup the input that is breaking the serialize functions here (I hope)
-	
 	$em=sanitize_email(strip_tags($email));
 	$em=sanitize_text_field($em);
 	$em=remove_accents($em);
 	$em=utf8_decode($em);
+	$em=really_clean($em);
 	$author=sanitize_text_field($author);
 	$author=remove_accents($author);
 	$author=utf8_decode($author);
+	$author=really_clean($author);
 	// think of other things that might kill the serialize functions
 	if (strlen($author)>32) $author=substr($author,0,29).'...';
 	if (strlen($em)>80) $em=substr($em,0,80).'...';
@@ -225,7 +264,7 @@ function kpg_stop_sp_reg_check_email($email,$author='') {
 		sfs_errorsonoff('off');
 		return $email;
 	}
-	if (in_array($email,$wlist)) {
+	if (in_array($em,$wlist)) {
 	    $hist[$now][4]='White List EMAIL';
 		$stats['hist']=$hist;
 		kpg_sp_update_option($stats,'kpg_stop_sp_reg_stats');
@@ -244,7 +283,7 @@ function kpg_stop_sp_reg_check_email($email,$author='') {
 		$deny=true;
 		$whodunnit.='Cached bad email';
 	} 
-	if (strlen($email)>48) {
+	if (strlen($em)>64) {
 		$badems[mysql_real_escape_string($em)]=date("Y/m/d H:i:s");
 		$deny=true;
 		$whodunnit.='email too long to be real';
@@ -266,7 +305,7 @@ function kpg_stop_sp_reg_check_email($email,$author='') {
 	if (!$deny) {
 		$query="http://www.stopforumspam.com/api?ip=$ip";
 		if ($chkemail=='Y') {
-			$query=$query."&email=$email";
+			$query=$query."&email=$em";
 		}
 		$check=kpg_stop_sp_reg_getafile($query);
 		if (substr($check,0,4)=="ERR:") {
@@ -388,7 +427,21 @@ function kpg_stop_sp_reg_check_email($email,$author='') {
 	sleep(2); // sleep for a few seconds to annoy spammers and maybe delay next hit on stopforumspam.com
 	return false;
 }
-
+// still getting errors from bad data. I am now stripping all but ascii characters from 32 to 126
+// email and user ideas are now plain 7 bit ascii as our founding fathers intended.
+// there has to be a built-in php function to do this, but I did not find it. 
+// There is an MB_ convert, but it did not work on all of my php hosts, so I think it may not be part of a standard install
+function really_clean($s) {
+	// try to get all non 7-bit things out of the string
+	if (empty($s)) return $s;
+	$ss=array_slice(unpack("c*", "\0".$s), 1);
+	if (empty($ss)) return $s;
+	$s='';
+	for ($j=0;$j<count($ss);$j++) {
+		if ($ss[$j]<127&&$ss[$j]>31) $s.=pack('C',$ss[$j]);
+	}
+	return $s;
+}
 function kpg_check_all_dnsbl($ip) {
  	// just for the heck of it, I found a bunch of blacklist sites
 	// these use the dns returns but don't need an api key as far as I know
@@ -757,7 +810,7 @@ Requirements: The plugin uses the WP_Http class to query the spam databases. Nor
 	<br />
 	<br/>
 	Deny spammers found on Stop Forum Span with more than 
-	<input size="3" name="sfsfreq" type="text" value="<?php echo $sfsfreq; ?>"/> incidents, and occuring less than <input size="4" name="sfsage" type="text" value="<?php echo $sfsage; ?>"/> days ago. 
+	<input size="3" name="sfsfreq" type="text" value="<?php echo $sfsfreq; ?>"/> incidents, and occurring less than <input size="4" name="sfsage" type="text" value="<?php echo $sfsage; ?>"/> days ago. 
 	<br/>
 	<br/>Deny spammers found on Project HoneyPot with incidents less than <input size="3" name="hnyage" type="text" value="<?php echo $hnyage; ?>"/> days ago, and with more than <input size="4" name="hnylevel" type="text" value="<?php echo $hnylevel; ?>"/> threat level. (25 threat level is average, threat level 5 is fairly low.) 
 	<br/>
@@ -887,17 +940,19 @@ Requirements: The plugin uses the WP_Http class to query the spam databases. Nor
 				if (function_exists('is_multisite') && is_multisite()) {
 					// switch to blog and back
 					switch_to_blog($blog);
-					restore_current_blog();
 					$num_comm = wp_count_comments( );
-					$num = number_format_i18n($num_comm->spam);
+					restore_current_blog();
+					$snum = number_format_i18n($num_comm->spam);
+					$mnum = number_format_i18n($num_comm->moderated );
+					$anum = number_format_i18n($num_comm->total_comments);
+
 				    $blogname=get_blog_option( $blog, 'blogname' );
 					$blogadmin=esc_url( get_admin_url($blog) );
+					if (substr($blogadmin,strlen($blogadmin)-1)=='/') $blogadmin=substr($blogadmin,0,strlen($blogadmin)-1);
 					echo "<td style=\"font-size:.8em;padding:2px;\" align=\"center\">";
-					if ($num_comm->spam>0) {	
-						echo "<a href=\"$blogadmin/edit-comments.php?comment_status=spam\">$blogname ($num)</a>";
-					} else {
-						echo "$blogname";
-					}
+					echo "$blogname: c<a href=\"$blogadmin/edit-comments.php/\">($anum)</a>,&nbsp; 
+					p<a href=\"$blogadmin/edit-comments.php?comment_status=moderated\">($mnum)</a>,&nbsp; 
+					s<a href=\"$blogadmin/edit-comments.php?comment_status=spam\">($snum)</a>";
 					echo "</td>";
 				}
 				echo "</tr>";
@@ -950,11 +1005,66 @@ Requirements: The plugin uses the WP_Http class to query the spam databases. Nor
 	
 ?>
   <hr/>
+  <?php
+	if (function_exists('is_multisite')&&is_multisite()) {
+		echo"<h3>Multisite Maintenance - Blogs with Spam</h3>";
+		$blogs=kpg_get_sp_blog_list();
+		if (!empty($blogs)) {
+		    echo "<table style=\"background-color:#eeeeee;\" cellspacing=\"2\" width=\"90%\">";
+			echo "<tr style=\"background-color:ivory;text-align:center;\">
+			<td>Blog</td><td>Comments</td><td>Pending</td><td>Spam</td></tr>";
+			$nn=0;
+			foreach ( (array) $blogs as $key=>$details ) {
+				$blog=$details['blog_id'];
+				// get the blog info for this blog
+				$bname=get_blog_option($blog, 'blogname', 'unknown');
+				$bdesc=get_blog_option($blog, 'blogdescription', 'unknown');
+				$siteurl=esc_url(get_blog_option($blog, 'siteurl', 'unknown'));
+				$blogadmin=esc_url(get_admin_url($blog));
+				if (substr($blogadmin,strlen($blogadmin)-1)=='/') $blogadmin=substr($blogadmin,0,strlen($blogadmin)-1);
+				switch_to_blog($blog);
+				$num_comm = wp_count_comments( );
+				restore_current_blog();
+				$snum = number_format_i18n($num_comm->spam);
+				$mnum = number_format_i18n($num_comm->moderated );
+				$anum = number_format_i18n($num_comm->total_comments);
+				if ($snum>0||$mnum>0) {
+					echo "<tr style=\"background-color:white;\">";
+					echo "<td><a href='$blogadmin/index.php'>$bname</a>:  
+					$bdesc<br/>
+					<a href='$siteurl'>$siteurl</a></td>";
+					echo "<td align=\"center\"><a href=\"$blogadmin/edit-comments.php\"> $anum </a></td>";
+					echo "<td align=\"center\"><a href=\"$blogadmin/edit-comments.php?comment_status=moderated\"> $mnum </a></td>";
+					echo "<td align=\"center\"><a href=\"$blogadmin/edit-comments.php?comment_status=spam\"> $snum </a></td>";
+					echo "</tr>";
+					$nn++;
+				}
+			}
+			if ($nn==0) {
+				echo "<tr style=\"background-color:white;\">";
+				echo "<td colspan='4' align='center'>No blogs have comments waiting for moderation or spam</td>";
+				echo "</tr>";
+			}
+		    echo "</table>";
+		}
+	}
+  ?>
 </div>
 <?php
 	sfs_errorsonoff('off');
 
 }
+function kpg_get_sp_blog_list($orderby='blog_id' ) {
+	global $wpdb;
+	$sql="SELECT blog_id FROM $wpdb->blogs WHERE  public = '1' AND archived = '0' AND mature = '0' AND spam = '0' AND deleted = '0' ORDER BY $orderby";
+	
+	$blogs = $wpdb->get_results($sql, ARRAY_A );
+	if (empty($blogs)) {
+		return array();
+	}
+	return $blogs;
+}
+
 function kpg_stop_sp_reg_check($actions,$comment) {
 	$email=urlencode($comment->comment_author_email);
 	$ip=$comment->comment_author_IP;
@@ -976,7 +1086,11 @@ function kpg_stop_sp_reg_report($actions,$comment) {
 	if (array_key_exists('botscoutapi',$options)) $botscoutapi=$options['botscoutapi'];
     
 	$email=urlencode($comment->comment_author_email);
-	if (empty($email)) return $actions;
+	$exst='';
+	if (empty($email)){
+		$email='no_valid_email@em.em';
+		$exst=' style="color:magenta;" ';
+	}
 	$uname=urlencode($comment->comment_author);
 	$ip=$comment->comment_author_IP;
 	// code added as per Paul at sto Forum Spam
@@ -993,7 +1107,7 @@ function kpg_stop_sp_reg_report($actions,$comment) {
     if (is_array($urls2)) $evidence.="\r\n".implode("\r\n",$urls2);	
 	
 	$evidence=urlencode(trim($evidence,"\r\n"));
-	$action="<a title=\"Report to Stop Forum Spam (SFS)\"target=\"_stopspam\" href=\"http://www.stopforumspam.com/add?username=$uname&email=$email&ip_addr=$ip&evidence=$evidence&api_key=$apikey\">Report to SFS</a>";
+	$action="<a $exst title=\"Report to Stop Forum Spam (SFS)\"target=\"_stopspam\" href=\"http://www.stopforumspam.com/add?username=$uname&email=$email&ip_addr=$ip&evidence=$evidence&api_key=$apikey\">Report to SFS</a>";
 	$actions['report_spam']=$action;
 	return $actions;
 
@@ -1006,6 +1120,15 @@ function kpg_stop_sp_reg_init() {
 	if (function_exists('is_multisite') && is_multisite()) {
 		add_action('mu_rightnow_end','kpg_sp_rightnow');
 	} 
+	if (current_user_can( 'manage_network' )) {
+		add_options_page('Stop Spammers', 'Stop Spammers', 'manage_options',__FILE__,'kpg_stop_sp_reg_control');
+		add_filter('comment_row_actions','kpg_stop_sp_reg_check',1,2);	
+		add_filter('comment_row_actions','kpg_stop_sp_reg_report',1,2);	
+		add_action('rightnow_end', 'kpg_sp_rightnow');
+		add_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links', 10, 2 );
+		return;
+	}
+
 	global $blog_id;
 	if (!isset($blog_id)||$blog_id==1) {
 		add_options_page('Stop Spammers', 'Stop Spammers', 'manage_options',__FILE__,'kpg_stop_sp_reg_control');
@@ -1016,8 +1139,10 @@ function kpg_stop_sp_reg_init() {
 
 		return;
 	}
+	
+	
 	$muswitch=get_sp_mu_option();
-	if ($muswitch=='Y') return; // we are already not at blog 1 so if wpmu switch is Y get out and don't show options.
+	if (!current_user_can( 'manage_network' )&& $muswitch=='Y') return; // we are already not at blog 1 so if wpmu switch is Y get out and don't show options.
 	add_options_page('Stop Spammers', 'Stop Spammers', 'manage_options',__FILE__,'kpg_stop_sp_reg_control');
 	add_filter('comment_row_actions','kpg_stop_sp_reg_check',1,2);	
 	add_filter('comment_row_actions','kpg_stop_sp_reg_report',1,2);	
@@ -1207,12 +1332,12 @@ function kpg_sp_delete_option($op) {
 function kpg_sp_rightnow() {
  	$options=kpg_sp_get_option('kpg_stop_sp_reg_options');
 	if (empty($options)) $options=array();
- 	$stats=kpg_sp_get_option('kpg_stop_sp_reg_stats');
+	$stats=kpg_sp_get_option('kpg_stop_sp_reg_stats');
 	if (empty($stats)) $stats=array();
 	if (!is_array($options)) $options=array();
 	if (!is_array($stats)) $stats=array();
 	$spmcount=0;
-    if (array_key_exists('spmcount',$options)) $spmcount=$stats['spmcount'];
+    if (array_key_exists('spmcount',$stats)) $spmcount=$stats['spmcount'];
  	if (!is_numeric($spmcount)) $spmcount=0;
 	$nobuy='N';
 	if (array_key_exists('nobuy',$options)) $nobuy=$options['nobuy'];

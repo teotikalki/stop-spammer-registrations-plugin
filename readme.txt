@@ -4,7 +4,7 @@ Donate link: http://www.amazon.com/gp/product/1456336584?ie=UTF8&tag=thenewjt30p
 Requires at least: 2.8
 Tested up to: 3.2
 Contributors: Keith Graham
-Stable tag: 2.10
+Stable tag: 2.20
 
 The Stop Spammer Registrations Plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments.
 
@@ -110,6 +110,9 @@ Changed the way that the plugin decides when to check an ip and email. This will
 
 = 2.10 =
 Fixed the way the cache is sorted. Added DNSBL support for spamhaus, dsbl, sorbs, spamcop, ordb, and njabl. These are email spam databases and they get only a small portion of the comment spam, but some is better than none. Added a list of common disposable email sites so that users who use disposable sites can be blocked. The list is only popular sites and is not exhaustive. Real commentators probably won't use the disposable sites, but some bloggers may be nervous about blocking them, so it is optional. Divided the options into a stats and a parameters wp_option array. Something in spam, probably a foreign language character, has been breaking the options causing the blog to "forget" when the stored array is broken. Now, when the stats array breaks, the configuration items will still be available. Rewrote the MU options, although it is not tested on subdomain installations.
+
+= 2.20 =
+Fixed several networked blog issues. Added a dummy email address so that pingbacks can be reported. Added Multisite Maintenance. Fixed a few minor bugs. Testing use of X-Forwarded-For HTTP ip address when the blog is behind a proxy. I cannot test this because I don't have access to a site behind a proxy. Please report if the X-forwarded-for header handling is broken.
 
 == Support ==
 This plugin is free and I expect nothing in return. Please rate the plugin at http://wordpress.org/extend/plugins/stop-spammer-registrations-plugin/. 
