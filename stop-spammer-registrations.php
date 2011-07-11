@@ -215,26 +215,22 @@ function kpg_stop_sp_reg_check_email($email,$author='') {
 		(substr($ip,0,7)>='172.16.' && substr($ip,0,7)<='172.31.')
 	) {
 		// see if there is a forwarded header
-		if (function_exists('get_headers')) {
-			$hlist=get_headers();
-			// ucase 
-			$ip='';
-			foreach ($hlist as $key => $data) {
-				if (substr(strtoupper($key),0,strlen('X-FORWARDED-FOR'))=='X-FORWARDED-FOR') {
-					// hit on the forwarded ip
-					if (strpos($data,',')>0) {
-						$ips=explode(',',$data);
-					} else {
-						$ips=array($data);
-					}
-					$ip=trim($ips[count($ips)-1]); // gets the last ip - most likely to be spoofed, perhaps the first ip would be better?
-					break;
+		$hlist=getallheaders();
+		// ucase 
+		$ip='';
+		foreach ($hlist as $key => $data) {
+			if (substr(strtoupper($key),0,strlen('X-FORWARDED-FOR'))=='X-FORWARDED-FOR') {
+				// hit on the forwarded ip
+				if (strpos($data,',')>0) {
+					$ips=explode(',',$data);
+				} else {
+					$ips=array($data);
 				}
+				$ip=trim($ips[count($ips)-1]); // gets the last ip - most likely to be spoofed, perhaps the first ip would be better?
+				break;
 			}
-			if (empty($ip)) return $email;
-		}  else {
-			return $email; // can't process ip for local host or private networks?
 		}
+		if (empty($ip)) return $email;
 	}
 	
 	// clean up history
