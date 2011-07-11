@@ -219,7 +219,7 @@ function kpg_stop_sp_reg_check_email($email,$author='') {
 			$hlist=get_headers();
 			// ucase 
 			$ip='';
-			foreach ($hlist as $key => $value) {
+			foreach ($hlist as $key => $data) {
 				if (substr(strtoupper($key),0,strlen('X-FORWARDED-FOR'))=='X-FORWARDED-FOR') {
 					// hit on the forwarded ip
 					if (strpos($data,',')>0) {
