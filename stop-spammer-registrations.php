@@ -2,7 +2,8 @@
 /*
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
-Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
+Description: The Stop Spammer Registrations Plugin checks against StopForumSpam.com to prevent spammers from registering or making comments.
+
 Version: 3.0
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
