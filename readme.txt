@@ -4,14 +4,13 @@ Donate link: http://www.blogseye.com/buy-the-book/
 Requires at least: 2.8
 Tested up to: 3.3
 Contributors: Keith Graham
-Stable tag: 3.0
+Stable tag: 3.1
 
 The Stop Spammer Registrations Plugin checks against StopForumSpam.com to prevent spammers from registering or making comments.
 
 == Description ==
 Eliminates 99% of spam registrations and comments. Checks all attempts to leave spam against StopForumSpam.com, Project Honeypot, BotScout, DNSBL lists such as Spamhaus.org, Ubiquity Servers, disposable email addresses, and HTTP_ACCEPT header.
  
-New With Version 3.0: 
 
 The Stop Spammer Registrations Plugin now checks for spammer IPs much earlier in the comment and registration process. When a spammer IP is detected, the plugin stops wordpress from completing any further operations and an access denied message is presented to the spammer. The text of the message can be edited.
 
@@ -124,6 +123,9 @@ Fixed several networked blog issues. Added a dummy email address so that pingbac
 
 = 3.0 =
 Restructured the Plugin completely, changing many of the ways it works. Changed the points and places where spam is checked. Spam is now being checked for much earlier. Added an Access denied screen. Optionally block Ubiquity Servers. Use AJAX to report Spam so that there is no need to open a new window.
+
+= 3.1 =
+Changed access to SFS db to stop false positives
 
 == Support ==
 This plugin is free and I expect nothing in return. Please rate the plugin at: http://wordpress.org/extend/plugins/stop-spammer-registrations-plugin/

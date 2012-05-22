@@ -33,7 +33,7 @@
 
 ?>
 <div class="wrap">
-  <h2>Stop Spammers Plugin Stats Version 3.0</h2>
+  <h2>Stop Spammers Plugin Stats Version 3.1</h2>
  <?php 
 	$nag='';
 	if ($spmcount>0) {
@@ -243,4 +243,13 @@
 	<?php
 	}
 ?>
+  <?php
+     $f=dirname(__FILE__)."/sfs_debug_output.txt";
+	 if (file_exists($f)) {
+	     echo("<pre>");
+		 readfile($f);
+	     echo("</pre>");
+	 }
+	 ?>
+
 </div>

@@ -207,6 +207,9 @@
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
   <p>Eliminates 99% of spam registrations and comments. Checks all attempts to leave spam against StopForumSpam.com, Project Honeypot, BotScout, DNSBL lists such as Spamhaus.org, Ubiquity Servers, disposable email addresses, and HTTP_ACCEPT header.</p>
+  <p style="font-weight:bold;">Version 3.1: </p>
+  <p>Changed the way site access SFS database to reduce false positives</p>
+  
   <p style="font-weight:bold;">New With Version 3.0: </p>
   <p>The Stop Spammer Registrations Plugin now checks for spammer IPs much earlier in the comment and registration process. When a spammer IP is detected, the plugin stops wordpress from completing any further operations and an access denied message is presented to the spammer. The text of the message can be edited.</p>
   <p style="font-weight:bold;">How the plugin works: </p>
@@ -381,4 +384,12 @@
     </p>
   </form>
   <p>&nbsp;</p>
+  <?php
+     $f=dirname(__FILE__)."/sfs_debug_output.txt";
+	 if (file_exists($f)) {
+	     echo("<pre>");
+		 readfile($f);
+	     echo("</pre>");
+	 }
+	 ?>
 </div>

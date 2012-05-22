@@ -2,9 +2,8 @@
 /*
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
-Description: The Stop Spammer Registrations Plugin checks against StopForumSpam.com to prevent spammers from registering or making comments.
-
-Version: 3.0
+Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
+Version: 3.1
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -330,9 +329,9 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 	// Ubiquity servers rent their servers to spammers and should be blocked
 	if (!$deny&&$chkubiquity=='Y') {
 		$ansa=kpg_check_ubiquity($ip);
-		if ($ansa) {
+		if ($ansa!==false) {
 				$deny=true;
-				$whodunnit.='Ubiquity Server';
+				$whodunnit.=$ansa;
 		}
 	}
 	// try akismet
@@ -344,36 +343,39 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 		}
 	}
 	// here is the database lookups section. Simple checks did not work. We need to do a lookup
-	if (!$deny) {
+	if (!$deny && !empty($em) ) { // sfs needs email????
 		$query="http://www.stopforumspam.com/api?ip=$ip";
 		if ($chkemail=='Y') {
 			$query=$query."&email=$em";
 		}
-		$check=@kpg_sfs_reg_getafile($query);
-		if (substr($check,0,4)=="ERR:") {
-			$whodunnit.=$check.', ';
-		}
-		$n=strpos($check,'<appears>yes</appears>');
-		if ($n) {
-			$k=strpos($check,'<lastseen>',$n);
-			$k+=10;
-			$j=strpos($check,'</lastseen>',$k);
-			$lastseen=date('Y-m-d',time());
-			if (($j-$k)>12&&($j-$k)<24) $lastseen=substr($check,$k,$j-$k); // should be about 20 characters
-			if (strpos($lastseen,' ')) $lastseen=substr($lastseen,0,strpos($lastseen,' ')); // trim out the time to save room.
-			$k=strpos($check,'<frequency>',$n);
-			$k+=11;
-			$j=strpos($check,'</frequency',$k);
-			$frequency='9999';
-			
-			if (($j-$k)&&($j-$k)<7) $frequency=substr($check,$k,$j-$k); // should be a number greater than 0 and probably no more than a few thousand.
-			// have freqency and lastseen date - make these options in next release
-			// check freq and age
-			if (($frequency>=$sfsfreq) && (strtotime($lastseen)>(time()-(60*60*24*$sfsage))) )   { 
-			// frequency we got from the db, sfsfreq is the min we'll accept (default 0)
-			// sfsage is the age in days. we get lastscene from
-				$deny=true;
-				$whodunnit.="SFS, $lastseen, $frequency;";
+		$check='';
+		$check=kpg_sfs_reg_getafile($query);
+		if (!empty($check)) {
+			if (substr($check,0,4)=="ERR:") {
+				$whodunnit.=$check.', ';
+			}
+			$n=strpos($check,'<appears>yes</appears>');
+			if ($n>0) {
+				$k=strpos($check,'<lastseen>',$n);
+				$k+=10;
+				$j=strpos($check,'</lastseen>',$k);
+				$lastseen=date('Y-m-d',time());
+				if (($j-$k)>12&&($j-$k)<24) $lastseen=substr($check,$k,$j-$k); // should be about 20 characters
+				if (strpos($lastseen,' ')) $lastseen=substr($lastseen,0,strpos($lastseen,' ')); // trim out the time to save room.
+				$k=strpos($check,'<frequency>',$n);
+				$k+=11;
+				$j=strpos($check,'</frequency',$k);
+				$frequency='9999';
+				
+				if (($j-$k)&&($j-$k)<7) $frequency=substr($check,$k,$j-$k); // should be a number greater than 0 and probably no more than a few thousand.
+				// have freqency and lastseen date - make these options in next release
+				// check freq and age
+				if (($frequency!=255) && ($frequency>=$sfsfreq) && (strtotime($lastseen)>(time()-(60*60*24*$sfsage))) )   { 
+				// frequency we got from the db, sfsfreq is the min we'll accept (default 0)
+				// sfsage is the age in days. we get lastscene from
+					$deny=true;
+					$whodunnit.="SFS, $lastseen, $frequency;";
+				}
 			}
 		}
 	} 
@@ -410,17 +412,20 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 	if (!$deny&&$botscoutapi!='') {
 		// try the ip on botscoutapi
 	    $query="http://botscout.com/test/?ip=$ip&key=$botscoutapi";
+		$check='';
 		$check=@kpg_sfs_reg_getafile($query);
-		if (substr($check,0,4)=="ERR:") {
-			$whodunnit.=$check.', ';
-		}
-		if(strpos($check,'|')) {
-			$result=explode('|',$check);
-			if (count($result)>2) {
-				//  Y|IP|3 - found, type, database occurences
-				if ($result[0]=='Y'&&$result[2]>$botfreq) {
-					$deny=true;
-					$whodunnit.='BotScout, '.$result[2];
+		if (!empty($check)) {
+			if (substr($check,0,4)=="ERR:") {
+				$whodunnit.=$check.', ';
+			}
+			if(strpos($check,'|')) {
+				$result=explode('|',$check);
+				if (count($result)>2) {
+					//  Y|IP|3 - found, type, database occurences
+					if ($result[0]=='Y'&&$result[2]>$botfreq) {
+						$deny=true;
+						$whodunnit.='BotScout, '.$result[2];
+					}
 				}
 			}
 		}
@@ -556,63 +561,136 @@ function kpg_akismet_check($ip) {
 
 function kpg_check_ubiquity($ip) {
 	$userve=array(
-		array('108.62.0.0','108.62.255.255'),
-		array('108.62.152.0','108.62.159.255'),
-		array('108.62.192.0','108.62.195.255'),
-		array('108.62.200.0','108.62.203.255'),
-		array('108.62.252.0','108.62.255.255'),
-		array('108.62.56.0','108.62.63.255'),
-		array('173.208.0.0','173.208.127.255'),
-		array('173.208.32.0','173.208.39.255'),
-		array('173.234.0.0','173.234.255.255'),
-		array('173.234.12.0','173.234.15.255'),
-		array('173.234.180.0','173.234.183.255'),
-		array('173.234.188.0','173.234.188.255'),
-		array('173.234.80.0','173.234.83.255'),
-		array('173.234.88.0','173.234.89.255'),
-		array('174.34.128.0','174.34.191.255'),
-		array('174.34.144.0','174.34.145.255'),
-		array('174.34.151.0','174.34.151.255'),
-		array('216.6.224.0','216.6.239.255'),
-		array('23.19.0.0','23.19.255.255'),
-		array('23.19.124.0','23.19.127.255'),
-		array('23.19.128.0','23.19.131.255'),
-		array('23.19.168.0','23.19.171.255'),
-		array('23.19.184.0','23.19.187.255'),
-		array('23.19.216.0','23.19.219.255'),
-		array('23.19.248.0','23.19.251.255'),
-		array('23.19.32.0','23.19.35.255'),
-		array('23.19.80.0','23.19.83.255'),
-		array('23.19.84.0','23.19.87.255'),
-		array('64.120.0.0','64.120.127.255'),
-		array('64.120.16.0','64.120.19.255'),
-		array('64.120.2.0','64.120.2.255'),
-		array('64.120.4.0','64.120.7.255'),
-		array('67.201.0.0','67.201.7.255'),
-		array('67.201.40.0','67.201.40.255'),
-		array('67.201.48.0','67.201.49.255'),
-		array('69.147.224.0','69.147.255.255'),
-		array('69.147.236.0','69.147.236.255'),
-		array('69.174.60.0','69.174.63.255'),
-		array('70.32.32.0','70.32.32.255'),
-		array('70.32.32.0','70.32.47.255'),
-		array('70.32.34.0','70.32.34.255'),
-		array('72.37.145.0','72.37.145.255'),
-		array('72.37.204.0','72.37.204.255'),
-		array('72.37.218.0','72.37.219.255'),
-		array('72.37.221.0','72.37.221.255'),
-		array('72.37.222.0','72.37.223.255'),
-		array('72.37.224.0','72.37.231.255'),
-		array('72.37.237.0','72.37.237.255'),
-		array('72.37.242.0','72.37.243.255'),
-		array('72.37.246.0','72.37.247.255')
-	);
+'XSServer',
+array('46.251.228.0','46.251.229.255'),
+array('109.230.197.0','109.230.197.255'),
+array('109.230.213.0','109.230.213.255'),
+array('109.230.216.0','109.230.217.255'),
+array('109.230.220.0','109.230.223.255'),
+array('109.230.246.0','109.230.246.255'),
+array('109.230.248.0','109.230.249.255'),
+array('109.230.251.0','109.230.251.255'),
+'Ubiquity-Nobis',
+array('23.19.0.0','23.19.255.255'),
+array('64.120.0.0','64.120.127.255'),
+array('67.201.0.0','67.201.7.255'),
+array('67.201.40.0','67.201.40.255'),
+array('67.201.48.0','67.201.49.255'),
+array('69.147.224.0','69.147.225.255'),
+array('69.174.60.0','69.174.63.255'),
+array('70.32.32.0','70.32.47.255'),
+array('72.37.145.0','72.37.145.255'),
+array('72.37.204.0','72.37.204.255'),
+array('72.37.218.0','72.37.219.255'),
+array('72.37.221.0','72.37.221.255'),
+array('72.37.222.0','72.37.223.255'),
+array('72.37.224.0','72.37.231.255'),
+array('72.37.237.0','72.37.237.255'),
+array('72.37.242.0','72.37.243.255'),
+array('72.37.246.0','72.37.247.255'),
+array('108.62.0.0','108.62.255.255'),
+array('173.208.0.0','173.208.127.255'),
+array('173.234.0.0','173.234.255.255'),
+array('174.34.128.0','174.34.191.255'),
+array('216.6.224.0','216.6.239.255'),
+array('176.31.50.64','176.31.50.95'),
+'Balticom',
+array('46.23.32.0','46.23.47.255'),
+array('82.193.64.0','82.193.95.255'),
+array('83.99.128.0','83.99.255.255'),
+array('109.73.96.0','109.73.111.255'),
+array('212.142.64.0','212.142.127.255'),
+'Everhost',
+array('31.2.216.0','31.2.223.255'),
+array('31.47.208.0','31.47.215.255'),
+array('31.220.128.0','31.220.131.255'),
+array('46.108.155.0','46.108.155.255'),
+array('89.42.8.0','89.42.8.255'),
+array('89.42.108.0','89.42.109.255'),
+array('89.44.16.0','89.44.31.255'),
+array('93.118.64.0','93.118.79.255'),
+array('94.60.152.0','94.60.159.255'),
+array('94.60.160.0','94.60.191.255'),
+array('94.60.192.0','94.60.199.255'),
+array('94.63.0.0','94.63.31.255'),
+array('94.63.32.0','94.63.47.255'),
+array('94.63.56.0','94.63.63.255'),
+array('94.63.64.0','94.63.71.255'),
+array('94.63.128.0','94.63.135.255'),
+array('94.63.152.0','94.63.159.255'),
+array('94.63.192.0','94.63.207.255'),
+array('94.177.4.0','94.177.5.255'),
+array('95.64.24.0','95.64.31.255'),
+array('95.64.32.0','95.64.32.255'),
+array('95.64.41.0','95.64.41.255'),
+array('95.64.42.0','95.64.42.255'),
+array('95.64.110.0','95.64.111.255'),
+array('95.128.168.0','95.128.168.255'),
+array('95.128.174.0','95.128.175.255'),
+array('95.187.0.0','95.187.127.255'),
+array('178.255.36.0','178.255.37.255'),
+array('178.255.38.0','178.255.38.255'),
+array('188.208.0.0','188.208.15.255'),
+array('188.215.0.0','188.215.0.255'),
+array('188.215.32.0','188.215.35.255'),
+array('188.229.19.0','188.229.19.255'),
+array('188.229.20.0','188.229.23.255'),
+array('188.229.38.0','188.229.38.255'),
+array('188.229.103.0','188.229.103.255'),
+array('188.229.104.0','188.229.111.255'),
+array('188.229.124.0','188.229.127.255'),
+array('188.240.36.0','188.240.39.255'),
+array('188.240.160.0','188.240.175.255'),
+array('188.240.192.0','188.240.223.255'),
+array('188.247.128.0','188.247.128.255'),
+array('188.247.228.0','188.247.229.255'),
+'FDC',
+array('67.159.0.0','67.159.63.255'),
+array('66.90.64.0','66.90.127.255'),
+array('208.53.128.0','208.53.191.255'),
+array('50.7.0.0','50.7.255.255'),
+array('204.45.0.0','204.45.255.255'),
+array('76.73.0.0','76.73.255.255'),
+array('74.63.64.0','74.63.127.255'),
+'Exetel',
+array('109.230.244.0','109.230.245.255'),
+array('31.214.155.0','31.214.155.255'),
+'Virpus',
+array('50.115.160.0','50.115.175.255'),
+array('173.0.48.0','173.0.63.255'),
+array('199.119.224.0','199.119.227.255'),
+array('199.180.128.0','199.180.135.255'),
+array('208.89.208.0','208.89.215.255'),
+'MiscSpamServer',
+array('74.63.222.74','74.63.222.74'),
+array('86.181.176.121','86.181.176.121'),
+array('98.126.4.202','98.126.4.202'),
+array('98.126.251.234','98.126.251.234'),
+array('188.168.0.0','188.168.255.255'),
+array('81.17.22.21','81.17.22.21'),
+array('66.219.17.212','66.219.17.212'),
+array('46.29.248.0','46.29.249.255'),
+array('74.221.208.0','74.221.223.255'),
+array('109.169.57.204','109.169.57.204'),
+array('184.22.139.0','184.22.139.255'),
+array('99.187.246.108','99.187.246.108'),
+array('195.62.24.0','195.62.25.255'),
+array('141.105.65.151','141.105.65.151'),
+array('146.0.74.0','146.0.74.255'),
+array('194.28.112.0','194.28.115.255'),
+array('159.224.130.96','159.224.130.96')
+);
+$srv='';
 	for ($j=0;$j<count($userve);$j++) {
-		$st=ip2long($userve[$j][0]);
-		$en=ip2long($userve[$j][1]);
-		if (ip2long($ip)>=$st && ip2long($ip)<=$en) {
-			// bad one
-			return true;
+		if (!is_array($userve[$j])) {
+			$srv=$userve[$j];
+		} else {
+			$st=ip2long($userve[$j][0]);
+			$en=ip2long($userve[$j][1]);
+			if (ip2long($ip)>=$st && ip2long($ip)<=$en) {
+				// bad one
+				return $srv;
+			}
 		}
 		//if (ip2long($ip)<$en) break; // done search
 	}
@@ -721,9 +799,6 @@ function kpg_sfs_reg_report($actions,$comment) {
 	}
 	$action="<a $exst title=\"Report to Stop Forum Spam (SFS)\" $target $href $onclick class='delete:the-comment-list:comment-$ID::delete=1 delete vim-d vim-destructive'>Report to SFS</a>";
 	
-	// <a href='comment.php?c=$ID&#038;action=deletecomment&#038;_wpnonce=5a31a6f106' class='delete:the-comment-list:comment-$ID::delete=1 delete vim-d vim-destructive'>
-	// "
-	//http://www.blogseye.com/wp-admin/admin-ajax.php/?username=autoblogging+software&email=HaisleyAubrey695%40aol.com&ip_addr=173.0.62.132&evidence=http%3A%2F%2Fwww.sgwsoft.com&api_key=DwBJhQ7jIX89RK
 
 	$actions['report_spam']=$action;
 	return $actions;
@@ -1071,7 +1146,7 @@ function sfs_ajax_return_spam(response) {
 // directory must be writeable or plugin will crash.
 
 function sfs_errorsonoff($old=null) {
-	$debug=false;  // change to true to debug
+	$debug=true;  // change to true to debug
 	if (!$debug) return;
 	if (empty($old)) return set_error_handler("sfs_ErrorHandler");
 	restore_error_handler();
