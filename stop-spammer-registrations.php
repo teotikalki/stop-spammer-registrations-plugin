@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
-Version: 3.1
+Version: 3.2
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -31,7 +31,8 @@ if ( empty( $current_user ) ) {
 	add_action('pre_comment_on_post','kpg_sfs_login_check');	
 	add_filter('preprocess_comment','kpg_sfs_newcomment');	
 	add_action('admin_init','kpg_sfs_login_check');
-}
+	add_action('xmlrpc_call','kpg_sfs_login_check');
+} 
 
 // make a function to unset all the hooks once a check to the db is done in order to prevent recusive checks
 function kpg_sfs_reg_unhook() {
@@ -44,6 +45,7 @@ function kpg_sfs_reg_unhook() {
 	remove_action( 'pre_comment_on_post', 'kpg_sfs_login_check' );
 	remove_filter( 'preprocess_comment', 'kpg_sfs_newcomment');	
 	remove_action( 'admin_init', 'kpg_sfs_login_check' );
+	remove_action( 'xmlrpc_call', 'kpg_sfs_login_check' );
 	return;
 }
 
@@ -203,15 +205,31 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 		return $email; // no check for the above files
 	}
 
-	$now=date('Y/m/d H:i:s');
+	$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
 	$stats=kpg_sp_get_stats();
 	extract($stats);
 	$options=kpg_sp_get_options();
 	extract($options);
+	
+	if ($chkcomments!='Y') {
+		if (strpos($sname,'wp-comments-post.php')>0) return $email;
+	}
+	if ($chklogin!='Y') {
+		if (strpos($sname,'wp-login.php')>0) return $email;
+	}
+	if ($chksignup!='Y') {
+		if (strpos($sname,'wp-signup.php')>0) return $email;
+	}
+	if ($chkxmlrpc!='Y') {
+		if (strpos($sname,'xmlrpc.php')>0) return $email;
+	}
+	
+	
 	// clean up cache and history	
 	while (count($badips)>$kpg_sp_cache) array_shift($badips);
 	while (count($badems)>$kpg_sp_cache) array_shift($badems);
-	while (count($goodips)>$kpg_sp_cache) array_shift($goodips);
+	while (count($goodips)>2) array_shift($goodips);
+	//$goodips=array(); // limiting good ips to just a few
 	while (count($hist)>$kpg_sp_hist) array_shift($hist);
 	$stats['badips']=$badips;
 	$stats['badems']=$badems;
@@ -246,7 +264,7 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 	$author=utf8_decode($author);
 	$author=really_clean($author);
 	// think of other things that might kill the serialize functions
-	if (strlen($author)>32) $author=substr($author,0,29).'...';
+	if (strlen($author)>80) $author=substr($author,0,77).'...';
 	if (strlen($em)>80) $em=substr($em,0,80).'...';
 	// set up hist channel
 	$hist[$now]=array($ip,mysql_real_escape_string($em),mysql_real_escape_string($author),$sname,'begin',$blog);
@@ -258,55 +276,65 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 	$deny=false;
 	// check whitelists and caches
 	
-	if (!$deny&&in_array($ip,$wlist)) {
+	if (!$deny&&(array_search($ip,$wlist))) {
 	    $hist[$now][4]='White List IP';
 		$stats['hist']=$hist;
 		update_option('kpg_stop_sp_reg_stats',$stats);
 		return $email;
 	}
-	if (!$deny&&!empty($em)&&in_array($em,$wlist)) {
+	if (!$deny&&!empty($em)&&kpg_sp_searchi($em,$wlist)) {
 	    $hist[$now][4]='White List EMAIL';
 		$stats['hist']=$hist;
 		update_option('kpg_stop_sp_reg_stats',$stats);
 		return $email;
 	}
-	if (!$deny&&in_array($ip,$blist)) {
-	    $hist[$now][4]='Black List IP';
-		$stats['hist']=$hist;
-		$deny=true;
-	}
-	if (!$deny&&!empty($em)&&in_array($em,$blist)) {
-	    $hist[$now][4]='Black List EMAIL';
-		$stats['hist']=$hist;
-		$deny=true;
+	$admin_email = get_settings('admin_email');
+	if ($admin_email==$em) {
+		//return $email; // whitelist admin email - probably not a good idea
 	}
 	// check to see if the ip is in the goodips cache
-	if (!$deny&&in_array($ip,$goodips)) {
+	if (!$deny&&kpg_sp_searchi($ip,$goodips)) {
 	    $hist[$now][4]='Cached good ip';
 		$stats['hist']=$hist;
 		update_option('kpg_stop_sp_reg_stats',$stats);
 		return $email;
 	}
-
+	
+	// try checking to see if there is a referrer
+	if (!$deny&&$chkreferer=='Y'&&!empty($_POST)) {
+		// someone is sending a post. Therefore the referer must be from our site.
+		$ref='';
+		if (array_key_exists('HTTP_REFERER',$_SERVER)) {
+			$ref=$_SERVER['HTTP_REFERER'];
+		}
+	    // check to see if our domain is found in the referer
+		$host=$_SERVER['HTTP_HOST'];
+		if (empty($ref)||strpos($ref,$host)===false) {
+			// bad referer
+			$whodunnit.='Bad or Missing HTTP_REFERER';
+			$deny=true;
+		}
+	}
+    // getting a lot of huge author names
+	if (!$deny && $chklong=='Y' && strlen($author)>64) {
+			$whodunnit.='long author name '.strlen($author);
+			$deny=true;
+	}
 	// check to see if the results have been cached
 	// These are the simple email checks
-	if (!empty($em)) {
-	    $admin_email = get_settings('admin_email');
-		if ($admin_email==$em) {
-			//return $email;
-		}
+	if (!empty($em) && !$deny) {
 		if (!$deny && array_key_exists($em,$badems)) {
-			if (!empty($em)) $badems[mysql_real_escape_string($em)]=date("Y/m/d H:i:s");
-			$badips[$ip]=date("Y/m/d H:i:s");
+			if (!empty($em)) $badems[mysql_real_escape_string($em)]=$now;
+			$badips[$ip]=$now;
 			$deny=true;
 			$whodunnit.='Cached bad email';
 		} 
-		if (strlen($em)>64) {
-			$badems[mysql_real_escape_string($em)]=date("Y/m/d H:i:s");
+		if (!$deny && $chklong=='Y' && strlen($em)>64) {
+			$badems[mysql_real_escape_string($em)]=$now;
 			$deny=true;
-			$whodunnit.='email too long to be real';
+			$whodunnit.='email too long';
 		}
-		if (!$deny&&$chkdisp=='Y') {
+		if (!$deny && $chkdisp=='Y') {
 			$ansa=kpg_check_disp($em);
 			if ($ansa) {
 				$deny=true;
@@ -315,6 +343,14 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 		}
 	}
 	// simple ip checks
+	if (!$deny && kpg_sp_searchi($ip,$blist)) {
+	    $whodunnit.='Black List IP';
+		$deny=true;
+	}
+	if (!$deny && !empty($em) && kpg_sp_searchi($em,$blist)) {
+	    $whodunnit.='Black List EMAIL';
+		$deny=true;
+	}
 	if (!$deny&&array_key_exists($ip,$badips)) {
 		$whodunnit.='Cached bad ip';
 		$deny=true;
@@ -343,9 +379,9 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 		}
 	}
 	// here is the database lookups section. Simple checks did not work. We need to do a lookup
-	if (!$deny && !empty($em) ) { // sfs needs email????
+	if (!$deny && $chksfs=='Y' ) { 
 		$query="http://www.stopforumspam.com/api?ip=$ip";
-		if ($chkemail=='Y') {
+		if ($chkemail=='Y'&&!empty($em)) {
 			$query=$query."&email=$em";
 		}
 		$check='';
@@ -354,30 +390,38 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 			if (substr($check,0,4)=="ERR:") {
 				$whodunnit.=$check.', ';
 			}
+			$lastseen='';
+			$frequency='';
 			$n=strpos($check,'<appears>yes</appears>');
-			if ($n>0) {
-				$k=strpos($check,'<lastseen>',$n);
-				$k+=10;
-				$j=strpos($check,'</lastseen>',$k);
-				$lastseen=date('Y-m-d',time());
-				if (($j-$k)>12&&($j-$k)<24) $lastseen=substr($check,$k,$j-$k); // should be about 20 characters
-				if (strpos($lastseen,' ')) $lastseen=substr($lastseen,0,strpos($lastseen,' ')); // trim out the time to save room.
-				$k=strpos($check,'<frequency>',$n);
-				$k+=11;
-				$j=strpos($check,'</frequency',$k);
-				$frequency='9999';
-				
-				if (($j-$k)&&($j-$k)<7) $frequency=substr($check,$k,$j-$k); // should be a number greater than 0 and probably no more than a few thousand.
+			if ($n!==false) {
+			    if (strpos($check,'<lastseen>',$n)!==false) {
+					$k=strpos($check,'<lastseen>',$n);
+					$k+=10;
+					$j=strpos($check,'</lastseen>',$k);
+					$lastseen=date('Y-m-d',time() + ( get_option( 'gmt_offset' ) * 3600 ));
+					if (($j-$k)>12&&($j-$k)<24) $lastseen=substr($check,$k,$j-$k); // should be about 20 characters
+					if (strpos($lastseen,' ')) $lastseen=substr($lastseen,0,strpos($lastseen,' ')); // trim out the time to save room.
+					if (strpos($check,'<frequency>',$n)!==false) {
+						$k=strpos($check,'<frequency>',$n);
+						$k+=11;
+						$j=strpos($check,'</frequency',$k);
+						$frequency='9999';			
+						if (($j-$k)&&($j-$k)<7) $frequency=substr($check,$k,$j-$k); // should be a number greater than 0 and probably no more than a few thousand.
+					}
+				}
+
 				// have freqency and lastseen date - make these options in next release
 				// check freq and age
-				if (($frequency!=255) && ($frequency>=$sfsfreq) && (strtotime($lastseen)>(time()-(60*60*24*$sfsage))) )   { 
+				if (!empty($frequency) && !empty($lastseen) && ($frequency!=255) && ($frequency>=$sfsfreq) && (strtotime($lastseen)>(time()-(60*60*24*$sfsage))) )   { 
+				//if ( ($frequency>=$sfsfreq) && (strtotime($lastseen)>(time()-(60*60*24*$sfsage))) )   { 
 				// frequency we got from the db, sfsfreq is the min we'll accept (default 0)
 				// sfsage is the age in days. we get lastscene from
 					$deny=true;
-					$whodunnit.="SFS, $lastseen, $frequency;";
+					$whodunnit.="SFS, $lastseen, $frequency";
 				}
 			}
 		}
+		//$whodunnit.="Passed SFS, $query $check";
 	} 
 	
 	// testing the DNSBL sites for a bad ip. This is useful for email spammers, but I do not know if
@@ -432,10 +476,10 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 	}
 	$hist[$now][4]=$whodunnit;
 	if (!$deny) {
-		$hist[$now][4]='passed';
-		$goodips[$ip]=date("Y/m/d H:i:s");
+		$hist[$now][4].=' passed';
+		$goodips[$ip]=$now;
 		$stats['hist']=$hist;
-		//$stats['goodips']=$goodips; // uncomment to cache good ips.
+		$stats['goodips']=$goodips; // uncomment to cache good ips.
 		update_option('kpg_stop_sp_reg_stats',$stats);
 		return $email;
 	}
@@ -448,11 +492,12 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 	$stats['spcount']=$spcount;
 	$stats['spmcount']=$spmcount;
 	// Cache the bad guy
-	if (!empty($em)) $badems[$em]=date("Y/m/d H:i:s");
-	if (!empty($ip)) $badips[$ip]=date("Y/m/d H:i:s");
+	if (!empty($em)) $badems[$em]=$now;
+	if (!empty($ip)) $badips[$ip]=$now;
+	asort($badips);
+	asort($badems);
 	while (count($badips)>$kpg_sp_cache) array_shift($badips);
 	while (count($badems)>$kpg_sp_cache) array_shift($badems);
-	// sort the array by date so that the most recent date is last
 	$stats['badips']=$badips;
 	$stats['badems']=$badems;
 	$stats['hist']=$hist;
@@ -811,6 +856,17 @@ function kpg_sfs_reg_init() {
 	$options=kpg_sp_get_options();
     $muswitch=$options['muswitch'];
 	if(!current_user_can('manage_options')) return;
+	$addtowhitelist=$options['addtowhitelist'];
+	$wlist=$options['wlist'];
+	$ip=$_SERVER['REMOTE_ADDR'];
+	$ip=check_forwarded_ip($ip);
+	if ($addtowhitelist=='Y'&&!in_array($ip,$wlist)) {
+		// add this ip to your white list
+		$wlist[count($wlist)]=$ip;
+		$options['wlist']=$wlist;
+		update_option('kpg_stop_sp_reg_options',$options);
+	}
+
 	// first, simple users just need a simple screen
 	if (!function_exists('is_multisite') || !is_multisite()) {
 		// just do the basic stuff and get out
@@ -851,7 +907,7 @@ function kpg_sfs_reg_init() {
 }
 function kpg_sp_plugin_action_links( $links, $file ) {
 	if ( basename($file) == basename(__FILE__))  {
-		$me=admin_url('options-general.php?page=stopspammerstats');
+		$me=admin_url('options-general.php?page=stopspammersoptions');
 		$links[] = "<a href=\"$me\">".__('Settings').'</a>';
 	}
 
@@ -863,10 +919,10 @@ function kpg_sfs_siteadmin_page(){
  // don't restrict this to site admins, because it throws an error if non site admins go to the URL. Instead, control it wtih the site admin test at the next level
 	if (function_exists('is_network_admin')) {
 		//3.1+
-		add_submenu_page('settings.php', 'Stop Spammers', 'Stop Spammers', 'manage_sites', 'kpg_sfs_reg_control', 'kpg_sfs_reg_control');
+		add_submenu_page('settings.php', 'Stop Spammers', 'Stop Spammers', 'manage_sites', 'stopspammersoptions', 'kpg_sfs_reg_control');
 	} else {
 		//-3.1
-		add_submenu_page('ms-admin.php', 'Stop Spammers', 'Stop Spammers', 'manage_sites', 'kpg_sfs_reg_control', 'kpg_sfs_reg_control');
+		add_submenu_page('ms-admin.php', 'Stop Spammers', 'Stop Spammers', 'manage_sites', 'stopspammersoptions', 'kpg_sfs_reg_control');
 	}
  }
 if (function_exists('is_network_admin')) {
@@ -924,19 +980,29 @@ function kpg_sp_rightnow() {
 	$stats=kpg_sp_get_stats();
 	extract($stats);
  	$me=admin_url('options-general.php?page=stopspammerstats');
+    if (function_exists('is_multisite') && is_multisite()) {
+		switch_to_blog(1);
+		$me=admin_url('options-general.php?page=stopspammerstats');
+		restore_current_blog();
+	}
 	if ($spmcount>0) {
 		// steal the akismet stats css format 
 		// get the path to the plugin
 		echo "<p><a style=\"font-style:italic;\" href=\"$me\">Stop Spammer Registrations</a> has prevented $spmcount spammers from registering or leaving comments.";
-		if ($nobuy=='N') echo "  <a style=\"font-style:italic;\" href=\"http://www.blogseye.com/buy-the-book/\">Buy Keith Graham&apos;s Science Fiction Book</a>";
+		if ($nobuy=='N' && $spmcount>1000) echo "  <a style=\"font-style:italic;\" href=\"http://www.blogseye.com/buy-the-book/\">Buy Keith Graham&apos;s Science Fiction Book</a>";
 		echo"</p>";
 	} else {
 		echo "<p><a style=\"font-style:italic\" href=\"$me\">Stop Spammer Registrations</a> has not stopped any spammers, yet.";
-		if ($nobuy=='N') echo "  <a style=\"font-style:italic\" href=\"http://www.blogseye.com/buy-the-book/\">Buy Keith Graham&apos;s Science Fiction Book</a>";
 		echo"</p>";
 	}
 }
-
+function kpg_sp_searchi($needle,$haystack) {
+	// ignore case in_array
+    foreach($haystack as $val) {
+		if (strtolower($val)==strtolower($needle)) return true;
+	}
+	return false;
+}
 function kpg_sp_get_stats() {
 	$stats=get_option('kpg_stop_sp_reg_stats');
 	if (empty($stats)||!is_array($stats)) $stats=array();
@@ -958,11 +1024,11 @@ function kpg_sp_get_stats() {
 	if (!is_numeric($ansa['spcount'])) $ansa['spcount']=0;
 	if (!is_numeric($ansa['spmcount'])) $ansa['spmcount']=0;
 	if ($ansa['spcount']==0) {
-		$ansa['spdate']=date('Y/m/d');
+		$ansa['spdate']=date('Y/m/d',time() + ( get_option( 'gmt_offset' ) * 3600 ));
 		update_option('kpg_stop_sp_reg_stats',$ansa);
 	}
 	if ($ansa['spmcount']==0) {
-		$ansa['spmdate']=date('Y/m/d');
+		$ansa['spmdate']=date('Y/m/d',time() + ( get_option( 'gmt_offset' ) * 3600 ));
 		update_option('kpg_stop_sp_reg_stats',$ansa);
 	}
 	
@@ -985,10 +1051,18 @@ function kpg_sp_get_options() {
 		'accept'=>'Y',
 		'nobuy'=>'N',
 		'chkemail'=>'Y',
+		'chksfs'=>'Y',
+		'chkreferer'=>'Y',
 		'chkdisp'=>'Y',
 		'chkdnsbl'=>'Y',
 		'chkubiquity'=>'Y',
 		'chkakismet'=>'Y',
+		'chkcomments'=>'Y',
+		'chklogin'=>'Y',
+		'chksignup'=>'Y',
+		'chklong'=>'Y',
+		'chkxmlrpc'=>'Y',
+		'addtowhitelist'=>'Y',
 		'muswitch'=>'Y',
 		'sfsfreq'=>0,
 		'hnyage'=>9999,
@@ -1011,15 +1085,45 @@ This site is protected by the Stop Spammer Registrations Plugin.<br/>"
 	if ($ansa['nobuy']!='Y') $ansa['nobuy']='N';
 	if ($ansa['chkemail']!='Y') $ansa['chkemail']='N';
 	if ($ansa['chkdisp']!='Y') $ansa['chkdisp']='N';
+	if ($ansa['chksfs']!='Y') $ansa['chksfs']='N';
 	if ($ansa['chkdnsbl']!='Y') $ansa['chkdnsbl']='N';
 	if ($ansa['chkubiquity']!='Y') $ansa['chkubiquity']='N';
 	if ($ansa['chkakismet']!='Y') $ansa['chkakismet']='N';
+	if ($ansa['chkcomments']!='Y') $ansa['chkcomments']='N';
+	if ($ansa['chklogin']!='Y') $ansa['chklogin']='N';
+	if ($ansa['chksignup']!='Y') $ansa['chksignup']='N';
+	if ($ansa['chkxmlrpc']!='Y') $ansa['chkxmlrpc']='N';
 	if ($ansa['muswitch']!='N') $ansa['muswitch']='Y';
 	if (empty($ansa['kpg_sp_cache'])) $ansa['kpg_sp_cache']=25;
 	if (empty($ansa['kpg_sp_hist'])) $ansa['kpg_sp_hist']=25;
 	return $ansa;
 }
-
+function sfs_handle_ajax_check($data) {
+	// this does a call to the sfs site to check a known spammer
+	// returns success or not
+	$query="http://www.stopforumspam.com/api?ip=91.186.18.61";
+	$check='';
+	$check=kpg_sfs_reg_getafile($query);
+	if (!empty($check)) {
+	    $check=trim($check);
+	    $check=trim($check,'0');
+		if (substr($check,0,4)=="ERR:") {
+			echo "Access to the Stop Forum Spam Database shows errors\r\n";
+			echo "response was $check\r\n";
+		}
+		//Access to the Stop Forum Spam Database is working
+		$n=strpos($check,'<response success="true">');
+		if ($n===false) {
+			echo "Access to the Stop Forum Spam Database is not working\r\n";
+			echo "response was\r\n $check\r\n";
+		} else {
+			echo "Access to the Stop Forum Spam Database is working";
+		}
+	} else {
+		echo "No response from the Stop Forum Spam AP Call\r\n";
+	}
+	return;
+}
 function sfs_handle_ajax_sub($data) {
 	// get the stuff from the $_GET and call stop forum spam
 	// this tages the stuff from the get and uses it to do the get from sfs
@@ -1091,6 +1195,7 @@ $hget="http://www.stopforumspam.com/add.php?ip_addr=$ip_addr&api_key=$apikey&ema
 }
 	add_action('wp_ajax_nopriv_sfs_sub', 'sfs_handle_ajax_sub');	
 	add_action('wp_ajax_sfs_sub', 'sfs_handle_ajax_sub');	
+	add_action('wp_ajax_sfs_check', 'sfs_handle_ajax_check');	// used to check if ajax reporting works
 /******************************************
 * try ajax version of reporting
 * right out of the api playbook
@@ -1146,7 +1251,7 @@ function sfs_ajax_return_spam(response) {
 // directory must be writeable or plugin will crash.
 
 function sfs_errorsonoff($old=null) {
-	$debug=true;  // change to true to debug
+	$debug=true;  // change to true to debug, false to stop debugging.
 	if (!$debug) return;
 	if (empty($old)) return set_error_handler("sfs_ErrorHandler");
 	restore_error_handler();

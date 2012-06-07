@@ -5,6 +5,8 @@
 */
 	$stats=kpg_sp_get_stats();
 	extract($stats);
+	$options=kpg_sp_get_options();
+	extract($options);
 	$nonce='';
 	if (array_key_exists('kpg_stop_spammers_control',$_POST)) $nonce=$_POST['kpg_stop_spammers_control'];
 	if (wp_verify_nonce($nonce,'kpgstopspam_update')) { 
@@ -28,13 +30,60 @@
 			update_option('kpg_stop_sp_reg_stats',$stats);
 			echo "<h2>History Cleared</h2>";
 		}
-	}
+		if (array_key_exists('kpg_stop_add_black_list',$_POST)) {
+			$bbbb=$_POST['kpg_stop_add_black_list'];
+			if (!in_array($bbbb,$blist)&&!in_array($bbbb,$wlist)) {
+				$blist[]=$bbbb;
+				$options['blist']=$blist;
+				update_option('kpg_stop_sp_reg_options',$options);
+				echo "<h2>$bb Added to Black List</h2>";
+			}
+		}
+		if (array_key_exists('kpg_stop_add_white_list',$_POST)) {
+			$bb=$_POST['kpg_stop_add_white_list'];
+			if (!in_array($bb,$wlist)) {
+				$wlist[]=$bb;
+				$options['wlist']=$wlist;
+				update_option('kpg_stop_sp_reg_options',$options);
+				echo "<h2>$bb Added to White List</h2>";
+			}
+		}
+		if (array_key_exists('kpg_stop_delete_log',$_POST)) {
+			// clear the cache
+			$f=dirname(__FILE__)."/../sfs_debug_output.txt";
+			if (file_exists($f)) {
+			    unlink($f);
+				echo "<h2>Deleted Error Log File</h2>";
+			}
+		}
+}
 	$nonce=wp_create_nonce('kpgstopspam_update');
 
 ?>
 <div class="wrap">
-  <h2>Stop Spammers Plugin Stats Version 3.1</h2>
+  <form method="post" name="kpg_ssp_bl" action="">
+    <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
+    <input type="hidden" name="kpg_stop_add_black_list" value="" />
+  </form>
+  <form method="post" name="kpg_ssp_wl" action="">
+    <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
+    <input type="hidden" name="kpg_stop_add_white_list" value="" />
+  </form>
+<script type="text/javascript" >
+function addblack(ip) {
+	document.kpg_ssp_bl.kpg_stop_add_black_list.value=ip;
+	document.kpg_ssp_bl.submit();
+	return false;
+}
+function addwhite(ip) {
+	document.kpg_ssp_wl.kpg_stop_add_white_list.value=ip;
+	document.kpg_ssp_wl.submit();
+	return false;
+}
+</script>
+  <h2>Stop Spammers Plugin Stats Version 3.2</h2>
  <?php 
+
 	$nag='';
 	if ($spmcount>0) {
 		if ($spmcount>3000) {
@@ -122,8 +171,12 @@
 			echo "<tr style=\"background-color:white;\">
 				<td style=\"font-size:.8em;padding:2px;\">$dt</td>
 				<td style=\"font-size:.8em;padding:2px;\">$em</td>
-				<td style=\"font-size:.8em;padding:2px;\">$ip</td>
-				<td style=\"font-size:.8em;padding:2px;\">$au</td>
+				<td style=\"font-size:.8em;padding:2px;\">$ip"; 
+		    if (strpos($reason,'passed')!==false && strpos($id,'login')!==false && !in_array($ip,$blist) && !in_array($ip,$wlist)) {
+				$skull = plugins_url( 'includes/sk.jpg', dirname(__FILE__) );
+				echo "<a href=\"\" onclick=\"return addblack('$ip');\" title=\"Add to Black List\" alt=\"Add to Black List\" ><img src=\"$skull\" width=\"12px\" /></a>";
+			}
+			echo "</td><td style=\"font-size:.8em;padding:2px;\">$au</td>
 				<td style=\"font-size:.8em;padding:2px;\">$id</td>
 				<td style=\"font-size:.8em;padding:2px;\">$reason</td>";
 			if (function_exists('is_multisite') && is_multisite()) {
@@ -234,7 +287,19 @@
    </tr>
   </table>
   <?PHP
-    }
+} 
+	$options=kpg_sp_get_options();
+	extract($options);
+ 
+ 	$ip=$_SERVER['REMOTE_ADDR'];
+	$ip=check_forwarded_ip($ip);
+
+	if ($addtowhitelist=='Y'&&in_array($ip,$wlist)) {
+		echo "<h3>Your current IP is in your white list. This will keep you from being locked out in the future</h3>";
+	}
+
+
+
 	if (function_exists('is_multisite') && is_multisite()) {
 	?>
 	<p>If you are looking for the list of spam on the blogs, I've broken that out into a separate plugin. 
@@ -244,12 +309,27 @@
 	}
 ?>
   <?php
-     $f=dirname(__FILE__)."/sfs_debug_output.txt";
+     $f=dirname(__FILE__)."/../sfs_debug_output.txt";
 	 if (file_exists($f)) {
-	     echo("<pre>");
-		 readfile($f);
-	     echo("</pre>");
+	    ?>
+<h3>Error Log</h3>
+<p>If debugging is turned on, the plugin will drop a record each time it encounters a PHP error. 
+Most of these errors are not fatal and do not effect the operation of the plugin. Almost all come from the unexpected data that
+spammers include in their effort to fool us. The author's goal is to eliminate any and
+all errors. These errors should be corrected. Fatal errors should be reported to the author at www.blogseye.com.</p>
+
+		
+<form method="post" action="">
+    <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
+    <input type="hidden" name="kpg_stop_delete_log" value="true" />
+    <input value="Delete Error Log File" type="submit">
+</form>
+
+<pre>
+<?php readfile($f); ?>
+</pre>
+<?php
 	 }
-	 ?>
+?>
 
 </div>

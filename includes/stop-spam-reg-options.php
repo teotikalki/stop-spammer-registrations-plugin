@@ -3,44 +3,32 @@
 	Stop Spammer Registrations Plugin 
 	Options Setup Page
 */
-?>
-
-<div class="wrap">
-  <h2>Stop Spammers Plugin Options</h2>
-  <?php
-	if ($nobuy=='N') {
-?>
-  div style="position:relative;float:right;width:35%;background-color:ivory;border:#333333 medium groove;padding:4px;margin-left:4px;">
-    <p>This plugin is free and I expect nothing in return. If you would like to support my programming, you can buy my book of short stories.</p>
-    <p>Some plugin authors ask for a donation. I ask you to spend a very small amount for something that you will enjoy. eBook versions for the Kindle and other book readers start at 99&cent;. The book is much better than you might think, and it has some very good science fiction writers saying some very nice things. <br/>
-      <a target="_blank" href="http://www.blogseye.com/buy-the-book/">Error Message Eyes: A Programmer's Guide to the Digital Soul</a></p>
-    <p>A link on your blog to one of my personal sites would also be appreciated.</p>
-    <p><a target="_blank" href="http://www.WestNyackHoney.com">West Nyack Honey</a> (I keep bees and sell the honey)<br />
-      <a target="_blank" href="http://www.cthreepo.com/blog">Wandering Blog</a> (My personal Blog) <br />
-      <a target="_blank" href="http://www.cthreepo.com">Resources for Science Fiction</a> (Writing Science Fiction) <br />
-      <a target="_blank" href="http://www.jt30.com">The JT30 Page</a> (Amplified Blues Harmonica) <br />
-      <a target="_blank" href="http://www.harpamps.com">Harp Amps</a> (Vacuum Tube Amplifiers for Blues) <br />
-      <a target="_blank" href="http://www.blogseye.com">Blog&apos;s Eye</a> (PHP coding) <br />
-      <a target="_blank" href="http://www.cthreepo.com/bees">Bee Progress Beekeeping Blog</a> (My adventures as a new beekeeper) </p>
-  </div>
-  <?php
+	if(!current_user_can('manage_options')) {
+		die('Access Denied');
 	}
-?>
-<p><a href="options-general.php?page=stopspammerstats">View History and Cache</a>
-</p>
-  <?php
+
+
 	$stats=kpg_sp_get_stats();
 	extract($stats);
 	$options=kpg_sp_get_options();
 	extract($options);
 
-	if(!current_user_can('manage_options')) {
-		die('Access Denied');
-	}
+	$wordpress_api_key=get_option('wordpress_api_key');
+    if (empty($wordpress_api_key)) $wordpress_api_key='';
+	$ip=$_SERVER['REMOTE_ADDR'];
+	$ip=check_forwarded_ip($ip);
+
+
 	$nonce='';
 	if (array_key_exists('kpg_stop_spammers_control',$_POST)) $nonce=$_POST['kpg_stop_spammers_control'];
 	if (wp_verify_nonce($nonce,'kpgstopspam_update')) { 
 		if (array_key_exists('action',$_POST)) {
+			if (array_key_exists('wordpress_api_key',$_POST)) {
+				$wordpress_api_key=stripslashes($_POST['wordpress_api_key']);
+				if (wordpress_api_key!='na') update_option('wordpress_api_key',$wordpress_api_key);
+			} else {
+				$wordpress_api_key='na';
+			}
 						
 			if (array_key_exists('chkdisp',$_POST)) {
 				$chkdisp=stripslashes($_POST['chkdisp']);
@@ -55,12 +43,57 @@
 				$chkubiquity='N';
 			}
 			$options['chkubiquity']=$chkubiquity;
+			
 			if (array_key_exists('chkakismet',$_POST)) {
 				$chkakismet=stripslashes($_POST['chkakismet']);
 			} else {
 				$chkakismet='N';
 			}
 			$options['chkakismet']=$chkakismet;
+			
+			if (array_key_exists('chkcomments',$_POST)) {
+				$chkcomments=stripslashes($_POST['chkcomments']);
+			} else {
+				$chkcomments='N';
+			}
+			$options['chkcomments']=$chkcomments;
+			
+			if (array_key_exists('chklogin',$_POST)) {
+				$chklogin=stripslashes($_POST['chklogin']);
+			} else {
+				$chklogin='N';
+			}
+			$options['chklogin']=$chklogin;
+			
+			if (array_key_exists('chksignup',$_POST)) {
+				$chksignup=stripslashes($_POST['chksignup']);
+			} else {
+				$chksignup='N';
+			}
+			$options['chksignup']=$chksignup;
+			
+			if (array_key_exists('chklong',$_POST)) {
+				$chklong=stripslashes($_POST['chklong']);
+			} else {
+				$chklong='N';
+			}
+			$options['chklong']=$chklong;
+			
+			if (array_key_exists('chkxmlrpc',$_POST)) {
+				$chkxmlrpc=stripslashes($_POST['chkxmlrpc']);
+			} else {
+				$chkxmlrpc='N';
+			}
+			$options['chkxmlrpc']=$chkxmlrpc;
+			if (array_key_exists('addtowhitelist',$_POST)) {
+				$addtowhitelist=stripslashes($_POST['addtowhitelist']);
+			} else {
+				$addtowhitelist='N';
+			}
+			$options['addtowhitelist']=$addtowhitelist;
+			
+
+
 			
 			if (array_key_exists('chkdnsbl',$_POST)) {
 				$chkdnsbl=stripslashes($_POST['chkdnsbl']);
@@ -75,6 +108,13 @@
 				$chkemail='N';
 			}
 			$options['chkemail']=$chkemail;
+			
+			if (array_key_exists('chkreferer',$_POST)) {
+				$chkreferer=stripslashes($_POST['chkreferer']);
+			} else {
+				$chkreferer='N';
+			}
+			$options['chkreferer']=$chkreferer;
 			
 			
 			if (array_key_exists('nobuy',$_POST)) {
@@ -100,25 +140,27 @@
 			$options['honeyapi']=$honeyapi;
 			if (array_key_exists('botscoutapi',$_POST)) $botscoutapi=stripslashes($_POST['botscoutapi']);
 			$options['botscoutapi']=$botscoutapi;
-			if (array_key_exists('wlist',$_POST)) {
-				$wlist=stripslashes($_POST['wlist']);
-			    $wlist=str_replace("\r\n","\n",$wlist);
-			    $wlist=str_replace("\r","\n",$wlist);
-				$wlist=explode("\n",$wlist);
-				$options['wlist']=$wlist;				
-				for ($k=0;$k<count($wlist);$k++) {
-					$wlist[$k]=trim($wlist[$k]);
-				}	
-			}
 			if (array_key_exists('blist',$_POST)) {
-				$blist=stripslashes($_POST['blist']);
-			    $blist=str_replace("\r\n","\n",$blist);
-			    $blist=str_replace("\r","\n",$blist);
+			    $blist=$_POST['blist'];
 				$blist=explode("\n",$blist);
-				$options['blist']=$blist;				
-				for ($k=0;$k<count($blist);$k++) {
-					$blist[$k]=trim($blist[$k]);
-				}	
+				$tblist=array();
+				foreach($blist as $bl) {
+					$bl=trim($bl);
+					if (!empty($bl)) $tblist[]=$bl;
+				}
+				$options['blist']=$tblist;				
+				$blist=$tblist;
+			}
+			if (array_key_exists('wlist',$_POST)) {
+			    $wlist=$_POST['wlist'];
+				$wlist=explode("\n",$wlist);
+				$tblist=array();
+				foreach($wlist as $bl) {
+					$bl=trim($bl);
+					if (!empty($bl)) $tblist[]=$bl;
+				}
+				$options['wlist']=$tblist;				
+				$wlist=$tblist;
 			}
 			// update the freq and age options
 			if (array_key_exists('sfsfreq',$_POST)) $sfsfreq=trim(stripslashes($_POST['sfsfreq']));
@@ -166,6 +208,39 @@
 		extract($options);
 
 	}
+	
+	
+?>
+
+<div class="wrap">
+  <h2>Stop Spammers Plugin Options</h2>
+<?php
+	if ($addtowhitelist=='Y'&&in_array($ip,$wlist)) {
+		echo "<h3>Your current IP is in your white list. This will keep you from being locked out in the future</h3>";
+	}
+	
+	
+	if ($nobuy!='Y') {
+?>
+  <div style="position:relative;float:right;width:35%;background-color:ivory;border:#333333 medium groove;padding:4px;margin-left:4px;">
+    <p>This plugin is free and I expect nothing in return. If you would like to support my programming, you can buy my book of short stories.</p>
+    <p>Some plugin authors ask for a donation. I ask you to spend a very small amount for something that you will enjoy. eBook versions for the Kindle and other book readers start at 99&cent;. The book is much better than you might think, and it has some very good science fiction writers saying some very nice things. <br/>
+      <a target="_blank" href="http://www.blogseye.com/buy-the-book/">Error Message Eyes: A Programmer's Guide to the Digital Soul</a></p>
+    <p>A link on your blog to one of my personal sites would also be appreciated.</p>
+    <p><a target="_blank" href="http://www.WestNyackHoney.com">West Nyack Honey</a> (I keep bees and sell the honey)<br />
+      <a target="_blank" href="http://www.cthreepo.com/blog">Wandering Blog</a> (My personal Blog) <br />
+      <a target="_blank" href="http://www.cthreepo.com">Resources for Science Fiction</a> (Writing Science Fiction) <br />
+      <a target="_blank" href="http://www.jt30.com">The JT30 Page</a> (Amplified Blues Harmonica) <br />
+      <a target="_blank" href="http://www.harpamps.com">Harp Amps</a> (Vacuum Tube Amplifiers for Blues) <br />
+      <a target="_blank" href="http://www.blogseye.com">Blog&apos;s Eye</a> (PHP coding) <br />
+      <a target="_blank" href="http://www.cthreepo.com/bees">Bee Progress Beekeeping Blog</a> (My adventures as a new beekeeper) </p>
+  </div>
+  <?php
+	}
+?>
+<p><a href="options-general.php?page=stopspammerstats">View History and Cache</a>
+</p>
+  <?php
 	if (function_exists('is_multisite') && is_multisite()) {
 		global $blog_id;
 		if (!isset($blog_id)||$blog_id!=1) {
@@ -203,19 +278,16 @@
   <p>There are <a href='edit-comments.php?comment_status=moderated'><?php echo $num; ?></a> spam comments waiting to be moderated</p>
   <?php 
 	}
-
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
   <p>Eliminates 99% of spam registrations and comments. Checks all attempts to leave spam against StopForumSpam.com, Project Honeypot, BotScout, DNSBL lists such as Spamhaus.org, Ubiquity Servers, disposable email addresses, and HTTP_ACCEPT header.</p>
-  <p style="font-weight:bold;">Version 3.1: </p>
-  <p>Changed the way site access SFS database to reduce false positives</p>
+  <p style="font-weight:bold;">Version 3.2: </p>
   
-  <p style="font-weight:bold;">New With Version 3.0: </p>
-  <p>The Stop Spammer Registrations Plugin now checks for spammer IPs much earlier in the comment and registration process. When a spammer IP is detected, the plugin stops wordpress from completing any further operations and an access denied message is presented to the spammer. The text of the message can be edited.</p>
-  <p style="font-weight:bold;">How the plugin works: </p>
+   <p style="font-weight:bold;">How the plugin works: </p>
   <p>This plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments. 
     The Stop Spammer Registrations plugin works by checking the IP address, email and user id of anyone who tries to register, login, or leave a comment. This effectively blocks spammers who try to register on blogs or leave spam. It checks a users credentials against up to three databases: <a href="http://www.stopforumspam.com/">Stop Forum Spam</a>, <a href="http://www.projecthoneypot.org/">Project Honeypot</a>, and <a href="http://www.botscout.com/">BotScout</a>. Optionally checks against Akismet for Logins and Registrations. </p>
-  <p>Optionally the plugin will also check for disposable email addresses, check for the lack of a HTTP_ACCEPT header, and check against several DNSBL lists such as Spamhaus.org. It also checks against the Ubiquity Servers IP ranges, which is a major source of Spam Comments. </p>
+  <p>Optionally the plugin will also check for disposable email addresses, check for the lack of a HTTP_ACCEPT header, and check against several DNSBL lists such as Spamhaus.org. It also checks against spammer hosts like Ubiquity-Nobis, XSServer, Balticom, Everhost, FDC, Exetel, Virpus and other servers, which are a major source of Spam Comments. </p>
+  <p>Rejects very long email addresses and very long author names since spammers can't resist putting there message everywhere. It also rejects form POST data where there is no HTTP_REFERER header, because spammers often forget to include the referring site information in their software.</p>
   <p><span style="font-weight:bold;">Limitations: </span></p>
   <p>StopForumSpam.com limits checks to 10,000 per day for each IP so the plugin may stop validating on very busy sites. I have not seen this happen, yet. The plugin will not stop spam that has not been reported to the various databases. You will always get some comments from spammers who are not yet reported. You can help others and yourself by reporting spam. If you do not report spam, the spammer will keep hitting you. This plugin works best with Akismet. Akismet works well, but clutters the database with spam comments that need to be deleted regularly, and Akismet does not work with spammer registrations. </p>
   <p style="font-weight:bold;">API Keys: </p>
@@ -225,17 +297,46 @@
   <p><span style="font-weight:bold;">Cache: </span></p>
   <p>The Stop Spammer Registrations plugin keeps track of a number of spammer emails and IP addresses in a cache to avoid pinging databases more often than necessary. The results are saved and displayed. You can control the length of the cache list and clear it at any time. </p>
   <p><span style="font-weight:bold;">Reporting Spam : </span></p>
-  <p>On the comments moderation page, the plugin adds extra options to check comments agains the various databases and to report to the Stop Forum Spam database. You will need a Stop Forum Spam API key in order to report spam/ </p>
+  <p>On the comments moderation page, the plugin adds extra options to check comments against the various databases and to report to the Stop Forum Spam database. You will need a Stop Forum Spam API key in order to report spam/ </p>
   <p><span style="font-weight:bold;">Network MU Installation Option : </span></p>
-  <p> If you are running a networked WPMU system of blogs, you can optionally control this plugin from the control panel of the main blog. By checking the 'Networked ON' radio button, the individual blogs will not see the options page. The API keyes will only have to entered in one place and the history will only appear in one place, making the plugin easier to use for administrating many blogs. The comments, however, still must be maintained from each blog. The Network buttons only appear if you have a Networked installation.</p>
+  <p> If you are running a networked WPMU system of blogs, you can optionally control this plugin from the control panel of the main blog. By checking the 'Networked ON' radio button, the individual blogs will not see the options page. The API keys will only have to entered in one place and the history will only appear in one place, making the plugin easier to use for administrating many blogs. The comments, however, still must be maintained from each blog. The Network buttons only appear if you have a Networked installation.</p>
+  <p><strong>Debugging:</strong></p>
+  <p>If the plugin is having trouble it drops a file in the plugin&rsquo;s directory named sfs_debug_output.txt. If the file is produced it will appear at the bottom of this page along with a button to delete it. Common errors include many which are not really an issue. From time to time you will see an error that reports that PHP could not redirect a page. This happens on some systems where the spammer is rejected, but the access denied screen does not appear correctly. I believe this is caused by data in the spam comment.</p>
+  <p>If you do not want to see any errors you can search in the plugin code for the line that contains &quot;debug=true;&quot; and change the true to false, so the line is &quot;debug=false;&quot; (a semicolon at the end is required by PHP). I have set the plugin to report problems by default (debug=true;). </p>
+  <p>Please report any errors that you see. </p>
   <p><span style="font-weight:bold;">Requirements : </span></p>
   <p>The plugin uses the WP_Http class to query the spam databases. Normally, if WordPress is working, then this class can access the databases. If, however, the system administrator has turned off the ability to open a url, then the plugin will not work. Sometimes placing a php.ini file in the blog's root directory with the line 'allow_url_fopen=On' will solve this.</p>
   <p>The Stop Spammer Registrations plugin is ON when it is installed and enabled. To turn it off just disable the plugin from the plugin menu.. </p>
   <p>You may see your own email in the cache as spammers try to use it to leave comments. You may have to white list your own email if that is the case, to keep the plugin from locking you out.</p>
-  <p>Watch the <a href="http://www.youtube.com/watch?v=EKrUX0hHAx8" target="_blank">youtube spam trap video</a>! The video shows one of my plugins that anti-spam cops use. They run honey pots or sites that do nothing but attract spammers. These sites report as many as 500 spammers per hour to the same database that this plugin checks. </p>
+  <p>There is a button that allows you check access to the StopForumSpam database from the plugin Options page. This will tell you if the host allows opening of remote URL addresses. Please check your network access to the StopForumSpam database before reporting that the plugin doesn't work. The problem may be your host configuration. </p>
   <hr/>
   <h4>For questions and support please check my website <a href="http://www.blogseye.com/i-make-plugins/stop-spammer-registrations-plugin/">BlogsEye.com</a>.</h4>
-  <p>
+  <p>&nbsp;</p>
+<script type="text/javascript" >
+function kpg_api_test(url) {
+	var data= {
+		action: 'sfs_check',
+		ajax_url: url
+	}
+	jQuery.get(ajaxurl, data, sfs_ajax_return_check);
+}
+function sfs_ajax_return_check(response) {
+	response=response.substring(0,response.length-1);
+	alert(response);
+	return false;
+}
+</script>
+    <fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
+    <legend>Test Network Access:</legend>
+	Use this button to test if this plugin has network access to the StopForumSpam.com database<br/>
+	<form method="GET" action="">
+	   <p class="submit">
+		<input class="button-primary" value="Test Network Access" type="submit" onclick="kpg_api_test();return false;">
+	  </p>
+    </p>
+  
+	</form>
+	</fieldset>
   <form method="post" action="">
     <input type="hidden" name="action" value="update" />
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
@@ -258,7 +359,11 @@
 	?>
     <fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
     <legend>API Keys:</legend>
-    Your StopForunSpam.com API Key:
+	Enable StopForumSpam Lookups:
+	<input name="chksfs" type="checkbox" value="Y" <? if ($accept=='Y') echo  'checked="true"';?>/>
+	You may want to disable checking of the SFS db. By default this is on. Uncheck it to turn off.
+	<br/>
+    Your StopForumSpam.com API Key:
     <input size="32" name="apikey" type="text" value="<?php echo $apikey; ?>"/>
     (optional) <br/>
     Project Honeypot API Key:
@@ -266,7 +371,10 @@
     (For HTTP:bl blacklist lookup, if not blank) <br/>
     BotScout API Key:
     <input size="32" name="botscoutapi" type="text" value="<?php echo $botscoutapi; ?>"/>
-    (For BotScout.com lookup, if not blank)
+    (For BotScout.com lookup, if not blank)<br/>
+    Wordpress API Key:
+    <input size="32" name="wordpress_api_key" type="text" value="<?php echo $wordpress_api_key; ?>"/>
+    (For use with Akismet DB. This will work without the Akismet plugin if you put enter your Wordpress API Key here.)
     </fieldset>
     <br/>
     <fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
@@ -297,27 +405,36 @@
     Block Spam missing the HTTP_ACCEPT header:
     <input name="accept" type="checkbox" value="Y" <? if ($accept=='Y') echo  'checked="true"';?>/>
     Blocks users who have incomplete headers. (optional) <br/>
-    <br/>
+    Block with missing or invalid HTTP_REFERER:
+    <input name="chkreferer" type="checkbox" value="Y" <? if ($chkreferer=='Y') echo  'checked="true"';?>/>
+    Blocks users who send form data, but the HTTP_REFERER does not match your domain. (optional) <br/>
     Check email address in addition to IP at StopForumSpam:
     <input name="chkemail" type="checkbox" value="Y" <? if ($chkemail=='Y') echo  'checked="true"';?>/>
     Most spammers use random, faked or other people's email. (optional) <br/>
-    <br/>
+ 
     Deny disposable email addresses:
     <input name="chkdisp" type="checkbox" value="Y" <? if ($chkdisp=='Y') echo  'checked="true"';?>/>
-    Some real commenters might use disposable email, but probably not (optional) <br/>
-    <br/>
+    Some real comments might use disposable email, but probably not (optional) <br/>
+
+    Check for long emails or author name:
+    <input name="chklong" type="checkbox" value="Y" <? if ($chklong=='Y') echo  'checked="true"';?>/>
+    Spammers like to use long names and emails. This rejects these if the are over 64 characters in length (optional)<br/>
+
     Check against DNSBL lists such as Spamhaus.org :
     <input name="chkdnsbl" type="checkbox" value="Y" <? if ($chkdnsbl=='Y') echo  'checked="true"';?>/>
     Primarily used for email spam, but might stop comment spam. (optional) <br/>
-    <br/>
-    Check against list of Ubiquity Server IPs:
+
+    Check against list of Ubiquity-Nobis and other Spam Server IPs:
     <input name="chkubiquity" type="checkbox" value="Y" <? if ($chkubiquity=='Y') echo  'checked="true"';?>/>
-    Ubiquity Servers is the source of much Comment Spam (optional) <br/>
-    <br/>
+    Hosting companies who tolerate spammers are the source of much Comment Spam (optional) <br/>
+
     Check IP against the Akismet database:
     <input name="chkakismet" type="checkbox" value="Y" <? if ($chkakismet=='Y') echo  'checked="true"';?>/>
-    If Akismet is installed and the API key is set, then you may use Akismet to check logins or registrations, but not comments (optional) <br/>
-    <br/>
+    If the Akismet API key is set, then you may use Akismet to check logins or registrations, but not comments (optional) <br/>
+
+    Automatically add admins to white list:
+    <input name="addtowhitelist" type="checkbox" value="Y" <? if ($addtowhitelist=='Y') echo  'checked="true"';?>/> Whenever an admin hits the options page his IP will be added to the white list. This prevents admins from being locked out.<br/>
+<br/>
     White List - put IP addresses or emails here that you don't want blocked. One email or IP to a line.<br/>
     <textarea style="border:medium solid #66CCFF;" name="wlist" cols="40" rows="8"><?php 
     for ($k=0;$k<count($wlist);$k++) {
@@ -327,18 +444,39 @@
 </textarea>
    <br/>
     Black List - put IP addresses or emails here that want blocked. One email or IP to a line.<br/>
-    <textarea style="border:medium solid #66CCFF;" name="blist" cols="40" rows="8"><?php 
+    <textarea style="border:medium solid #66CCFF;" name="blist" cols="40" rows="8"><?php
     for ($k=0;$k<count($blist);$k++) {
 		echo $blist[$k]."\r\n";
 	}
 	?>
 </textarea>
-    </p>
+    </p><br/>
     </fieldset>
+    <br/>
+    <fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
+    <legend>Events to Check:</legend>
+	<p>You can specify which events to check. You may not want to check logins or registrations. You may wish to allow any comment and let Akismet handle things.</p>
+	Check IP on wp-comment.php
+    <input name="chkcomments" type="checkbox" value="Y" <? if ($chkcomments=='Y') echo  'checked="true"';?>/> 
+    Check IP and email every time the wp-comments.php file is loaded.<br/>
+	Check IP on wp-login.php
+    <input name="chklogin" type="checkbox" value="Y" <? if ($chklogin=='Y') echo  'checked="true"';?>/> 
+    Check IP and email every time the wp-login.php file is loaded.<br/>
+	Check IP on wp-signup.php
+    <input name="chksignup" type="checkbox" value="Y" <? if ($chksignup=='Y') echo  'checked="true"';?>/> 
+    Check IP and email every time the wp-signup.php file is loaded.<br/>
+	Check IP on xmlrpc.php
+    <input name="chkxmlrpc" type="checkbox" value="Y" <? if ($chkxmlrpc=='Y') echo  'checked="true"';?>/> 
+    Check IP and email every time the xmlrpc.php file is loaded. This will check ping backs and other remote calls.<br/>
+    <br/>
+	
+    </fieldset>
+ 	
     <br/>
     <fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
     <legend>History and Cache Size:</legend>
     You can change the number of entries to keep in your history and cache. The size of these items is an issue and will cause problems with some WordPress installations. It is best to keep these small.<br/>
+	<br/>
     Cache Size:
     <select name="kpg_sp_cache">
       <option value="10" <?php if ($kpg_sp_cache=='10') echo "selected=\"true\""; ?>>10</option>
@@ -373,7 +511,7 @@
 			echo "Thanks";		
 		} else {
 		?>
-    Check if you are tired of seeing the <a target="_blank" href="http://www.blogseye.com/buy-the-book/">">Buy Keith's Book</a> links.
+    Check if you are tired of seeing the <a target="_blank" href="http://www.blogseye.com/buy-the-book/">Buy Keith's Book</a> links.
     <?php 
 		}
 	?>
@@ -385,11 +523,25 @@
   </form>
   <p>&nbsp;</p>
   <?php
-     $f=dirname(__FILE__)."/sfs_debug_output.txt";
+     $f=dirname(__FILE__)."/../sfs_debug_output.txt";
 	 if (file_exists($f)) {
-	     echo("<pre>");
-		 readfile($f);
-	     echo("</pre>");
+	    ?>
+<h3>Error Log</h3>
+<p>If debugging is turned on, the plugin will drop a record each time it encounters a PHP error. 
+Most of these errors are not fatal and do not effect the operation of the plugin. Almost all come from the unexpected data that
+spammers include in their effort to fool us. The author's goal is to eliminate any and
+all errors. These errors should be corrected. Fatal errors should be reported to the author at www.blogseye.com.</p>
+		
+<form method="post" action="">
+    <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
+    <input type="hidden" name="kpg_stop_delete_log" value="true" />
+    <input value="Delete Error Log File" type="submit">
+</form>
+
+<pre>
+<?php readfile($f); ?>
+</pre>
+<?php
 	 }
-	 ?>
+?>
 </div>
