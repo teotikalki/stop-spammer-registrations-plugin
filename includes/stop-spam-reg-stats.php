@@ -81,7 +81,7 @@ function addwhite(ip) {
 	return false;
 }
 </script>
-  <h2>Stop Spammers Plugin Stats Version 3.4</h2>
+  <h2>Stop Spammers Plugin Stats Version 3.5<h2>
  <?php 
 
 	$nag='';
