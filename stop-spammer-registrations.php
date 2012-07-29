@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
-Version: 3.5
+Version: 3.6
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -108,10 +108,8 @@ function kpg_sfs_reg_unhook() {
 function kpg_sfs_red_herring_comment($query) {
 	remove_action('loop_start','kpg_sfs_red_herring_comment');
     if (is_feed()) return $query;
-   $sname=$_SERVER["SCRIPT_URI"];	
-	if (empty($sname)) {
-		$sname=$_SERVER["REQUEST_URI"];	
-	}
+	$sname=kpg_sfs_get_SCRIPT_URI();
+	if (empty($sname)) return;
 	if (strpos($sname,'/feed')) return $query;
 	$options=kpg_sp_get_options();
 	if (array_key_exists('redherring',$options)&&$options['redherring']!='Y') return $query;
@@ -332,6 +330,17 @@ function kpg_sfs_reg_check_send_mail($stuff) {
 	return $stuff;
 
 }
+function kpg_sfs_get_SCRIPT_URI() {
+	$sname='';
+	if (array_key_exists("SCRIPT_URI",$_SERVER)) {
+		$sname=$_SERVER["SCRIPT_URI"];	
+	}
+	if (empty($sname)) {
+		$sname=$_SERVER["REQUEST_URI"];	
+	}
+	return $sname;
+
+}
 /************************************************************
 * 	kpg_sfs_check_404s()
 *	
@@ -339,6 +348,18 @@ function kpg_sfs_reg_check_send_mail($stuff) {
 *   This just caches badips for spiders trolling for a login
 *************************************************************/
 function kpg_sfs_check_404s() {
+	// fix request_uri on IIS
+	if (!isset($_SERVER['REQUEST_URI'])) {
+		$_SERVER['REQUEST_URI'] = substr($_SERVER['PHP_SELF'],1 );
+		if (isset($_SERVER['QUERY_STRING'])) { 
+			$_SERVER['REQUEST_URI'].='?'.$_SERVER['QUERY_STRING']; 
+		}
+	}	
+	if (!array_key_exists('SCRIPT_URI',$_SERVER)) {
+		$sname=$_SERVER["REQUEST_URI"];
+		if (strpos($sname,'?')!==false) $sname=substr($sname,0,strpos($sname,'?'));
+		$_SERVER['SCRIPT_URI']=$sname;
+	}
 	if (!is_404()) return;
 	remove_action('template_redirect', 'kpg_sfs_check_404s');
 	// check to see if we should even be here
@@ -349,13 +370,18 @@ function kpg_sfs_check_404s() {
 	$ip=check_forwarded_ip($ip);
 
 	$stats=kpg_sp_get_stats();
+
 	//extract($options);
 	$plink = $_SERVER['REQUEST_URI']; 
 	if (strpos($plink,'?')!==false)  $plink=substr($plink,0,strpos($plink,'?'));
 	if (strpos($plink,'#')!==false)  $plink=substr($plink,0,strpos($plink,'#'));
 	$plink=basename($plink);
-	if (strpos($plink."\t","wp-login.php\t")===false && strpos($plink."\t","wp-signup.php\t")!==false ) return;
-	if (strpos($plink."\t","wp-comments-post.php\t")===false && strpos($plink."\t","xmlrpc.php\t")!==false ) return;
+	if (strpos($plink."\t","wp-login.php\t")===false 
+		&& strpos($plink."\t","wp-signup.php\t")===false 
+		&& strpos($plink."\t","wp-comments-post.php\t")===false
+		&& strpos($plink."\t","xmlrpc.php\t")===false) {
+			return;
+	}
 	// have a bogus hit on a login or signup
 	// register the bad ip
 	$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
@@ -363,6 +389,18 @@ function kpg_sfs_check_404s() {
 	if (!empty($ip)) $badips[$ip]=$now;
 	asort($badips);
 	$stats['badips']=$badips;
+	// put into the history list
+	$blog='';
+	if (function_exists('is_multisite') && is_multisite()) {
+		global $blog_id;
+		if (!isset($blog_id)||$blog_id!=1) {
+			$blog=$blog_id;
+		}
+	}
+	$hist=$stats['hist'];
+	$hist[$now]=array($ip,'-','-',$plink,"404 on $plink, added to reject cache.",$blog);
+	$hist[$now][4]="404 on $plink, added to reject cache.";
+	$stats['hist']=$hist;
     update_option('kpg_stop_sp_reg_stats',$stats);
     return;
 }
@@ -915,7 +953,7 @@ function really_clean($s) {
 	return $s;
 }
 function kpg_check_bad_agents() {
-$badagents=array("asterias","Atomic_Email_Hunter","b2w/0.1","BackDoorBot/1.0","Black Hole","BlowFish/1.0","BotALot","BotRightHere","BuiltBotTough","Bullseye/1.0","BunnySlippers","Cegbfeieh","CheeseBot","CherryPicker","CherryPickerElite/1.0","CherryPickerSE/1.0","CopyRightCheck","cosmos","Crescent","Crescent Internet ToolPak HTTP OLE Control v.1.0","discobot","DittoSpyder","DOC","Download Ninja","EmailCollector","EmailSiphon","EmailWolf","EroCrawler","ExtractorPro","Fasterfox","Fetch","Foobot","grub-client","Harvest/1.5","hloader","httplib","HTTrack","humanlinks","ieautodiscovery","InfoNaviRobot","JennyBot","k2spider","Kenjin Spider","Keyword Density/0.9","larbin","LexiBot","libWeb/clsHTTP","libwww","LinkextractorPro","linko","LinkScan/8.1a Unix","LinkWalker","LNSpiderguy","lwp-trivial","lwp-trivial/1.34","Mata Hari","Microsoft.URL.Control","Microsoft URL Control - 5.01.4511","Microsoft URL Control - 6.00.8169","MIIxpc","MIIxpc/4.2","Missigua Locator","Mister PiX","moget","moget/2.1","MSIECrawler","NetAnts","NICErsPRO","NPBot","Offline Explorer","Openfind","Openfind data gathere","ProPowerBot/2.14","ProWebWalker","QueryN Metasearch","RepoMonkey","RepoMonkey Bait & Tackle/v1.01","RMA","sitecheck.Internetseer.com","SiteSnagger","SnapPreviewBot","SpankBot","spanner","suzuran","Szukacz/1.4","Teleport","TeleportPro","Teleport Pro/1.29","Telesoft","TurnitinBot","The Intraformant","TheNomad","TightTwatBot","Titan","toCrawl/UrlDispatcher","True_Robot","True_Robot/1.0","turingos","UbiCrawler","URLy Warning","VCI","VCI WebViewer VCI WebViewer Win32","Web Image Collector","Web Downloader/6.9","WebAuto","WebBandit","WebBandit/3.50","WebCopier","WebCopier v4.0","WebEnhancer","WebmasterWorldForumBot","WebReaper","WebSauger","Website Quester","Webster Pro","WebStripper","WebZip","WebZip/4.0","Wget","Wget/1.5.3","Wget/1.6","WWW-Collector-E","Xenu's","Xenu's Link Sleuth 1.1c","Zao","Zeus","Zeus 32297 Webster Pro V2.9 Win32","ZyBORG",);
+$badagents=array("asterias","Atomic_Email_Hunter","b2w/0.1","BackDoorBot/1.0","Black Hole","BlowFish/1.0","BotALot","BotRightHere","BuiltBotTough","Bullseye/1.0","BunnySlippers","Cegbfeieh","CheeseBot","CherryPicker","CherryPickerElite/1.0","CherryPickerSE/1.0","CopyRightCheck","cosmos","Crescent","Crescent Internet ToolPak HTTP OLE Control v.1.0","discobot","DittoSpyder","DOC","Download Ninja","EmailCollector","EmailSiphon","EmailWolf","EroCrawler","ExtractorPro","Fasterfox","Fetch","Foobot","grub-client","Harvest/1.5","hloader","httplib","HTTrack","humanlinks","ieautodiscovery","InfoNaviRobot","JennyBot","k2spider","Kenjin Spider","Keyword Density/0.9","larbin","LexiBot","libWeb/clsHTTP","libwww","LinkextractorPro","linko","LinkScan/8.1a Unix","LinkWalker","LNSpiderguy","lwp-trivial","lwp-trivial/1.34","Mata Hari","Microsoft.URL.Control","Microsoft URL Control - 5.01.4511","Microsoft URL Control - 6.00.8169","MIIxpc","MIIxpc/4.2","Missigua Locator","Mister PiX","moget","moget/2.1","MSIECrawler","NetAnts","NICErsPRO","NPBot","Offline Explorer","Openfind","Openfind data gathere","ProPowerBot/2.14","ProWebWalker","QueryN Metasearch","RepoMonkey","RepoMonkey Bait & Tackle/v1.01","RMA","sitecheck.Internetseer.com","SiteSnagger","SnapPreviewBot","SpankBot","spanner","suzuran","Szukacz/1.4","Teleport","TeleportPro","Teleport Pro/1.29","Telesoft","TurnitinBot","The Intraformant","TheNomad","TightTwatBot","Titan","toCrawl/UrlDispatcher","True_Robot","True_Robot/1.0","turingos","UbiCrawler","URLy Warning","VCI","VCI WebViewer VCI WebViewer Win32","Web Image Collector","Web Downloader/6.9","WebAuto","WebBandit","WebBandit/3.50","WebCopier","WebCopier v4.0","WebEnhancer","WebmasterWorldForumBot","WebReaper","WebSauger","Website Quester","Webster Pro","WebStripper","WebZip","WebZip/4.0","Wget","Wget/1.5.3","Wget/1.6","WWW-Collector-E","Xenu's","Xenu's Link Sleuth 1.1c","Zao","Zeus","Zeus 32297 Webster Pro V2.9 Win32","ZyBORG","Java/1.");
 $agent=$_SERVER['HTTP_USER_AGENT'];
 	foreach ($badagents as $a) {
 		if (strpos(strtolower($agent),strtolower($a))!==false) {
@@ -1168,13 +1206,17 @@ function kpg_sfs_reg_stats_control() {
 		die('Access Denied');
 	}
 	// include it so as to make the core plugin smaller
+	sfs_errorsonoff();
 	require("includes/stop-spam-reg-stats.php");
+	sfs_errorsonoff('off');
 
 }
 function kpg_sfs_reg_control()  {
 // this is the display of information about the page.
 
-  require("includes/stop-spam-reg-options.php");
+	sfs_errorsonoff();
+	require("includes/stop-spam-reg-options.php");
+	sfs_errorsonoff('off');
 	
 
 }
@@ -1460,7 +1502,8 @@ function kpg_sp_get_options() {
 		'chkagent'=>'Y',
 		'chkxmlrpc'=>'Y',
 		'chkwpmail'=>'Y',
-		'chkwplogin'=>'Y',
+		'chkwplogin'=>'N',
+		'chk404'=>'Y',
 		'addtowhitelist'=>'Y',
 		'muswitch'=>'Y',
 		'sfsfreq'=>0,
@@ -1471,7 +1514,7 @@ function kpg_sp_get_options() {
 		'botage'=>9999,
 		'kpg_sp_cache'=>25,
 		'kpg_sp_hist'=>25,
-		'redirurl'=>'http://click.linksynergy.com/fs-bin/click?id=drdqG*JRcDg&offerid=206296.10000061&type=3&subid=0', 
+		'redirurl'=>'', 
 		'redir'=>'N',
 		'rejectmessage'=>"Access Denied<br/>
 This site is protected by the Stop Spammer Registrations Plugin.<br/>",
@@ -1501,6 +1544,10 @@ This site is protected by the Stop Spammer Registrations Plugin.<br/>",
 	if (empty($ansa['kpg_sp_cache'])) $ansa['kpg_sp_cache']=25;
 	if (empty($ansa['kpg_sp_hist'])) $ansa['kpg_sp_hist']=25;
 	if (!is_array($ansa['spamwords'])) $ansa['spamwords']=array();
+	if ($ansa['redirurl']=='http://click.linksynergy.com/fs-bin/click?id=drdqG*JRcDg&offerid=206296.10000061&type=3&subid=0') $ansa['redirurl']='';
+	if ($ansa['rejectmessage']=='http://click.linksynergy.com/fs-bin/click?id=drdqG*JRcDg&offerid=206296.10000061&type=3&subid=0') {
+		$ansa['rejectmessage']='Access Denied<br/>This site is protected by the Stop Spammer Registrations Plugin.<br/>';
+	}
 	return $ansa;
 }
 function sfs_handle_ajax_check($data) {
@@ -1666,7 +1713,7 @@ function sfs_ErrorHandler($errno, $errmsg, $filename, $linenum, $vars) {
 	// we are only conserned with the errors and warnings, not the notices
 	//if ($errno==E_NOTICE || $errno==E_WARNING) return false;
 	$serrno="";
-	if ((strpos($filename,'stop-spammer-registrations')<1)&&(strpos($filename,'options-general.php')<1)) return false;
+	if ((strpos($filename,'stop-spam')<1)&&(strpos($filename,'options-general.php')<1)) return false;
 	switch ($errno) {
 		case E_ERROR: 
 			$serrno="Fatal run-time errors. These indicate errors that can not be recovered from, such as a memory allocation problem. Execution of the script is halted. ";

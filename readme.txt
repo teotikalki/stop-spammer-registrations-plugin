@@ -4,7 +4,7 @@ Donate link: http://www.blogseye.com/buy-the-book/
 Requires at least: 3.0
 Tested up to: 3.5
 Contributors: Keith Graham
-Stable tag: 3.5
+Stable tag: 3.6
 
 The Stop Spammer Registrations Plugin checks comments and logins 15 different ways to block spammers.
 
@@ -142,7 +142,10 @@ Changed way arrays are searched. It was possible that ip addresses were not foun
 Fixed an issue with Red Herring inserting invalid data into feeds. Added a list of spam robot user agents. Added a timeout to the comment submission forms to ban spammers who take less than 5 seconds to fill out and submit a form. Changed the way the plugin loads, speeding up WordPress. Most functions do not load unless the plugin is processing a form. There is no need to check for spammers unless they are actually in the process of leaving a comment or logging in. Mail and XMLRPC checks load all the time. Akismet may get the spammer before this plugin does resulting in more spam in the Akismet spam queue, but it doesn't matter as long as the spammer is stopped. Added an optional JavaScript trap to the comment form. Users who do not have JavaScript enabled will be marked as spammers. Disable this if you have a blog for paranoids.
 
 = 3.5 =
-Fixed stupid bug. Although I tested for a week in 5 different sites, this bug didn't come up.
+Fixed typo. Although I tested for a week in 5 different sites, this bug didn't come up.
+
+= 3.6 =
+Fixed issue with some web servers that did not set server variables such as SCRIPT_URI and REQUEST_URI. These were troubling to those with hosting software that ignored these variables. Fixed an issue on saving of parameters. Added a hook to 404 errors so that missed hits on wp-login can be considered malicious. Removed default doubleclick link that was causing problems.
 
 == Support ==
 This plugin is free and I expect nothing in return. Please rate the plugin at: http://wordpress.org/extend/plugins/stop-spammer-registrations-plugin/

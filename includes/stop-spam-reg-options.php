@@ -25,7 +25,7 @@
 		if (array_key_exists('action',$_POST)) {
 			if (array_key_exists('wordpress_api_key',$_POST)) {
 				$wordpress_api_key=stripslashes($_POST['wordpress_api_key']);
-				if (wordpress_api_key!='na') update_option('wordpress_api_key',$wordpress_api_key);
+				if ($wordpress_api_key!='na') update_option('wordpress_api_key',$wordpress_api_key);
 			} else {
 				$wordpress_api_key='na';
 			}
@@ -50,6 +50,13 @@
 				$chkubiquity='N';
 			}
 			$options['chkubiquity']=$chkubiquity;
+			
+			if (array_key_exists('chkwplogin',$_POST)) {
+				$chkwplogin=stripslashes($_POST['chkwplogin']);
+			} else {
+				$chkwplogin='N';
+			}
+			$options['chkwplogin']=$chkwplogin;
 			
 			if (array_key_exists('chkakismet',$_POST)) {
 				$chkakismet=stripslashes($_POST['chkakismet']);
@@ -121,10 +128,7 @@
 				$chkjscript='N';
 			}
 			$options['chkjscript']=$chkjscript;
-			
-
-
-			
+					
 			if (array_key_exists('chkwpmail',$_POST)) {
 				$chkwpmail=stripslashes($_POST['chkwpmail']);
 			} else {
@@ -245,7 +249,7 @@
 			if (array_key_exists('botage',$_POST)) $botage=trim(stripslashes($_POST['botage']));
 			if (array_key_exists('muswitch',$_POST)) $muswitch=trim(stripslashes($_POST['muswitch']));
 			if (array_key_exists('rejectmessage',$_POST)) $rejectmessage=trim(stripslashes($_POST['rejectmessage']));
-			if (array_key_exists('redirurl',$_POST)) $rejectmessage=trim(stripslashes($_POST['redirurl']));
+			if (array_key_exists('redirurl',$_POST)) $redirurl=trim(stripslashes($_POST['redirurl']));
 			
 			if (array_key_exists('kpg_sp_cache',$_POST)) $kpg_sp_cache=trim(stripslashes($_POST['kpg_sp_cache']));
 			if (array_key_exists('kpg_sp_hist',$_POST)) $kpg_sp_hist=trim(stripslashes($_POST['kpg_sp_hist']));
@@ -354,7 +358,7 @@
 	}
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
-  <p style="font-weight:bold;">Version 3.5</p>
+  <p style="font-weight:bold;">Version 3.6</p>
   <p>Eliminates 99% of spam registrations and  comments. Checks all attempts to leave spam against <a href="http://www.stopforumspam.com/">Stop Forum Spam</a>, <a href="http://www.projecthoneypot.org/">Project Honeypot</a>, and <a href="http://www.botscout.com/">BotScout</a>, DNSBL lists such as Spamhaus.org, known spammer hosts such  as Ubiquity Servers, disposable email addresses, very long email address and  names, and HTTP_ACCEPT header. Checks for robots that hit your site too fast,  and puts a fake comment and login screen where only spammers will find them. In  all the plugin uses 15 different strategies to block spammers. </p>
   <p style="font-weight:bold;">How the plugin works: </p>
   <p>This plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments. 
@@ -505,6 +509,9 @@ function sfs_ajax_return_check(response) {
 	Use JavaScript trap:
     <input name="chkjscript" type="checkbox" value="Y" <? if ($chkjscript=='Y') echo  'checked="true"';?>/>
     Places a Javascript trap on comment forms. If a user has javascript turned off they will be denied access. Only paranoids and delusional users disable javascript.<br/>
+	Blacklist searches for wp-login:
+    <input name="chkwplogin" type="checkbox" value="Y" <? if ($chkwplogin=='Y') echo  'checked="true"';?>/>
+    When WordPress detects a 404 file not found for someone trying to find wp-login, this is someone probing your site to find your login so the IP is added to your bad IP cache. This is off by default.<br/>
     Check against list of Ubiquity-Nobis and other Spam Server IPs:
     <input name="chkubiquity" type="checkbox" value="Y" <? if ($chkubiquity=='Y') echo  'checked="true"';?>/>
     Hosting companies who tolerate spammers are the source of much Comment Spam<br/>
