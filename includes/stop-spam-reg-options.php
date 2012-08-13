@@ -270,6 +270,7 @@
 			$options['botage']=$botage;
 			$options['kpg_sp_cache']=$kpg_sp_cache;
 			$options['kpg_sp_hist']=$kpg_sp_hist;
+			$options['redirurl']=$redirurl;
 			if (empty($muswitch)) $muswitch='Y';
 			if ($muswitch!='N') $muswitch='Y';
 			$options['muswitch']=$muswitch;
@@ -358,7 +359,7 @@
 	}
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
-  <p style="font-weight:bold;">Version 3.6</p>
+  <p style="font-weight:bold;">Version 3.7</p>
   <p>Eliminates 99% of spam registrations and  comments. Checks all attempts to leave spam against <a href="http://www.stopforumspam.com/">Stop Forum Spam</a>, <a href="http://www.projecthoneypot.org/">Project Honeypot</a>, and <a href="http://www.botscout.com/">BotScout</a>, DNSBL lists such as Spamhaus.org, known spammer hosts such  as Ubiquity Servers, disposable email addresses, very long email address and  names, and HTTP_ACCEPT header. Checks for robots that hit your site too fast,  and puts a fake comment and login screen where only spammers will find them. In  all the plugin uses 15 different strategies to block spammers. </p>
   <p style="font-weight:bold;">How the plugin works: </p>
   <p>This plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments. 
@@ -405,231 +406,298 @@ function sfs_ajax_return_check(response) {
 	return false;
 }
 </script>
-  <fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
-  <legend>Test Network Access:</legend>
+  <h4>Test Network Access:</h4>
   Use this button to test if this plugin has network access to the StopForumSpam.com database<br/>
   <form method="GET" action="">
     <p class="submit">
       <input class="button-primary" value="Test Network Access" type="submit" onclick="kpg_api_test();return false;">
-    </p>
-    </p>
   </form>
-  </fieldset>
+  <br/>
   <form method="post" action="">
     <input type="hidden" name="action" value="update" />
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <?php
 		if (function_exists('is_multisite') && is_multisite()) {
 	?>
-    <fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
-    <legend>Network Blog Option:</legend>
-    Select how you want to control options in a networked blog environment: <br />
-    Networked ON:
-    <input name="muswitch" type="radio" value='Y'  <?php if ($muswitch=='Y') echo "checked=\"true\""; ?> />
-    | Networked OFF:
-    <input name="muswitch" type="radio" value='N' <?php if ($muswitch!='Y') echo "checked=\"true\""; ?>  />
-    <br />
-    If you are running WPMU and want to control all options and logs through the main log admin panel, select on. If you select OFF, each blog will have to configure the plugin separately.
-    </fieldset>
+    <h4>Network Blog Option:</h4>
+    <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
+      <tr bgcolor="white">
+        <td width="20%" valign="top">Select how you want to control options in a networked blog environment:</td>
+        <td valign="top"> Networked ON:
+          <input name="muswitch" type="radio" value='Y'  <?php if ($muswitch=='Y') echo "checked=\"true\""; ?> />
+          <br/>
+          Networked OFF:
+          <input name="muswitch" type="radio" value='N' <?php if ($muswitch!='Y') echo "checked=\"true\""; ?>  />
+        </td>
+        <td valign="top"> If you are running WPMU and want to control all options and logs through the main log admin panel, select on. If you select OFF, each blog will have to configure the plugin separately. </td>
+      </tr>
+    </table>
     <br/>
     <?php
 		}
 	?>
-    <fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
-    <legend>API Keys:</legend>
-    Enable StopForumSpam Lookups:
-    <input name="chksfs" type="checkbox" value="Y" <? if ($accept=='Y') echo  'checked="true"';?>/>
-    You may want to disable checking of the SFS db. By default this is on. Uncheck it to turn off. <br/>
-    Your StopForumSpam.com API Key:
-    <input size="32" name="apikey" type="text" value="<?php echo $apikey; ?>"/>
-    (optional) <br/>
-    Project Honeypot API Key:
-    <input size="32" name="honeyapi" type="text" value="<?php echo $honeyapi; ?>"/>
-    (For HTTP:bl blacklist lookup, if not blank) <br/>
-    BotScout API Key:
-    <input size="32" name="botscoutapi" type="text" value="<?php echo $botscoutapi; ?>"/>
-    (For BotScout.com lookup, if not blank)<br/>
-    Wordpress API Key:
-    <input size="32" name="wordpress_api_key" type="text" value="<?php echo $wordpress_api_key; ?>"/>
-    (For use with Akismet DB. This will work without the Akismet plugin if you put enter your Wordpress API Key here.)
-    </fieldset>
+    <h4>API Keys:</h4>
+    <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
+      <tr bgcolor="white">
+        <td valign="top">Enable StopForumSpam Lookups:</td>
+        <td align="center" valign="top"><input name="chksfs" type="checkbox" value="Y" <?php if ($accept=='Y') echo  "checked=\"checked\"";?>/>
+        </td>
+        <td valign="top">You may want to disable checking of the SFS db. By default this is on. Uncheck it to turn off.</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Your StopForumSpam.com API Key:</td>
+        <td align="center" valign="top"><input size="32" name="apikey" type="text" value="<?php echo $apikey; ?>"/></td>
+        <td valign="top">(optional)</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top"> Project Honeypot API Key:</td>
+        <td align="center" valign="top"><input size="32" name="honeyapi" type="text" value="<?php echo $honeyapi; ?>"/></td>
+        <td valign="top"> (For HTTP:bl blacklist lookup, if not blank)</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">BotScout API Key:</td>
+        <td align="center" valign="top"><input size="32" name="botscoutapi" type="text" value="<?php echo $botscoutapi; ?>"/></td>
+        <td valign="top">(For BotScout.com lookup, if not blank)</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Wordpress API Key:</td>
+        <td align="center" valign="top"><input size="32" name="wordpress_api_key" type="text" value="<?php echo $wordpress_api_key; ?>"/></td>
+        <td valign="top">(For use with Akismet DB. This will work without the Akismet plugin if you put enter your Wordpress API Key here.)</td>
+      </tr>
+    </table>
     <br/>
-    <fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
-    <legend>Spam Limits:</legend>
+    <h4>Spam Limits:</h4>
     You can set the minimum settings to allow possible spammers to use your site. <br/>
+    You may wish to forgive spammers with few incidents or no recent activity. I would recommend that to be on the safe side you should block users who appear on the spam database unless they specifically ask to be white listed. Allowed values are 0 to 9999. Only numbers are accepted.
+    <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
+      <tr bgcolor="white">
+        <td valign="top">Deny spammers found on Stop Forum Spam with more than
+          <input size="3" name="sfsfreq" type="text" value="<?php echo $sfsfreq; ?>"/>
+          incidents, and occurring less than
+          <input size="4" name="sfsage" type="text" value="<?php echo $sfsage; ?>"/>
+          days ago. </td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Deny spammers found on Project HoneyPot with incidents less than
+          <input size="3" name="hnyage" type="text" value="<?php echo $hnyage; ?>"/>
+          days ago, and with more than
+          <input size="4" name="hnylevel" type="text" value="<?php echo $hnylevel; ?>"/>
+          threat level. (25 threat level is average, threat level 5 is fairly low.)</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Deny spammers found on BotScout with more than
+          <input size="3" name="botfreq" type="text" value="<?php echo $botfreq; ?>"/>
+          incidents.</td>
+      </tr>
+    </table>
     <br/>
-    You may wish to forgive spammers with few incidents or no recent activity. I would recommend that to be on the safe side you should block users who appear on the spam database unless they specifically ask to be white listed. Allowed values are 0 to 9999. Only numbers are accepted. <br />
+    <h4>Other Checks:</h4>
+    <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
+      <tr bgcolor="white">
+        <td valign="top">Block Spam missing the HTTP_ACCEPT header:</td>
+        <td align="center" valign="top"><input name="accept" type="checkbox" value="Y" <?php if ($accept=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Blocks users who have incomplete headers.</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Block with missing or invalid HTTP_REFERER:</td>
+        <td align="center" valign="top"><input name="chkreferer" type="checkbox" value="Y" <?php if ($chkreferer=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Blocks users who send form data, but the HTTP_REFERER does not match your domain.
+      <tr bgcolor="white">
+        <td valign="top">Check email address in addition to IP at StopForumSpam:</td>
+        <td align="center" valign="top"><input name="chkemail" type="checkbox" value="Y" <?php if ($chkemail=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Most spammers use random, faked or other people's email.
+      <tr bgcolor="white">
+        <td valign="top">Deny disposable email addresses:</td>
+        <td align="center" valign="top"><input name="chkdisp" type="checkbox" value="Y" <?php if ($chkdisp=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Some real comments might use disposable email, but probably not
+      <tr bgcolor="white">
+        <td valign="top">Check for long emails or author name:</td>
+        <td align="center" valign="top"><input name="chklong" type="checkbox" value="Y" <?php if ($chklong=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Spammers like to use long names and emails. This rejects these if the are over 64 characters in length (optional)</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Check for missing HTTP_USER_AGENT:</td>
+        <td align="center" valign="top"><input name="chkagent" type="checkbox" value="Y" <?php if ($chkagent=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Browsers always include a user agent string when they access a site. A missing user agent is usually a spammer using poorly written software or a leach who is stealing the pages from your site.
+      <tr bgcolor="white">
+        <td valign="top">Check session for quick responses (disabled if caching is active):</td>
+        <td align="center" valign="top"><input name="chksession" type="checkbox" value="Y" <?php if ($chksession=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Checks that the spammer is allowed to use a PHP session. If not, it denies the comment. The plugin puts a timer in the session and if the user fills the form in less than 6 seconds it is too quick to be human. (Stops the most spammers of all the methods listed here.)
+      <tr bgcolor="white">
+        <td valign="top">Use a Red Herring form:</td>
+        <td align="center" valign="top"><input name="redherring" type="checkbox" value="Y" <?php if ($redherring=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Places a fake comment form on web pages to trap spammers. If they bite, their IP address is added to the bad cache. Normal users should not be able to see the Red Herring form. Check your theme after enabling this feature to make sure that it does not alter your blog's presentation. (Very very good way to stop spammers.)
+      <tr bgcolor="white">
+        <td valign="top">Check against DNSBL lists such as Spamhaus.org:</td>
+        <td align="center" valign="top"><input name="chkdnsbl" type="checkbox" value="Y" <?php if ($chkdnsbl=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Primarily used for email spam, but might stop comment spam.
+      <tr bgcolor="white">
+        <td valign="top">Use JavaScript trap:</td>
+        <td align="center" valign="top"><input name="chkjscript" type="checkbox" value="Y" <?php if ($chkjscript=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Places a Javascript trap on comment forms. If a user has javascript turned off they will be denied access. Only paranoids and delusional users disable javascript.
+      <tr bgcolor="white">
+        <td valign="top">Blacklist searches for wp-login:</td>
+        <td align="center" valign="top"><input name="chkwplogin" type="checkbox" value="Y" <?php if ($chkwplogin=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">When WordPress detects a 404 file not found for someone trying to find wp-login, this is someone probing your site to find your login so the IP is added to your bad IP cache. This is off by default.
+      <tr bgcolor="white">
+        <td valign="top">Check against list of Ubiquity-Nobis and other Spam Server IPs:</td>
+        <td align="center" valign="top"><input name="chkubiquity" type="checkbox" value="Y" <?php if ($chkubiquity=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Hosting companies who tolerate spammers are the source of much Comment Spam
+      <tr bgcolor="white">
+        <td valign="top">Check IP against the Akismet database:</td>
+        <td align="center" valign="top"><input name="chkakismet" type="checkbox" value="Y" <?php if ($chkakismet=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">If the Akismet API key is set, then you may use Akismet to check logins or registrations, but not comments (optional)
+      <tr bgcolor="white">
+        <td valign="top">Automatically add admins to white list:</td>
+        <td align="center" valign="top"><input name="addtowhitelist" type="checkbox" value="Y" <?php if ($addtowhitelist=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Whenever an admin hits the options page his IP will be added to the white list. This prevents admins from being locked out. </td>
+      </tr>
+    </table>
     <br/>
-    Deny spammers found on Stop Forum Spam with more than
-    <input size="3" name="sfsfreq" type="text" value="<?php echo $sfsfreq; ?>"/>
-    incidents, and occurring less than
-    <input size="4" name="sfsage" type="text" value="<?php echo $sfsage; ?>"/>
-    days ago. <br/>
-    <br/>
-    Deny spammers found on Project HoneyPot with incidents less than
-    <input size="3" name="hnyage" type="text" value="<?php echo $hnyage; ?>"/>
-    days ago, and with more than
-    <input size="4" name="hnylevel" type="text" value="<?php echo $hnylevel; ?>"/>
-    threat level. (25 threat level is average, threat level 5 is fairly low.) <br/>
-    <br/>
-    Deny spammers found on BotScout with more than
-    <input size="3" name="botfreq" type="text" value="<?php echo $botfreq; ?>"/>
-    incidents.
-    </fieldset>
-    <br/>
-    <fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
-    <legend>Other Checks:</legend>
-    Block Spam missing the HTTP_ACCEPT header:
-    <input name="accept" type="checkbox" value="Y" <? if ($accept=='Y') echo  'checked="true"';?>/>
-    Blocks users who have incomplete headers.<br/>
-    Block with missing or invalid HTTP_REFERER:
-    <input name="chkreferer" type="checkbox" value="Y" <? if ($chkreferer=='Y') echo  'checked="true"';?>/>
-    Blocks users who send form data, but the HTTP_REFERER does not match your domain.<br/>
-    Check email address in addition to IP at StopForumSpam:
-    <input name="chkemail" type="checkbox" value="Y" <? if ($chkemail=='Y') echo  'checked="true"';?>/>
-    Most spammers use random, faked or other people's email.<br/>
-    Deny disposable email addresses:
-    <input name="chkdisp" type="checkbox" value="Y" <? if ($chkdisp=='Y') echo  'checked="true"';?>/>
-    Some real comments might use disposable email, but probably not<br/>
-    Check for long emails or author name:
-    <input name="chklong" type="checkbox" value="Y" <? if ($chklong=='Y') echo  'checked="true"';?>/>
-    Spammers like to use long names and emails. This rejects these if the are over 64 characters in length (optional)<br/>
-    Check for missing HTTP_USER_AGENT:
-    <input name="chkagent" type="checkbox" value="Y" <? if ($chkagent=='Y') echo  'checked="true"';?>/>
-    Browsers always include a user agent string when they access a site. A missing user agent is usually a spammer using poorly written software or a leach who is stealing the pages from your site.<br/>
-    Check session for quick responses (disabled if caching is active):
-    <input name="chksession" type="checkbox" value="Y" <? if ($chksession=='Y') echo  'checked="true"';?>/>
-    Checks that the spammer is allowed to use a PHP session. If not, it denies the comment. The plugin puts a timer in the session and if the user fills the form in less than 6 seconds it is too quick to be human. (Stops the most spammers of all the methods listed here.)<br/>
-    Use a Red Herring form:
-    <input name="redherring" type="checkbox" value="Y" <? if ($redherring=='Y') echo  'checked="true"';?>/>
-    Places a fake comment form on web pages to trap spammers. If they bite, their IP address is added to the bad cache. Normal users should not be able to see the Red Herring form. Check your theme after enabling this feature to make sure that it does not alter your blog's presentation. (Very very good way to stop spammers.)<br/>
-    Check against DNSBL lists such as Spamhaus.org :
-    <input name="chkdnsbl" type="checkbox" value="Y" <? if ($chkdnsbl=='Y') echo  'checked="true"';?>/>
-    Primarily used for email spam, but might stop comment spam.<br/>	
-	Use JavaScript trap:
-    <input name="chkjscript" type="checkbox" value="Y" <? if ($chkjscript=='Y') echo  'checked="true"';?>/>
-    Places a Javascript trap on comment forms. If a user has javascript turned off they will be denied access. Only paranoids and delusional users disable javascript.<br/>
-	Blacklist searches for wp-login:
-    <input name="chkwplogin" type="checkbox" value="Y" <? if ($chkwplogin=='Y') echo  'checked="true"';?>/>
-    When WordPress detects a 404 file not found for someone trying to find wp-login, this is someone probing your site to find your login so the IP is added to your bad IP cache. This is off by default.<br/>
-    Check against list of Ubiquity-Nobis and other Spam Server IPs:
-    <input name="chkubiquity" type="checkbox" value="Y" <? if ($chkubiquity=='Y') echo  'checked="true"';?>/>
-    Hosting companies who tolerate spammers are the source of much Comment Spam<br/>
-    Check IP against the Akismet database:
-    <input name="chkakismet" type="checkbox" value="Y" <? if ($chkakismet=='Y') echo  'checked="true"';?>/>
-    If the Akismet API key is set, then you may use Akismet to check logins or registrations, but not comments (optional) <br/>
-    Automatically add admins to white list:
-    <input name="addtowhitelist" type="checkbox" value="Y" <? if ($addtowhitelist=='Y') echo  'checked="true"';?>/>
-    Whenever an admin hits the options page his IP will be added to the white list. This prevents admins from being locked out.<br/>
-    <br/>
-    White List - put IP addresses or emails here that you don't want blocked. One email or IP to a line.<br/>
-    <textarea style="border:medium solid #66CCFF;" name="wlist" cols="40" rows="8"><?php 
+    <h4>Lists:</h4>
+    <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
+      <tr bgcolor="white">
+        <td valign="top">White List:</td>
+        <td align="center" valign="top"><textarea name="wlist" cols="40" rows="8"><?php 
     for ($k=0;$k<count($wlist);$k++) {
 		echo $wlist[$k]."\r\n";
 	}
 	?>
-</textarea>
-    <br/>
-    Black List - put IP addresses or emails here that want blocked. One email or IP to a line.<br/>
-    <textarea style="border:medium solid #66CCFF;" name="blist" cols="40" rows="8"><?php
+</textarea></td>
+        <td valign="top">put IP addresses or emails here that you don't want blocked. One email or IP to a line.</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Black List:</td>
+        <td align="center" valign="top"><textarea name="blist" cols="40" rows="8"><?php
     for ($k=0;$k<count($blist);$k++) {
 		echo $blist[$k]."\r\n";
 	}
 	?>
-</textarea>
-    <br/>
-    Blocked Email Domains - Put the domains you want blocked here. e.g. dresssmall.com. This will block all comments and registrations that use this domain for emails.<br/>
-    <textarea style="border:medium solid #66CCFF;" name="blist" cols="40" rows="8"><?php
+</textarea></td>
+        <td valign="top">put IP addresses or emails here that want blocked. One email or IP to a line.</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top"> Blocked Email Domains:</td>
+        <td align="center" valign="top"><textarea name="baddomains" cols="40" rows="8"><?php
     for ($k=0;$k<count($baddomains);$k++) {
 		echo $baddomains[$k]."\r\n";
 	}
 	?>
-</textarea>
-    <br/>
-    Use the spam words list below to check comments:
-    <input name="chkspamwords" type="checkbox" value="Y" <? if ($chkspamwords=='Y') echo  'checked="true"';?>/>
-    Use the spam words list to check email and author fields.
-    <br/>
-    Spam Words - If a word here shows up in an email address or author field then block the comment.<br/>
-    <textarea style="border:medium solid #66CCFF;" name="spamwords" cols="40" rows="8"><?php
+</textarea></td>
+        <td valign="top">Put the domains you want blocked here. e.g. dresssmall.com. This will block all comments and registrations that use this domain for emails.</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Check Spam Words:</td>
+        <td valign="top"><input name="chkspamwords" type="checkbox" value="Y" <?php if ($chkspamwords=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td valign="top">Use the spam words list to check email and author fields. </td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Spam Words List:</td>
+        <td valign="top"><textarea name="spamwords" cols="40" rows="8"><?php
     for ($k=0;$k<count($spamwords);$k++) {
 		echo $spamwords[$k]."\r\n";
 	}
 	?>
-</textarea>
-    </p>
+</textarea></td>
+        <td valign="top">If a word here shows up in an email address or author field then block the comment.</td>
+      </tr>
+    </table>
     <br/>
-    </fieldset>
+    <h4>Events to Check:</h4>
+    You can specify which events to check. You may not want to check logins or registrations. You may wish to allow any comment and let Akismet handle things.
+    <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
+      <tr bgcolor="white">
+        <td valign="top">Check IP on wp-comment.php:</td>
+        <td valign="top"><input name="chkcomments" type="checkbox" value="Y" <?php if ($chkcomments=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td valign="top">Check IP and email every time the wp-comments.php file is loaded.</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Check IP on wp-login.php:</td>
+        <td valign="top"><input name="chklogin" type="checkbox" value="Y" <?php if ($chklogin=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td valign="top">Check IP and email every time the wp-login.php file is loaded.</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Check IP on wp-signup.php:</td>
+        <td valign="top"><input name="chksignup" type="checkbox" value="Y" <?php if ($chksignup=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td valign="top">Check IP and email every time the wp-signup.php file is loaded.</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Check IP on xmlrpc.php:</td>
+        <td valign="top"><input name="chkxmlrpc" type="checkbox" value="Y" <?php if ($chkxmlrpc=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td valign="top">Check IP and email every time the xmlrpc.php file is loaded. This will check ping backs and other remote calls</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Check IP on wp_mail:</td>
+        <td valign="top"><input name="chkwpmail" type="checkbox" value="Y" <?php if ($chkwpmail=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td valign="top">Check IP whenever wordpress sends mail to prevent spammers from sending mail to you or anyone else.</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">
+    </table>
     <br/>
-    <fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
-    <legend>Events to Check:</legend>
-    <p>You can specify which events to check. You may not want to check logins or registrations. You may wish to allow any comment and let Akismet handle things.</p>
-    Check IP on wp-comment.php
-    <input name="chkcomments" type="checkbox" value="Y" <? if ($chkcomments=='Y') echo  'checked="true"';?>/>
-    Check IP and email every time the wp-comments.php file is loaded.<br/>
-    Check IP on wp-login.php
-    <input name="chklogin" type="checkbox" value="Y" <? if ($chklogin=='Y') echo  'checked="true"';?>/>
-    Check IP and email every time the wp-login.php file is loaded.<br/>
-    Check IP on wp-signup.php
-    <input name="chksignup" type="checkbox" value="Y" <? if ($chksignup=='Y') echo  'checked="true"';?>/>
-    Check IP and email every time the wp-signup.php file is loaded.<br/>
-    Check IP on xmlrpc.php
-    <input name="chkxmlrpc" type="checkbox" value="Y" <? if ($chkxmlrpc=='Y') echo  'checked="true"';?>/>
-    Check IP and email every time the xmlrpc.php file is loaded. This will check ping backs and other remote calls.<br/>
-    Check IP on wp_mail
-    <input name="chkwpmail" type="checkbox" value="Y" <? if ($chkwpmail=='Y') echo  'checked="true"';?>/>
-    Check IP whenever wordpress sends mail to prevent spammers from sending mail to you or anyone else.<br/>
-    <br/>
-    </fieldset>
-    <br/>
-    <fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
-    <legend>History and Cache Size:</legend>
+    <h4>History and Cache Size:</h4>
     You can change the number of entries to keep in your history and cache. The size of these items is an issue and will cause problems with some WordPress installations. It is best to keep these small.<br/>
+    <table align="center" cellspacing="1"  style="background-color:#CCCCCC;font-size:.9em;">
+      <tr bgcolor="white">
+        <td valign="top">Cache Size:</td>
+        <td valign="top"><select name="kpg_sp_cache">
+            <option value="10" <?php if ($kpg_sp_cache=='10') echo "selected=\"true\""; ?>>10</option>
+            <option value="25" <?php if ($kpg_sp_cache=='25') echo "selected=\"true\""; ?>>25</option>
+            <option value="50" <?php if ($kpg_sp_cache=='50') echo "selected=\"true\""; ?>>50</option>
+            <option value="75" <?php if ($kpg_sp_cache=='75') echo "selected=\"true\""; ?>>75</option>
+            <option value="100" <?php if ($kpg_sp_cache=='100') echo "selected=\"true\""; ?>>100</option>
+          </select></td>
+        <td valign="top">Select the number of items to save in the cache.</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">History Size:</td>
+        <td valign="top"><select name="kpg_sp_hist">
+            <option value="10" <?php if ($kpg_sp_hist=='10') echo "selected=\"true\""; ?>>10</option>
+            <option value="25" <?php if ($kpg_sp_hist=='25') echo "selected=\"true\""; ?>>25</option>
+            <option value="50" <?php if ($kpg_sp_hist=='50') echo "selected=\"true\""; ?>>50</option>
+            <option value="75" <?php if ($kpg_sp_hist=='75') echo "selected=\"true\""; ?>>75</option>
+            <option value="100" <?php if ($kpg_sp_hist=='100') echo "selected=\"true\""; ?>>100</option>
+          </select></td>
+        <td valign="top">Select the number of items to save in the History.</td>
+      </tr>
+    </table>
     <br/>
-    Cache Size:
-    <select name="kpg_sp_cache">
-      <option value="10" <?php if ($kpg_sp_cache=='10') echo "selected=\"true\""; ?>>10</option>
-      <option value="25" <?php if ($kpg_sp_cache=='25') echo "selected=\"true\""; ?>>25</option>
-      <option value="50" <?php if ($kpg_sp_cache=='50') echo "selected=\"true\""; ?>>50</option>
-      <option value="75" <?php if ($kpg_sp_cache=='75') echo "selected=\"true\""; ?>>75</option>
-      <option value="100" <?php if ($kpg_sp_cache=='100') echo "selected=\"true\""; ?>>100</option>
-    </select>
+    <h4>Access Denied Message:</h4>
+    <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
+      <tr bgcolor="white">
+        <td valign="top">Spammer Message:</td>
+        <td></td>
+        <td valign="top"><textarea id="rejectmessage" name="rejectmessage" cols="64" rows="5"><?php echo $rejectmessage; ?></textarea></td>
+        <td valign="top">This message is only visible to spammers. It only shows if spammers are rejected at the time login or comment form is displayed.</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Send spammer to another web page:</td>
+        <td align="center" valign="top" width="20px"><input type="checkbox" name ="redir" value="Y" <?php if ($redir=='Y') echo "checked=\"checked\""; ?> >
+        </td>
+        <td valign="top"colspan="2">Check this to send spammers to the URL below.</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Redirect URL:</td>
+        <td valign="top" colspan=3><input size="112" name="redirurl" type="text" value="<?php echo $redirurl; ?>"/></td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top" colspan="4">If you want you can send the spammer to a web page. This can be a custom page explaining terms of service, or a nasty message </td>
+      </tr>
+    </table>
     <br/>
-    History Size:
-    <select name="kpg_sp_hist">
-      <option value="10" <?php if ($kpg_sp_hist=='10') echo "selected=\"true\""; ?>>10</option>
-      <option value="25" <?php if ($kpg_sp_hist=='25') echo "selected=\"true\""; ?>>25</option>
-      <option value="50" <?php if ($kpg_sp_hist=='50') echo "selected=\"true\""; ?>>50</option>
-      <option value="75" <?php if ($kpg_sp_hist=='75') echo "selected=\"true\""; ?>>75</option>
-      <option value="100" <?php if ($kpg_sp_hist=='100') echo "selected=\"true\""; ?>>100</option>
-    </select>
-    <br/>
-    </fieldset>
-    <br/>
-    <fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
-    <legend>Access Denied Message:</legend>
-    This message is only visible to spammers. It only shows if spammers are rejected at the time login or comment form is displayed.
-    <textarea id="rejectmessage" name="rejectmessage" cols="64" rows="5"><?php echo $rejectmessage; ?></textarea><br/>
-	Send spammer to another web page: 
-	   <input type="checkbox" name ="redir" value="Y" <?php if ($redir=='Y') echo 'checked="true"'; ?> > Check this to send spammers to the URL below.
- <br/>
-     Redirect URL: <input size="112" name="redirurl" type="text" value="<?php echo $redirurl; ?>"/><br/>
-	If you want you can send the spammer to a web page. This can be a custom page explaining terms of service, or even a doubleclick page in the extremely unlikely chance that the spammer is human and may buy something.<br/>
-    </fieldset>
-    <br/>
-    <fieldset style="width:95%;border: #888888 thin groove;margin-left:auto;margin-right:auto;padding-left:6px;">
-    <legend>Remove &quot;Buy The Book&quot;:</legend>
-    <input type="checkbox" name ="nobuy" value="Y" <?php if ($nobuy=='Y') echo 'checked="true"'; ?> >
-    <?php 
+    <p><strong>Remove &quot;Buy The Book&quot;:</strong>
+      <input type="checkbox" name ="nobuy" value="Y" <?php if ($nobuy=='Y') echo "checked=\"checked\""; ?> >
+      <br/>
+      <?php 
 		if ($nobuy=='Y')  {
 			echo "Thanks";		
 		} else {
 		?>
-    Check if you are tired of seeing the <a target="_blank" href="http://www.blogseye.com/buy-the-book/">Buy Keith's Book</a> links.
-    <?php 
+      Check if you are tired of seeing the <a target="_blank" href="http://www.blogseye.com/buy-the-book/">Buy Keith's Book</a> links.
+      <?php 
 		}
 	?>
-    </fieldset>
+    </p>
     <br/>
     <p class="submit">
       <input class="button-primary" value="Save Changes" type="submit">

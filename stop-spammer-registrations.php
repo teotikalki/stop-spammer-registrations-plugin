@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
-Version: 3.6
+Version: 3.7
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -894,11 +894,10 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 	$stats['hist']=$hist;
 	update_option('kpg_stop_sp_reg_stats',$stats);
 	
-	if ($redir&&!empty($redirurl)) {
+	if ($redir=='Y'&&!empty($redirurl)) {
 		header('HTTP/1.1 307 Moved');
 		header('Status: 307 Moved');
 		header("location: $redirurl"); 
-		//header("location: http://click.linksynergy.com/fs-bin/click?id=drdqG*JRcDg&offerid=206296.10000061&type=3&subid=0"); 
 		exit();
 	} 
 	sleep(2); // sleep for a few seconds to annoy spammers and maybe delay next hit on stopforumspam.com
