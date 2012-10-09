@@ -4,7 +4,7 @@ Donate link: http://www.blogseye.com/buy-the-book/
 Requires at least: 3.0
 Tested up to: 3.5
 Contributors: Keith Graham
-Stable tag: 3.7
+Stable tag: 3.8
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -50,7 +50,7 @@ On the comments moderation page, the plugin adds extra options to check comments
 
 Network MU Installation Option: 
 
-If you are running a networked WPMU system of blogs, you can optionally control this plugin from the control panel of the main blog. By checking the "Networked ON" radio button, the individual blogs will not see the options page. The API keys will only have to entered in one place and the history will only appear in one place, making the plugin easier to use for administrating many blogs. The comments, however, still must be maintained from each blog. The Network buttons only appear if you have a Networked installation.
+If you are running a networked WPMU system of blogs, you control this plugin from the network admin dashboard. By checking the "Networked ON" radio button, the individual blogs will not see the options page. The API keys will only have to entered in one place and the history will only appear in one place, making the plugin easier to use for administrating many blogs. The comments, however, still must be maintained from each blog. The Network radio button only appear if you have a Networked installation.
 
 Requirements: 
 
@@ -151,6 +151,16 @@ This has some functions partially complete, but I had to release as is to fix th
 
 = 3.7 =
 * fixed several bugs in Options page. Reformatted Options page to make it easier to view.
+
+= 3.8 =
+* fixed options page bug with the Check SFS checkbox. 
+* Fixed blacklist options issue. 
+* White listed PayPal IPs to stop interference with paypal callbacks (not optional).
+* added ability to reject by TLD in email (users can stop .ru or .cn if they want).
+* made options and history options non-autoload to preserve memory usage.
+* changed the way the network checkbox works. Users must be able to manage the network to set the feature and see the network options when set. When the network box is checked the only way to admin the network is through the network admin dashboard.
+* compensates for a bug in Apple Safari that does not sent HTTP_REFERER from the iPhone and iPad. Disables the HTTP_REFERER check if the user agent appears to be from an iphone or ipad.
+* corrected link to options from admin panel (again). I hope I have it right at last.
 
 == Frequently Asked Questions ==
 

@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
-Version: 3.7
+Version: 3.8
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -36,14 +36,18 @@ function kpg_load_all_checks() {
 	
 	if (isset($_POST)&&!empty($_POST)) {
 		// here we go - not in a post so we can set all the stuff we need
+		// put sanitize_email back, but remove the filter when when fired.
+		add_filter('sanitize_email','kpg_sfs_sanitize_email');
 		add_filter('user_registration_email','kpg_sfs_reg_fixup');	
-		add_filter('login_init','kpg_sfs_login_check');	
+		add_filter('login_init','kpg_sfs_login_checkNR');	
 		add_filter('before_signup_form','kpg_sfs_login_check');	
 		add_action('pre_comment_on_post','kpg_sfs_login_check');	
 		add_filter('preprocess_comment','kpg_sfs_newcomment');	
 		add_action('admin_init','kpg_sfs_login_check');
 		add_action('xmlrpc_call','kpg_sfs_login_check'); // might be a get for all I know
 		add_filter('wp_mail','kpg_sfs_reg_check_send_mail'); // god knows how plugins will send mail
+		add_filter('wpmu_validate_user_signup','kpg_sfs_reg_validate_blog_signup');	
+		add_filter('wpmu_validate_blog_signup','kpg_sfs_reg_validate_blog_signup');	
 		return;
 	}
 	// not in a post so set the session timeout so it can be checked in the post
@@ -62,6 +66,7 @@ function kpg_load_all_checks() {
 
 // make a function to unset all the hooks once a check to the db is done in order to prevent recusive checks
 function kpg_sfs_reg_unhook() {
+	@remove_filter( 'sanitize_email','kpg_sfs_sanitize_email');
 	@remove_filter( 'user_registration_email', 'kpg_sfs_reg_fixup' );
 	@remove_filter( 'login_init', 'kpg_sfs_login_check' );
 	@remove_filter( 'before_signup_form', 'kpg_sfs_login_check' );
@@ -74,32 +79,32 @@ function kpg_sfs_reg_unhook() {
 }
 
 
+
+function load_sfs_mu() {
 // check to see if this is an MU installation
-	if (function_exists('is_multisite') && is_multisite()) {
-		// include the hook the get/set options so that it works for multisite
-		// check the blog 1 options to see if we should hook the mu options
+	if (function_exists('is_multisite') && is_multisite() && !function_exists('kpg_ssp_global_setup')) {
+		// install the global hooks to globalize the options
 		$muswitch='Y';
 		global $blog_id;
-		if (isset($blog_id)&&$blog_id==1) {
-			// no need to switch blogs
-			$ansa=get_option('kpg_stop_sp_reg_options');
-			if (empty($ansa)) $ansa=array();
-			if (!is_array($ansa)) $ansa=array();
-		} else {
-			switch_to_blog(1);
-			$ansa=get_option('kpg_stop_sp_reg_options');
-			if (empty($ansa)) $ansa=array();
-			if (!is_array($ansa)) $ansa=array();
-			restore_current_blog();
-		}
+		// check blog 1 for the main copy of options
+		switch_to_blog(1);
+		$ansa=get_option('kpg_stop_sp_reg_options');
+		restore_current_blog();
+		if (empty($ansa)) $ansa=array();
+		if (!is_array($ansa)) $ansa=array();
 		if (array_key_exists('muswitch',$ansa)) $muswitch=$ansa['muswitch'];
 		if ($muswitch!='N') $muswitch='Y';
-		if ($muswitch=='Y') {
-			include('includes/sfr-mu-options.php');
+		if ($muswitch=='Y') { // if it is true then the global options need to be installed.
+			load_sfs_mu_options_file();
 			kpg_ssp_global_setup();
 		}
 	}
-
+}
+function load_sfs_mu_options_file() {
+	sfs_errorsonoff();
+	include_once('includes/sfr-mu-options.php');
+	sfs_errorsonoff('off');
+}
 /************************************************************
 *
 * show a bogus form. If the form is hit then this is a spammer
@@ -185,7 +190,7 @@ function kpg_sfs_red_herring_signup() {
 *
 *************************************************************/
 function kpg_sfs_javascript() {
-	echo "\r\n\r\n<!-- Made it to comment_form_before_fields -->\r\n\r\n";
+	//echo "\r\n\r\n<!-- Made it to comment_form_before_fields -->\r\n\r\n";
 	remove_filter('comment_form_before_fields','kpg_sfs_javascript');	 
 	$options=kpg_sp_get_options();
 	if ((!array_key_exists('chkjscript',$options))||($options['chkjscript']!='Y')) return;
@@ -254,16 +259,22 @@ function kpg_sfs_red_herring_login($message) {
 *   there is a hit in the cache or one of the db sites
 *
 *************************************************************/
+function kpg_sfs_login_checkNR() {
+	$ansa=kpg_sfs_login_check();
+	return;
+}
+
 function kpg_sfs_login_check() {
 	// there are multiple entry points.
 	// Login check is hooked from the "PRE" forms and has no parameters
 	// we start here gathering information and then passing it on to the full check with email, author and ip
 	// prevent from running multiple times
-	
+	//echo "\r\n<!--\r\n step 1 \r\n-->\r\n";
 	kpg_sfs_reg_unhook();
 	if(is_user_logged_in()) {
 		return; // I know that I checked it before, but check again
 	}
+	//echo "\r\n<!--\r\n step 2 \r\n-->\r\n";
 	// get things from the post to pass to the check
 	// see if they are sending an email
 	$em='';
@@ -273,7 +284,11 @@ function kpg_sfs_login_check() {
 		$em=$_POST['user_email'];
 	} else if (array_key_exists('user_login',$_POST)) {
 		$em=$_POST['user_login'];
+	} else if (array_key_exists('signup_email',$_POST)) {
+		$em=$_POST['signup_email'];
 	}
+	//echo "\r\n<!--\r\n step 3 \r\n-->\r\n";
+	
 	if (strpos($em,'@')===false) { // not an email, but a username (or some other crap)
 		$em='';
 	}
@@ -284,13 +299,16 @@ function kpg_sfs_login_check() {
 	} else if (array_key_exists('user_name',$_POST)) {
 		$author=$_POST['user_name'];
 	}
+	//echo "\r\n<!--\r\n step 4 \r\n-->\r\n";
 	// get the ip 
 	$ip=$_SERVER['REMOTE_ADDR'];
 	$ip=check_forwarded_ip($ip);
 	// now call the generic checker
+	//echo "\r\n<!--\r\n step 5 \r\n-->\r\n";
 	sfs_errorsonoff();
-    $ansa=kpg_sfs_check($em,$author,$ip,'2');
+    $ansa=kpg_sfs_check($em,$author,$ip);
 	sfs_errorsonoff('off');
+	//echo "\r\n<!--\r\n step 6 \r\n-->\r\n";
 	return $ansa;
 }
 /************************************************************
@@ -325,7 +343,7 @@ function kpg_sfs_reg_check_send_mail($stuff) {
 	$ip=check_forwarded_ip($ip);
 	// now call the generic checker
 	sfs_errorsonoff();
-    kpg_sfs_check($from_email,$from_name,$ip,'4'); 
+    kpg_sfs_check($from_email,$from_name,$ip); 
 	sfs_errorsonoff('off');
 	return $stuff;
 
@@ -404,6 +422,88 @@ function kpg_sfs_check_404s() {
     update_option('kpg_stop_sp_reg_stats',$stats);
     return;
 }
+/************************************************************
+* 	kpg_sfs_sanitize_email()
+*   Most functions sanitize emails. So if this in a post then 
+*   it must be a login, comment or signup.
+*   
+*   I hope this catches all of the signups that have been slipping through
+*   due to custom themes and signup plugins.
+*
+*************************************************************/
+function kpg_sfs_sanitize_email($em,$d1='',$d2='') {
+	// any function that checks email needs to use sanitize_email
+	// this does the check 
+	@remove_filter( 'sanitize_email','kpg_sfs_sanitize_email');	
+	if(is_user_logged_in()) {
+		return $email;
+	}
+	$author='';
+	if (array_key_exists('author',$_POST)) {
+		$author=$_POST['author'];
+	} else if (array_key_exists('user_name',$_POST)) {
+		$author=$_POST['user_name'];
+	} else if (array_key_exists('signupuser',$_POST)) {
+		$author=$_POST['signupuser'];
+	}
+	$ip=$_SERVER['REMOTE_ADDR'];
+	$ip=check_forwarded_ip($ip);
+	sfs_errorsonoff();
+    kpg_sfs_check($em,$author,$ip);
+	sfs_errorsonoff('off');
+	
+	return $email;
+}
+
+/************************************************************
+* 	kpg_sfs_validate_signup()
+*	Hooked from wpmu_validate_blog_signup($blogname, $blog_title, $user = '') 
+*	this is when wpmu_validate_blog_signup is hooked
+*
+* wpmu_validate_blog_signup (also validate_user_signup)
+*
+*************************************************************/
+function kpg_sfs_reg_validate_blog_signup($results) {
+	// this can gets the email and ip and stuff
+	// calls the fixup routine and either dies or allows.
+	
+	// email or author might be in signupuser,user_email or user_name
+	
+	if(is_user_logged_in()) {
+		return $results;
+	}
+	$em='';
+	if (array_key_exists('email',$_POST)) {
+		$em=$_POST['email'];
+	} else if (array_key_exists('user_email',$_POST)) {
+		$em=$_POST['user_email'];
+	} else if (array_key_exists('signup_email',$_POST)) {
+		$em=$_POST['signup_email'];
+	} else if (array_key_exists('signup_for',$_POST)) {
+		$em=$_POST['signup_for'];
+	} else if (array_key_exists('signupuser',$_POST)) {
+		$em=$_POST['signupuser'];
+	}
+	if (strpos($em,'@')===false) { // not an email, but a username (or some other crap)
+		$em='';
+	}
+	$author='';
+	if (array_key_exists('author',$_POST)) {
+		$author=$_POST['author'];
+	} else if (array_key_exists('user_name',$_POST)) {
+		$author=$_POST['user_name'];
+	} else if (array_key_exists('signupuser',$_POST)) {
+		$author=$_POST['signupuser'];
+	}
+	// get the ip 
+	$ip=$_SERVER['REMOTE_ADDR'];
+	$ip=check_forwarded_ip($ip);
+	sfs_errorsonoff();
+    kpg_sfs_check($em,$author,$ip);
+	sfs_errorsonoff('off');
+	return $results;
+}
+
 
 
 /************************************************************
@@ -423,6 +523,10 @@ function kpg_sfs_reg_fixup($email) {
 			$em=$_POST['email'];
 		} else if (array_key_exists('user_email',$_POST)) {
 			$em=$_POST['user_email'];
+		} else if (array_key_exists('signup_email',$_POST)) {
+			$em=$_POST['signup_email'];
+		} else if (array_key_exists('signupuser',$_POST)) {
+		$em=$_POST['signupuser'];
 		}
 		if (strpos($em,'@')===false) { // not an email, but a username (or some other crap)
 			$em='';
@@ -439,7 +543,7 @@ function kpg_sfs_reg_fixup($email) {
 	$ip=$_SERVER['REMOTE_ADDR'];
 	$ip=check_forwarded_ip($ip);
 	sfs_errorsonoff();
-    kpg_sfs_check($em,$author,$ip,'1');
+    kpg_sfs_check($em,$author,$ip);
 	sfs_errorsonoff('off');
 
 	return $email;
@@ -463,7 +567,7 @@ function kpg_sfs_newcomment($commentdata) {
 *   returns the email if good. Dies if bad
 *
 *************************************************************/
-function kpg_sfs_check($email='',$author='',$ip,$src='3') {
+function kpg_sfs_check($email='',$author='',$ip) {
 	if(is_user_logged_in()) {
 		return $email;
 	}
@@ -570,7 +674,14 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 	
 	
 	// first check white lists 
-	
+
+	// paypal is whitelisted
+	if (kpg_sp_checkPayPal($ip)){
+	    $hist[$now][4]='White List PayPal';
+		$stats['hist']=$hist;
+		update_option('kpg_stop_sp_reg_stats',$stats);
+		return $email;
+	}
 	if (!$deny&&(kpg_sp_searchi($ip,$wlist))) {
 	    $hist[$now][4]='White List IP';
 		$stats['hist']=$hist;
@@ -654,16 +765,24 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 	// try checking to see if there is a referrer
 	if (!$deny&&$chkreferer=='Y'&&!empty($_POST)) {
 		// someone is sending a post. Therefore the referer must be from our site.
-		$ref='';
-		if (array_key_exists('HTTP_REFERER',$_SERVER)) {
-			$ref=$_SERVER['HTTP_REFERER'];
+		// apple safari on the iphone does not send the referrer so we need to ignore this.
+		$ua='';
+		if (array_key_exists('HTTP_USER_AGENT',$_SERVER)) {
+			$ua=$_SERVER['HTTP_USER_AGENT'];
 		}
-	    // check to see if our domain is found in the referer
-		$host=$_SERVER['HTTP_HOST'];
-		if (empty($ref)||strpos($ref,$host)===false) {
-			// bad referer
-			$whodunnit.='Bad or Missing HTTP_REFERER';
-			$deny=true;
+		if (strpos(strtolower($ua),'iphone')===false&&strpos(strtolower($ua),'ipad')===false) {
+			// require the referer
+			$ref='';
+			if (array_key_exists('HTTP_REFERER',$_SERVER)) {
+				$ref=$_SERVER['HTTP_REFERER'];
+			}
+			// check to see if our domain is found in the referer
+			$host=$_SERVER['HTTP_HOST'];
+			if (empty($ref)||strpos($ref,$host)===false) {
+				// bad referer
+				$whodunnit.='Bad or Missing HTTP_REFERER';
+				$deny=true;
+			}
 		}
 	}
 	
@@ -681,6 +800,13 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 		}
 	}
 			
+	if (!$deny && !empty($badTLDs)) {
+		// check the ending to see if the tld should be banned
+		if (kpg_sp_searchL($em,$badTLDs)) {
+			$whodunnit.='Bad TLD';
+			$deny=true;
+		}
+	}
 
 	// These are the simple email checks
 	if (!empty($em)) {
@@ -690,7 +816,7 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 		}
 		if (!$deny) { 
 			$emdomain=explode('@',$em);
-			if (count($emdomain)==2&&kpg_sp_searchi($em,$baddomains)) {
+			if (count($emdomain)==2&&kpg_sp_searchi($em[1],$baddomains)) {
 				$whodunnit.='Blocked Domain';
 				$deny=true;
 			}
@@ -902,7 +1028,8 @@ function kpg_sfs_check($email='',$author='',$ip,$src='3') {
 	} 
 	sleep(2); // sleep for a few seconds to annoy spammers and maybe delay next hit on stopforumspam.com
 	// here we do wp_die
-	header('HTTP/1.1 403 Forbidden');
+	//header('HTTP/1.1 403 Forbidden');
+	//echo $rejectmessage;
 	wp_die("$rejectmessage","Login Access Denied");
 	exit();
 }
@@ -952,8 +1079,9 @@ function really_clean($s) {
 	return $s;
 }
 function kpg_check_bad_agents() {
-$badagents=array("asterias","Atomic_Email_Hunter","b2w/0.1","BackDoorBot/1.0","Black Hole","BlowFish/1.0","BotALot","BotRightHere","BuiltBotTough","Bullseye/1.0","BunnySlippers","Cegbfeieh","CheeseBot","CherryPicker","CherryPickerElite/1.0","CherryPickerSE/1.0","CopyRightCheck","cosmos","Crescent","Crescent Internet ToolPak HTTP OLE Control v.1.0","discobot","DittoSpyder","DOC","Download Ninja","EmailCollector","EmailSiphon","EmailWolf","EroCrawler","ExtractorPro","Fasterfox","Fetch","Foobot","grub-client","Harvest/1.5","hloader","httplib","HTTrack","humanlinks","ieautodiscovery","InfoNaviRobot","JennyBot","k2spider","Kenjin Spider","Keyword Density/0.9","larbin","LexiBot","libWeb/clsHTTP","libwww","LinkextractorPro","linko","LinkScan/8.1a Unix","LinkWalker","LNSpiderguy","lwp-trivial","lwp-trivial/1.34","Mata Hari","Microsoft.URL.Control","Microsoft URL Control - 5.01.4511","Microsoft URL Control - 6.00.8169","MIIxpc","MIIxpc/4.2","Missigua Locator","Mister PiX","moget","moget/2.1","MSIECrawler","NetAnts","NICErsPRO","NPBot","Offline Explorer","Openfind","Openfind data gathere","ProPowerBot/2.14","ProWebWalker","QueryN Metasearch","RepoMonkey","RepoMonkey Bait & Tackle/v1.01","RMA","sitecheck.Internetseer.com","SiteSnagger","SnapPreviewBot","SpankBot","spanner","suzuran","Szukacz/1.4","Teleport","TeleportPro","Teleport Pro/1.29","Telesoft","TurnitinBot","The Intraformant","TheNomad","TightTwatBot","Titan","toCrawl/UrlDispatcher","True_Robot","True_Robot/1.0","turingos","UbiCrawler","URLy Warning","VCI","VCI WebViewer VCI WebViewer Win32","Web Image Collector","Web Downloader/6.9","WebAuto","WebBandit","WebBandit/3.50","WebCopier","WebCopier v4.0","WebEnhancer","WebmasterWorldForumBot","WebReaper","WebSauger","Website Quester","Webster Pro","WebStripper","WebZip","WebZip/4.0","Wget","Wget/1.5.3","Wget/1.6","WWW-Collector-E","Xenu's","Xenu's Link Sleuth 1.1c","Zao","Zeus","Zeus 32297 Webster Pro V2.9 Win32","ZyBORG","Java/1.");
-$agent=$_SERVER['HTTP_USER_AGENT'];
+	$badagents=array("asterias","Atomic_Email_Hunter","b2w/0.1","BackDoorBot/1.0","Black Hole","BlowFish/1.0","BotALot","BotRightHere","BuiltBotTough","Bullseye/1.0","BunnySlippers","Cegbfeieh","CheeseBot","CherryPicker","CherryPickerElite/1.0","CherryPickerSE/1.0","CopyRightCheck","cosmos","Crescent","Crescent Internet ToolPak HTTP OLE Control v.1.0","discobot","DittoSpyder","DOC","Download Ninja","EmailCollector","EmailSiphon","EmailWolf","EroCrawler","ExtractorPro","Fasterfox","Fetch","Foobot","grub-client","Harvest/1.5","hloader","httplib","HTTrack","humanlinks","ieautodiscovery","InfoNaviRobot","JennyBot","k2spider","Kenjin Spider","Keyword Density/0.9","larbin","LexiBot","libWeb/clsHTTP","libwww","LinkextractorPro","linko","LinkScan/8.1a Unix","LinkWalker","LNSpiderguy","lwp-trivial","lwp-trivial/1.34","Mata Hari","Microsoft.URL.Control","Microsoft URL Control - 5.01.4511","Microsoft URL Control - 6.00.8169","MIIxpc","MIIxpc/4.2","Missigua Locator","Mister PiX","moget","moget/2.1","MSIECrawler","NetAnts","NICErsPRO","NPBot","Offline Explorer","Openfind","Openfind data gathere","ProPowerBot/2.14","ProWebWalker","QueryN Metasearch","RepoMonkey","RepoMonkey Bait & Tackle/v1.01","RMA","sitecheck.Internetseer.com","SiteSnagger","SnapPreviewBot","SpankBot","spanner","suzuran","Szukacz/1.4","Teleport","TeleportPro","Teleport Pro/1.29","Telesoft","TurnitinBot","The Intraformant","TheNomad","TightTwatBot","Titan","toCrawl/UrlDispatcher","True_Robot","True_Robot/1.0","turingos","UbiCrawler","URLy Warning","VCI","VCI WebViewer VCI WebViewer Win32","Web Image Collector","Web Downloader/6.9","WebAuto","WebBandit","WebBandit/3.50","WebCopier","WebCopier v4.0","WebEnhancer","WebmasterWorldForumBot","WebReaper","WebSauger","Website Quester","Webster Pro","WebStripper","WebZip","WebZip/4.0","Wget","Wget/1.5.3","Wget/1.6","WWW-Collector-E","Xenu's","Xenu's Link Sleuth 1.1c","Zao","Zeus","Zeus 32297 Webster Pro V2.9 Win32","ZyBORG","Java/1.");
+	$agent=$_SERVER['HTTP_USER_AGENT'];
+	if (empty($agent)) return false;
 	foreach ($badagents as $a) {
 		if (strpos(strtolower($agent),strtolower($a))!==false) {
 			return $a;
@@ -981,6 +1109,8 @@ function kpg_check_spamwords($chk,$spamwords) {
 
 }
 function kpg_check_disp($em) {
+	if (empty($em)) return false;
+
 	$disposables=array('0815.ru','0clickemail.com','0wnd.net','0wnd.org','10minutemail.com','1chuan.com','1zhuan.com','20minutemail.com','2prong.com','3d-painting.com','4warding.com','4warding.net','4warding.org','675hosting.com','675hosting.net','675hosting.org','6url.com','75hosting.com','75hosting.net','75hosting.org','9ox.net','a-bc.net','afrobacon.com','ajaxapp.net','amilegit.com','amiri.net','amiriindustries.com','anonbox.net','anonymail.dk','anonymbox.com','antichef.com','antichef.net','antispam.de','baxomale.ht.cx','beefmilk.com','binkmail.com','bio-muesli.net','blogmyway.org','bobmail.info','bodhi.lawlita.com','bofthew.com','brefmail.com','bsnow.net','bugmenot.com','bumpymail.com','buyusedlibrarybooks.org','casualdx.com','centermail.com','centermail.net','chogmail.com','choicemail1.com','cool.fr.nf','correo.blogos.net','cosmorph.com','courriel.fr.nf','courrieltemporaire.com','curryworld.de','cust.in','dacoolest.com','dandikmail.com','deadaddress.com','deadspam.com','despam.it','despammed.com','devnullmail.com','dfgh.net','digitalsanctuary.com','discardmail.com','discardmail.de','disposableaddress.com','disposeamail.com','disposemail.com','dispostable.com','dm.w3internet.co.uk example.com','dodgeit.com','dodgit.com','dodgit.org','dontreg.com','dontsendmespam.de','dotmsg.com','dresssmall.com','dump-email.info','dumpandjunk.com','dumpmail.de','dumpyemail.com','e4ward.com','email60.com','emaildienst.de','emailias.com','emailinfive.com','emailmiser.com','emailtemporario.com.br','emailto.de','emailwarden.com','emailxfer.com','emz.net','enterto.com','ephemail.net','etranquil.com','etranquil.net','etranquil.org','explodemail.com','fakeinbox.com','fakeinformation.com','fakemailz.com','fastacura.com','fastchevy.com','fastchrysler.com','fastkawasaki.com','fastmazda.com','fastmitsubishi.com','fastnissan.com','fastsubaru.com','fastsuzuki.com','fasttoyota.com','fastyamaha.com','filzmail.com','fizmail.com','footard.com','forgetmail.com','frapmail.com','front14.org','fux0ringduh.com','garliclife.com','get1mail.com','getonemail.com','getonemail.net','ghosttexter.de','girlsundertheinfluence.com','gishpuppy.com','gowikibooks.com','gowikicampus.com','gowikicars.com','gowikifilms.com','gowikigames.com','gowikimusic.com','gowikinetwork.com','gowikitravel.com','gowikitv.com','great-host.in','greensloth.com','gsrv.co.uk','guerillamail.biz','guerillamail.com','guerillamail.net','guerillamail.org','guerrillamail.com','guerrillamail.net','guerrillamailblock.com','h8s.org','haltospam.com','hatespam.org','hidemail.de','hotpop.com','ieatspam.eu','ieatspam.info','ihateyoualot.info','iheartspam.org','imails.info','imstations.com','inboxclean.com','inboxclean.org','incognitomail.com','incognitomail.net','ipoo.org','irish2me.com','iwi.net','jetable.com','jetable.fr.nf','jetable.net','jetable.org','jnxjn.com','junk1e.com','kasmail.com','kaspop.com','killmail.com','killmail.net','klassmaster.com','klassmaster.net','klzlk.com','kulturbetrieb.info','kurzepost.de','lifebyfood.com','link2mail.net','litedrop.com','lookugly.com','lopl.co.cc','lortemail.dk','lovemeleaveme.com','lr78.com','maboard.com','mail.by','mail.mezimages.net','mail2rss.org','mail333.com','mail4trash.com','mailbidon.com','mailblocks.com','mailcatch.com','maileater.com','mailexpire.com','mailfreeonline.com','mailin8r.com','mailinater.com','mailinator.com','mailinator.net','mailinator2.com','mailincubator.com','mailme.lv','mailmoat.com','mailnator.com','mailnull.com','mailquack.com','mailshell.com','mailsiphon.com','mailslapping.com','mailzilla.com','mailzilla.org','mbx.cc','mega.zik.dj','meinspamschutz.de','meltmail.com','messagebeamer.de','mierdamail.com','mintemail.com','moncourrier.fr.nf','monemail.fr.nf','monmail.fr.nf','mt2009.com','mx0.wwwnew.eu','mycleaninbox.net','myspaceinc.com','myspaceinc.net','myspaceinc.org','myspacepimpedup.com','myspamless.com','mytrashmail.com','neomailbox.com','nervmich.net','nervtmich.net','netmails.com','netmails.net','netzidiot.de','neverbox.com','no-spam.ws','nobulk.com','noclickemail.com','nogmailspam.info','nomail.xl.cx','nomail2me.com','nospam.ze.tc','nospam4.us','nospamfor.us','nowmymail.com','nurfuerspam.de','objectmail.com','obobbo.com','oneoffemail.com','oneoffmail.com','onewaymail.com','oopi.org','ordinaryamerican.net','ourklips.com','outlawspam.com','owlpic.com','pancakemail.com','pimpedupmyspace.com','poofy.org','pookmail.com','privacy.net','proxymail.eu','punkass.com','putthisinyourspamdatabase.com','quickinbox.com','rcpt.at','recode.me','recursor.net','recyclemail.dk','regbypass.comsafe-mail.net','rejectmail.com','rklips.com','safersignup.de','safetymail.info','sandelf.de','saynotospams.com','selfdestructingmail.com','sendspamhere.com','shiftmail.com','shitmail.me','shortmail.net','sibmail.com','skeefmail.com','slaskpost.se','slopsbox.com','smellfear.com','snakemail.com','sneakemail.com','sofort-mail.de','sogetthis.com','soodonims.com','spam.la','spamavert.com','spambob.com','spambob.net','spambob.org','spambog.com','spambog.de','spambog.ru','spambox.info','spambox.us','spamcannon.com','spamcannon.net','spamcero.com','spamcon.org','spamcorptastic.com','spamcowboy.com','spamcowboy.net','spamcowboy.org','spamday.com','spamex.com','spamfree24.com','spamfree24.de','spamfree24.eu','spamfree24.info','spamfree24.net','spamfree24.org','spamgourmet.com','spamgourmet.net','spamgourmet.org','spamherelots.com','spamhereplease.com','spamhole.com','spamify.com','spaminator.de','spamkill.info','spaml.com','spaml.de','spammotel.com','spamobox.com','spamoff.de','spamslicer.com','spamspot.com','spamthis.co.uk','spamthisplease.com','spamtrail.com','speed.1s.fr','suremail.info','tempalias.com','tempe-mail.com','tempemail.biz','tempemail.com','tempemail.net','tempinbox.co.uk','tempinbox.com','tempomail.fr','temporarily.de','temporaryemail.net','temporaryforwarding.com','temporaryinbox.com','thankyou2010.com','thisisnotmyrealemail.com','throwawayemailaddress.com','tilien.com','tmailinator.com','tradermail.info','trash-amil.com','trash-mail.at','trash-mail.com','trash-mail.de','trash2009.com','trashdevil.com','trashdevil.de','trashmail.at','trashmail.com','trashmail.de','trashmail.me','trashmail.net','trashmail.org','trashmailer.com','trashymail.com','trashymail.net','turual.com','twinmail.de','tyldd.com','uggsrock.com','upliftnow.com','uplipht.com','venompen.com','viditag.com','viewcastmedia.com','viewcastmedia.net','viewcastmedia.org','walala.org','wegwerfadresse.de','wegwerfmail.de','wegwerfmail.net','wegwerfmail.org','wetrainbayarea.com','wetrainbayarea.org','wh4f.org','whopy.com','whyspam.me','wilemail.com','willselfdestruct.com','winemaven.info','wronghead.com','wuzup.net','wuzupmail.net','wwwnew.eu','xagloo.com','xemaps.com','xents.com','xmaily.com','xoxy.net','yep.it','yogamaven.com','yopmail.com','yopmail.fr','yopmail.net','yuurok.com','zippymail.info','zoemail.org');
 	$emdomain=explode('@',$em);
 	if (count($emdomain)==2&&in_array(strtolower($emdomain[1]),$disposables)) {
@@ -992,6 +1122,7 @@ function kpg_check_disp($em) {
 }
 
 function kpg_akismet_check($ip) {
+	if (empty($ip)) return false;
 	// give akismet a try - it seems to know more than anyone
 	$api_key=get_option('wordpress_api_key');
 	$agent=$_SERVER['HTTP_USER_AGENT'];
@@ -1033,6 +1164,7 @@ function kpg_akismet_check($ip) {
 }	
 
 function kpg_check_ubiquity($ip) {
+	if (empty($ip)) return false;
 	$userve=array(
 'XSServer',
 array('46.251.228.0','46.251.229.255'),
@@ -1170,7 +1302,8 @@ $srv='';
 	return false;
 }
 function kpg_check_all_dnsbl($ip) {
- 	// just for the heck of it, I found a bunch of blacklist sites
+ 	if (empty($ip)) return false;
+	// just for the heck of it, I found a bunch of blacklist sites
 	// these use the dns returns but don't need an api key as far as I know
    $iplist = array(
 	    'sbl.spamhaus' 	=> '.sbl.spamhaus.org',
@@ -1206,7 +1339,7 @@ function kpg_sfs_reg_stats_control() {
 	}
 	// include it so as to make the core plugin smaller
 	sfs_errorsonoff();
-	require("includes/stop-spam-reg-stats.php");
+	require_once("includes/stop-spam-reg-stats.php");
 	sfs_errorsonoff('off');
 
 }
@@ -1281,13 +1414,55 @@ function kpg_sfs_reg_report($actions,$comment) {
 	return $actions;
 
 }
+// hook the comment list with a "report Spam" filater
+add_action('admin_menu', 'kpg_sfs_reg_admin_menus');
+add_action('network_admin_menu', 'kpg_sfs_reg_net_admin_menus');
 
-
-function kpg_sfs_reg_init() {
-	// we need to find out if it is OK to add the init
+function kpg_sfs_reg_net_admin_menus() {
+	if(!current_user_can('manage_network_options')) return;
+	$options=kpg_sp_get_options();
+    $muswitch=$options['muswitch'];
+	kpg_sfs_reg_add_user_to_whitelist($options);
+	// now install the admin stuff
+	// if the muswitch is "Y" then we are in a network environment
+	// it is a network, the muswitch is on and we can manage the network
+	// this means we can install the options page on the network options page.
+	
+  add_submenu_page('settings.php', 'Stop Spammers', 'Stop Spammers', 'manage_options', 'adminstopspammersoptions', 'kpg_sfs_reg_control');
+  add_submenu_page('settings.php', 'Stop Spammers History', 'Spammer History', 'manage_options', 'adminstopspammerstats', 'kpg_sfs_reg_stats_control');
+ 
+	
+	
+	//add_options_page('Stop Spammers', 'Stop Spammers', 'manage_options','adminstopspammersoptions','kpg_sfs_reg_control');
+	//add_options_page('Stop Spammers History', 'Spammer History', 'manage_options','adminstopspammerstats','kpg_sfs_reg_stats_control');
+	add_action('mu_rightnow_end','kpg_sp_rightnow');
+	add_filter('plugin_action_links', 'kpg_sp_plugin_action_links', 10, 2 );
+	add_filter('comment_row_actions','kpg_sfs_reg_check',1,2);	
+	add_filter('comment_row_actions','kpg_sfs_reg_report',1,2);	
+}
+function kpg_sfs_reg_admin_menus() {
 	$options=kpg_sp_get_options();
     $muswitch=$options['muswitch'];
 	if(!current_user_can('manage_options')) return;
+	kpg_sfs_reg_add_user_to_whitelist($options);
+	// now install the admin stuff
+	// if the muswitch is "Y" then we are in a network environment and do not install
+	if ($muswitch=='Y') {
+		// we are in the normal admin menu
+		// I am not sure that the muswitch can be turned on
+		//echo "<!-- \r\n\r\n the muswitch is on! \r\n\r\n -->";
+		return; // a network - only the admin can do it.
+	}
+	// this means we can install the options page on the network options page.
+	add_options_page('Stop Spammers', 'Stop Spammers', 'manage_options','stopspammersoptions','kpg_sfs_reg_control');
+	add_options_page('Stop Spammers History', 'Spammer History', 'manage_options','stopspammerstats','kpg_sfs_reg_stats_control');
+	add_action('rightnow_end', 'kpg_sp_rightnow');
+	add_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links', 10, 2 );
+	add_filter('comment_row_actions','kpg_sfs_reg_check',1,2);	
+	add_filter('comment_row_actions','kpg_sfs_reg_report',1,2);	
+}
+
+function kpg_sfs_reg_add_user_to_whitelist($options) {
 	$addtowhitelist=$options['addtowhitelist'];
 	$wlist=$options['wlist'];
 	$ip=$_SERVER['REMOTE_ADDR'];
@@ -1298,71 +1473,23 @@ function kpg_sfs_reg_init() {
 		$options['wlist']=$wlist;
 		update_option('kpg_stop_sp_reg_options',$options);
 	}
-
-	// first, simple users just need a simple screen
-	if (!function_exists('is_multisite') || !is_multisite()) {
-		// just do the basic stuff and get out
-		add_options_page('Stop Spammers', 'Stop Spammers', 'manage_options','stopspammersoptions','kpg_sfs_reg_control');
-		add_options_page('Stop Spammers History', 'Spammer History', 'manage_options','stopspammerstats','kpg_sfs_reg_stats_control');
-		add_action('rightnow_end', 'kpg_sp_rightnow');
-		add_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links', 10, 2 );
-		add_filter('comment_row_actions','kpg_sfs_reg_check',1,2);	
-		add_filter('comment_row_actions','kpg_sfs_reg_report',1,2);	
-		return;
-	}
-	// we are in a multisite setup
-	// newtwork managers can always see the admin screens and report spam
-	if (current_user_can( 'manage_network' )) {
-		add_action('mu_rightnow_end','kpg_sp_rightnow');
-		add_options_page('Stop Spammers', 'Stop Spammers', 'manage_options','stopspammersoptions','kpg_sfs_reg_control');
-		add_options_page('Stop Spammers History', 'Spammer History', 'manage_options','stopspammerstats','kpg_sfs_reg_stats_control');
-		add_action('rightnow_end', 'kpg_sp_rightnow');
-		add_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links', 10, 2 );
-		add_filter('comment_row_actions','kpg_sfs_reg_check',1,2);	
-		add_filter('comment_row_actions','kpg_sfs_reg_report',1,2);	
-		return;
-	}
-	// user is not a network manager.
-	// we only install the management page if the manager has allowed it.	
-	if ($muswitch!='Y') { // not networked - each blog has to configure the stuff separately
-		add_options_page('Stop Spammers', 'Stop Spammers', 'manage_options','stopspammersoptions','kpg_sfs_reg_control');
-		add_options_page('Stop Spammers History', 'Spammer History', 'manage_options','stopspammerstats','kpg_sfs_reg_stats_control');
-		add_action('rightnow_end', 'kpg_sp_rightnow');
-		add_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links', 10, 2 );
-		add_filter('comment_row_actions','kpg_sfs_reg_check',1,2);	
-		add_filter('comment_row_actions','kpg_sfs_reg_report',1,2);	
-		return;
-	}
-    // multisite and not a network manager and the muswitch is off - means no admin installation at all
-	return;
-
 }
+
+
 function kpg_sp_plugin_action_links( $links, $file ) {
+	$options=kpg_sp_get_options();
+	extract($options);
+	$muswitch=$options['muswitch'];
 	if ( basename($file) == basename(__FILE__))  {
 		$me=admin_url('options-general.php?page=stopspammersoptions');
+		if (function_exists('is_multisite') && is_multisite() && $muswitch=='Y') {
+			switch_to_blog(1);
+			$me=get_admin_url( 1,'network/settings.php?page=adminstopspammerstats');
+			restore_current_blog();
+		}
 		$links[] = "<a href=\"$me\">".__('Settings').'</a>';
 	}
-
 	return $links;
-}
-
-
-function kpg_sfs_siteadmin_page(){
- // don't restrict this to site admins, because it throws an error if non site admins go to the URL. Instead, control it wtih the site admin test at the next level
-	if (function_exists('is_network_admin')) {
-		//3.1+
-		add_submenu_page('settings.php', 'Stop Spammers', 'Stop Spammers', 'manage_sites', 'stopspammersoptions', 'kpg_sfs_reg_control');
-	} else {
-		//-3.1
-		add_submenu_page('ms-admin.php', 'Stop Spammers', 'Stop Spammers', 'manage_sites', 'stopspammersoptions', 'kpg_sfs_reg_control');
-	}
- }
-if (function_exists('is_network_admin')) {
-	//3.1+
-	add_action('network_admin_menu', 'kpg_sfs_siteadmin_page');
-} else {
-	//-3.1
-	add_action('admin_menu', 'kpg_sfs_siteadmin_page');
 }
 
   
@@ -1375,9 +1502,6 @@ function kpg_sfs_reg_uninstall() {
 	return;
 }  
 
-// hook the comment list with a "report Spam" filater
-	add_action('admin_menu', 'kpg_sfs_reg_init');
-	add_action('network_admin_menu', 'kpg_sfs_reg_init');
 
 
 if ( function_exists('register_uninstall_hook') ) {
@@ -1409,33 +1533,56 @@ function kpg_sfs_reg_getafile($f) {
 function kpg_sp_rightnow() {
 	$options=kpg_sp_get_options();
 	extract($options);
+	$muswitch=$options['muswitch'];
 	$stats=kpg_sp_get_stats();
 	extract($stats);
  	$me=admin_url('options-general.php?page=stopspammerstats');
-    if (function_exists('is_multisite') && is_multisite()) {
+    if (function_exists('is_multisite') && is_multisite() && $muswitch=='Y') {
 		switch_to_blog(1);
-		$me=get_admin_url( 1,'options-general.php?page=stopspammerstats');
+		$me=get_admin_url( 1,'network/settings.php?page=adminstopspammerstats');
 		restore_current_blog();
 	}
 	if ($spmcount>0) {
 		// steal the akismet stats css format 
 		// get the path to the plugin
 		echo "<p><a style=\"font-style:italic;\" href=\"$me\">Stop Spammer Registrations</a> has prevented $spmcount spammers from registering or leaving comments.";
-		if ($nobuy=='N' && $spmcount>1000) echo "  <a style=\"font-style:italic;\" href=\"http://www.blogseye.com/buy-the-book/\">Buy Keith Graham&apos;s Science Fiction Book</a>";
+		if ($nobuy=='N' && $spmcount>10000) echo "  <a style=\"font-style:italic;\" href=\"http://www.blogseye.com/buy-the-book/\">Buy Keith Graham&apos;s Science Fiction Book</a>";
 		echo"</p>";
 	} else {
 		echo "<p><a style=\"font-style:italic\" href=\"$me\">Stop Spammer Registrations</a> has not stopped any spammers, yet.";
 		echo"</p>";
 	}
 }
+function kpg_sp_checkPayPal($ip) { // returns true if a whitelisted paypal ip
+$paypal=array('173.0.88.66','173.0.88.98','173.0.84.66','173.0.84.98','66.211.168.91','66.211.168.123','173.0.88.67','173.0.88.99','173.0.84.99','173.0.84.67','66.211.168.92','66.211.168.124','173.0.88.69','173.0.88.101','173.0.84.69','173.0.84.101','66.211.168.126','66.211.168.194','173.0.88.68','173.0.88.100','173.0.84.68','173.0.84.100','66.211.168.125','66.211.168.195','173.0.81.1','173.0.81.33','66.211.170.66','216.113.188.100','66.211.168.93','173.0.80.0/20','64.4.240.0/20','66.211.160.0/19','118.214.15.186','118.215.103.186','118.215.119.186','118.215.127.186','118.215.15.186','118.215.151.186','118.215.159.186','118.215.167.186','118.215.199.186','118.215.207.186','118.215.215.186','118.215.231.186','118.215.255.186','118.215.39.186','118.215.63.186','118.215.7.186','118.215.79.186','118.215.87.186','118.215.95.186','202.43.63.186','69.192.31.186','72.247.111.186','88.221.43.186','92.122.143.186','92.123.151.186','92.123.159.186','92.123.163.186','92.123.167.186','92.123.179.186','92.123.183.186','92.123.199.186','92.123.203.186','92.123.207.186','92.123.211.186','92.123.215.186','92.123.219.186','92.123.247.186','92.123.255.186','95.100.31.186','96.16.199.186','96.16.23.186','96.16.247.186','96.16.255.186','96.16.39.186','96.16.55.186','96.17.47.186','96.6.239.186','96.6.79.186','96.7.175.186','96.7.191.186','96.7.199.186','96.7.231.186','96.7.247.186','216.113.188.64','216.113.188.34','173.0.84.178','173.0.84.212','173.0.88.178','173.0.88.212','66.211.168.136','66.211.168.66','173.0.88.203','173.0.84.171','173.0.84.203','173.0.88.171','66.211.168.142','66.211.168.150','173.0.84.76','173.0.88.76','173.0.84.108','173.0.88.108','66.211.168.158','66.211.168.180','118.214.15.186','118.215.103.186','118.215.119.186','118.215.127.186','118.215.15.186','118.215.151.186','118.215.159.186','118.215.167.186','118.215.199.186','118.215.207.186','118.215.215.186','118.215.231.186','118.215.255.186','118.215.39.186','118.215.63.186','118.215.7.186','118.215.79.186','118.215.87.186','118.215.95.186','202.43.63.186','69.192.31.186','72.247.111.186','88.221.43.186','92.122.143.186','92.123.151.186','92.123.159.186','92.123.163.186','92.123.167.186','92.123.179.186','92.123.183.186','92.123.199.186','92.123.203.186','92.123.207.186','92.123.211.186','92.123.215.186','92.123.219.186','92.123.247.186','92.123.255.186','95.100.31.186','96.16.199.186','96.16.23.186','96.16.247.186','96.16.255.186','96.16.39.186','96.16.55.186','96.17.47.186','96.6.239.186','96.6.79.186','96.7.175.186','96.7.191.186','96.7.199.186','96.7.231.186','96.7.247.186',
+// sandbox
+'173.0.82.75','173.0.82.91','173.0.82.77','173.0.82.78','173.0.82.79','173.0.82.75','173.0.82.126','173.0.82.83','173.0.82.84','173.0.82.86','173.0.82.89','173.0.82.101'
+);
+	return kpg_sp_searchi($ip,$paypal);
+}
 function kpg_sp_searchi($needle,$haystack) {
 	// ignore case in_array
-    foreach($haystack as $val) {
+	if (empty($needle)) return false;
+	if (empty($haystack)) return false;
+	if (!is_array($haystack)) return ralse;
+	foreach($haystack as $val) {
 		if (strtolower($val)==strtolower($needle)) return true;
 	}
 	return false;
 }
+function kpg_sp_searchl($needle,$haystack) {
+	// search the end of a string case insensitive
+	if (empty($needle)) return false;
+	if (empty($haystack)) return false;
+	if (empty($needle)) return false;
+    foreach($haystack as $val) {
+	    if (strpos(strtolower($val).'\t',strtolower($needle).'\t')!==false)  return true;
+	}
+	return false;
+}
 function kpg_sp_get_stats() {
+	// check to see if we need to load the option redirector
+	load_sfs_mu();
 	$stats=get_option('kpg_stop_sp_reg_stats');
 	if (empty($stats)||!is_array($stats)) $stats=array();
 	$options=array(
@@ -1445,6 +1592,7 @@ function kpg_sp_get_stats() {
 		'hist'=>array(),
 		'spcount'=>0,
 		'spmcount'=>0,
+		'autoload'=>'N',
 		'spmdate'=>'installation',
 		'spdate'=>'last cleared'
 	);
@@ -1463,7 +1611,12 @@ function kpg_sp_get_stats() {
 		$ansa['spmdate']=date('Y/m/d',time() + ( get_option( 'gmt_offset' ) * 3600 ));
 		update_option('kpg_stop_sp_reg_stats',$ansa);
 	}
-	
+	if ($ansa['autoload']=='N') {
+		delete_option('kpg_stop_sp_reg_stats');
+		$ansa['autoload']='Y';
+		add_option('kpg_stop_sp_reg_stats',$ansa, 0, 'no' );
+	}
+
 	return $ansa;
 }
 
@@ -1472,12 +1625,15 @@ function kpg_sp_get_stats() {
 
 */
 function kpg_sp_get_options() {
+	// first see if we need to load the option redirecor
+	load_sfs_mu();
 	$opts=get_option('kpg_stop_sp_reg_options');
 	if (empty($opts)||!is_array($opts)) $opts=array();
 	$options=array(
 		'wlist'=>array(),
 		'blist'=>array(),
 		'baddomains'=>array(),
+		'badTLDs'=>array(),
 		'apikey'=>'',
 		'honeyapi'=>'',
 		'botscoutapi'=>'',
@@ -1504,7 +1660,7 @@ function kpg_sp_get_options() {
 		'chkwplogin'=>'N',
 		'chk404'=>'Y',
 		'addtowhitelist'=>'Y',
-		'muswitch'=>'Y',
+		'muswitch'=>'N',
 		'sfsfreq'=>0,
 		'hnyage'=>9999,
 		'botfreq'=>0,
@@ -1515,6 +1671,7 @@ function kpg_sp_get_options() {
 		'kpg_sp_hist'=>25,
 		'redirurl'=>'', 
 		'redir'=>'N',
+		'autoload'=>'N',
 		'rejectmessage'=>"Access Denied<br/>
 This site is protected by the Stop Spammer Registrations Plugin.<br/>",
 		'spamwords'=>array("-online","4u","4-u","adipex","advicer","baccarrat","blackjack","bllogspot","booker","byob","car-rental-e-site","car-rentals-e-site","carisoprodol","casino","chatroom","cialis","coolhu","credit-card-debt","credit-report","cwas","cyclen","cyclobenzaprine","dating-e-site","day-trading","debt-consolidation","debt-consolidation","discreetordering","duty-free","dutyfree","equityloans","fioricet","flowers-leading-site","freenet-shopping","freenet","gambling-","hair-loss","health-insurancedeals","homeequityloans","homefinance","holdem","hotel-dealse-site","hotele-site","hotelse-site","incest","insurance-quotes","insurancedeals","jrcreations","levitra","macinstruct","mortgagequotes","online-gambling","onlinegambling","ottawavalleyag","ownsthis","paxil","penis","pharmacy","phentermine","poker-chip","poze","pussy","rental-car-e-site","ringtones","roulette ","shemale","slot-machine","thorcarlson","top-site","top-e-site","tramadol","trim-spa","ultram","valeofglamorganconservatives","viagra","vioxx","xanax","zolus","ambien","poker","bingo","allstate","insurnce","work-at-home","workathome","home-based","homebased","weight-loss","weightloss","additional-income","extra-income","email-marketing","sibutramine","seo-","fast-cash")
@@ -1523,6 +1680,7 @@ This site is protected by the Stop Spammer Registrations Plugin.<br/>",
 	if (!is_array($ansa['wlist'])) $ansa['wlist']=array();
 	if (!is_array($ansa['blist'])) $ansa['blist']=array();
 	if (!is_array($ansa['baddomains'])) $ansa['baddomains']=array();
+	if (!is_array($ansa['badTLDs'])) $ansa['badTLDs']=array();
 	if (empty($ansa['apikey'])) $ansa['apikey']='';
 	if (empty($ansa['honeyapi'])) $ansa['honeyapi']='';
 	if (empty($ansa['botscoutapi'])) $ansa['botscoutapi']='';
@@ -1539,13 +1697,29 @@ This site is protected by the Stop Spammer Registrations Plugin.<br/>",
 	if ($ansa['chksignup']!='Y') $ansa['chksignup']='N';
 	if ($ansa['chkxmlrpc']!='Y') $ansa['chkxmlrpc']='N';
 	if ($ansa['chkwplogin']!='Y') $ansa['chkwplogin']='N';
-	if ($ansa['muswitch']!='N') $ansa['muswitch']='Y';
+	if ($ansa['muswitch']!='Y') $ansa['muswitch']='N';
 	if (empty($ansa['kpg_sp_cache'])) $ansa['kpg_sp_cache']=25;
 	if (empty($ansa['kpg_sp_hist'])) $ansa['kpg_sp_hist']=25;
 	if (!is_array($ansa['spamwords'])) $ansa['spamwords']=array();
+	/* fix stupid mistake from previous release - really dumb thing to do */
 	if ($ansa['redirurl']=='http://click.linksynergy.com/fs-bin/click?id=drdqG*JRcDg&offerid=206296.10000061&type=3&subid=0') $ansa['redirurl']='';
 	if ($ansa['rejectmessage']=='http://click.linksynergy.com/fs-bin/click?id=drdqG*JRcDg&offerid=206296.10000061&type=3&subid=0') {
 		$ansa['rejectmessage']='Access Denied<br/>This site is protected by the Stop Spammer Registrations Plugin.<br/>';
+	}
+	if ($ansa['autoload']=='N') {
+		delete_option('kpg_stop_sp_reg_options');
+		$ansa['autoload']='Y';
+		add_option('kpg_stop_sp_reg_options',$ansa, 0, 'no' );
+	}
+	// need to check to see if the mu option has been set
+	if (function_exists('is_multisite') && is_multisite()) {
+		switch_to_blog(1);
+		$options=get_option('kpg_stop_sp_reg_options');
+		restore_current_blog();
+		$muswitch=$options['muswitch'];
+		$ansa['muswitch']=$muswitch;
+	} else {
+		$ansa['muswitch']='N';
 	}
 	return $ansa;
 }
@@ -1581,7 +1755,7 @@ function sfs_handle_ajax_sub($data) {
 	// get the configuration items
 	//kpg_ssp_global_setup();
 	$options=kpg_sp_get_options();
-	if (empty($options)) {
+	if (empty($options)) { // can't happen?
 		echo "No Options set";
 		exit();
 	}
@@ -1712,7 +1886,12 @@ function sfs_ErrorHandler($errno, $errmsg, $filename, $linenum, $vars) {
 	// we are only conserned with the errors and warnings, not the notices
 	//if ($errno==E_NOTICE || $errno==E_WARNING) return false;
 	$serrno="";
-	if ((strpos($filename,'stop-spam')<1)&&(strpos($filename,'options-general.php')<1)) return false;
+	if (
+	(strpos($filename,'stop-spam')===false)
+	&&(strpos($filename,'sfr_mu')===false)
+	&&(strpos($filename,'settings.php')===false)
+	&&(strpos($filename,'options-general.php')===false)
+	) return false;
 	switch ($errno) {
 		case E_ERROR: 
 			$serrno="Fatal run-time errors. These indicate errors that can not be recovered from, such as a memory allocation problem. Execution of the script is halted. ";

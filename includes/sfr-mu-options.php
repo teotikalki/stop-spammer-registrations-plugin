@@ -1,6 +1,6 @@
 <?php
 /*
-mu-options.php
+sfr-mu-options.php
 
 Provides mu support to the stop spammer registrations plugin
 
@@ -14,7 +14,16 @@ This hooks the options functions of wp in order to update one option from blog #
 
 $kpg_ssp_semaphore=0;
 // add the options. Since the add action is already implied at the load_plugins level we don't need to add_action 
-// get a list of option names and values from the site config 
+// get a list of option names and values from the site config
+
+// user must be able to 'manage_network_plugins' to see the plugin.
+// user must be able to 'manage_network_options' to change the plugin
+
+/***********************************************
+* kpg_ssp_global_setup()
+* This installs the global hooks and redirects
+* all plugin options to blog #1
+***********************************************/
 function kpg_ssp_global_setup() {
 	global $blog_id;
 	if ($blog_id==1) {

@@ -81,24 +81,24 @@ function addwhite(ip) {
 	return false;
 }
 </script>
-  <h2>Stop Spammers Plugin Stats Version 3.7</h2>
+  <h2>Stop Spammers Plugin Stats Version 3.8</h2>
  <?php 
 
 	$nag='';
 	if ($spmcount>0) {
-		if ($spmcount>3000) {
+		if ($spmcount>10000) {
 			$nag="<br/> This plugin is really working hard for you. Don't you think that it's time to <a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">buy the book</a>?</p>";
 		}
-		if ($spmcount>8000) {
+		if ($spmcount>20000) {
 			$nag="<p> WOW! This plugin is great. It's time to <a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">buy the book</a> (99&cent; cheap)</p>";
 		}
-		if ($spmcount>15000) {
+		if ($spmcount>30000) {
 			$nag="<p> AMAZING! Look at all the spammers stopped. Please <a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">buy the book</a> (99&cent; cheap)</p>";
 		}
-		if ($spmcount>30000) {
+		if ($spmcount>50000) {
 			$nag="<p> You know, if you already bought the book, I have written others that you can buy. Please <a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">buy a book</a>.</p>";
 		}
-		if ($spmcount>40000) {
+		if ($spmcount>100000) {
 			$nag="<p><a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">Oh well...</a></p>";
 		}
 ?>
@@ -126,9 +126,17 @@ function addwhite(ip) {
   <p>There are <a href='edit-comments.php?comment_status=moderated'><?php echo $num; ?></a> comments waiting to be moderated</p>
 <?php 
 	}
+	
+		$me=admin_url('options-general.php?page=stopspammersoptions');
+		if (function_exists('is_multisite') && is_multisite() && $muswitch=='Y') {
+			switch_to_blog(1);
+			$me=get_admin_url( 1,'network/settings.php?page=adminstopspammersoptions');
+			restore_current_blog();
+		}
+
 ?>
 
-<p><a href="#" onclick="window.location.href=window.location.href;return false;">Refresh</a> - <a href="options-general.php?page=stopspammersoptions">View Options</a>
+<p><a href="#" onclick="window.location.href=window.location.href;return false;">Refresh</a> - <a href="<?php echo $me; ?>">View Options</a>
 </p>
 <?php
 	if (count($hist)==0) {

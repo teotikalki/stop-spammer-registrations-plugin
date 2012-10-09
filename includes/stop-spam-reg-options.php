@@ -2,6 +2,7 @@
 /*
 	Stop Spammer Registrations Plugin 
 	Options Setup Page
+	stop-spam-reg-options.php
 */
 	if(!current_user_can('manage_options')) {
 		die('Access Denied');
@@ -12,7 +13,9 @@
 	extract($stats);
 	$options=kpg_sp_get_options();
 	extract($options);
-
+    // delete options and reset as not being autoloaded, I am retrofitting this into the plugin
+	delete_option('kpg_stop_sp_reg_options');
+	add_option('kpg_stop_sp_reg_options',$options,'','no'); // now it loads only at spam check time
 	$wordpress_api_key=get_option('wordpress_api_key');
     if (empty($wordpress_api_key)) $wordpress_api_key='';
 	$ip=$_SERVER['REMOTE_ADDR'];
@@ -43,6 +46,13 @@
 				$chkdisp='N';
 			}
 			$options['chkdisp']=$chkdisp;
+			
+			if (array_key_exists('chksfs',$_POST)) {
+				$chksfs=stripslashes($_POST['chksfs']);
+			} else {
+				$chksfs='N';
+			}
+			$options['chksfs']=$chksfs;
 			
 			if (array_key_exists('chkubiquity',$_POST)) {
 				$chkubiquity=stripslashes($_POST['chkubiquity']);
@@ -229,6 +239,21 @@
 				$options['wlist']=$tblist;				
 				$wlist=$tblist;
 			}
+			
+			
+
+			if (array_key_exists('badTLDs',$_POST)) {
+			    $badTLDs=$_POST['badTLDs'];
+				$badTLDs=explode("\n",$badTLDs);
+				$tblist=array();
+				foreach($badTLDs as $bl) {
+					$bl=trim($bl);
+					if (!empty($bl)) $tblist[]=$bl;
+				}
+				$options['badTLDs']=$tblist;				
+				$badTLDs=$tblist;
+			}
+
 			if (array_key_exists('baddomains',$_POST)) {
 			    $baddomains=$_POST['baddomains'];
 				$baddomains=explode("\n",$baddomains);
@@ -271,13 +296,17 @@
 			$options['kpg_sp_cache']=$kpg_sp_cache;
 			$options['kpg_sp_hist']=$kpg_sp_hist;
 			$options['redirurl']=$redirurl;
-			if (empty($muswitch)) $muswitch='Y';
-			if ($muswitch!='N') $muswitch='Y';
+			if (empty($muswitch)) $muswitch='N';
+			if ($muswitch!='Y') $muswitch='N';
 			$options['muswitch']=$muswitch;
 			$options['rejectmessage']=$rejectmessage;
 			if (function_exists('is_multisite') && is_multisite() && function_exists('kpg_ssp_global_unsetup') && function_exists('kpg_ssp_global_setup')) {
 				if ($muswitch=='N') {
 					kpg_ssp_global_unsetup();
+				    // the $muswitch is N so we have to update blog 1
+					switch_to_blog(1);
+					update_option('kpg_stop_sp_reg_options',$options);
+					restore_current_blog();
 				} else {
 					kpg_ssp_global_setup();
 				}
@@ -317,8 +346,15 @@
   </div>
   <?php
 	}
+		$me=admin_url('options-general.php?page=stopspammerstats');
+		if (function_exists('is_multisite') && is_multisite() && $muswitch=='Y') {
+			switch_to_blog(1);
+			$me=get_admin_url( 1,'network/settings.php?page=adminstopspammerstats');
+			restore_current_blog();
+		}
+	
 ?>
-  <p><a href="options-general.php?page=stopspammerstats">View History and Cache</a> </p>
+  <p><a href="<?php echo $me; ?>">View History and Cache</a> </p>
   <?php
 	if (function_exists('is_multisite') && is_multisite()) {
 		global $blog_id;
@@ -359,7 +395,7 @@
 	}
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
-  <p style="font-weight:bold;">Version 3.7</p>
+  <p style="font-weight:bold;">Version 3.8</p>
   <p>Eliminates 99% of spam registrations and  comments. Checks all attempts to leave spam against <a href="http://www.stopforumspam.com/">Stop Forum Spam</a>, <a href="http://www.projecthoneypot.org/">Project Honeypot</a>, and <a href="http://www.botscout.com/">BotScout</a>, DNSBL lists such as Spamhaus.org, known spammer hosts such  as Ubiquity Servers, disposable email addresses, very long email address and  names, and HTTP_ACCEPT header. Checks for robots that hit your site too fast,  and puts a fake comment and login screen where only spammers will find them. In  all the plugin uses 15 different strategies to block spammers. </p>
   <p style="font-weight:bold;">How the plugin works: </p>
   <p>This plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments. 
@@ -417,7 +453,8 @@ function sfs_ajax_return_check(response) {
     <input type="hidden" name="action" value="update" />
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <?php
-		if (function_exists('is_multisite') && is_multisite()) {
+		// it must not only be a multisite install, but the user must be able to manage the network.
+		if (function_exists('is_multisite') && is_multisite() && current_user_can('manage_network_options')) {
 	?>
     <h4>Network Blog Option:</h4>
     <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
@@ -440,7 +477,7 @@ function sfs_ajax_return_check(response) {
     <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
       <tr bgcolor="white">
         <td valign="top">Enable StopForumSpam Lookups:</td>
-        <td align="center" valign="top"><input name="chksfs" type="checkbox" value="Y" <?php if ($accept=='Y') echo  "checked=\"checked\"";?>/>
+        <td align="center" valign="top"><input name="chksfs" type="checkbox" value="Y" <?php if ($chksfs=='Y') echo  "checked=\"checked\"";?>/>
         </td>
         <td valign="top">You may want to disable checking of the SFS db. By default this is on. Uncheck it to turn off.</td>
       </tr>
@@ -586,6 +623,22 @@ function sfs_ajax_return_check(response) {
 </textarea></td>
         <td valign="top">Put the domains you want blocked here. e.g. dresssmall.com. This will block all comments and registrations that use this domain for emails.</td>
       </tr>
+	  
+      <tr bgcolor="white">
+        <td valign="top"> Blocked TLDs:</td>
+        <td align="center" valign="top"><textarea name="badTLDs" cols="40" rows="8"><?php
+    for ($k=0;$k<count($badTLDs);$k++) {
+		echo $badTLDs[$k]."\r\n";
+	}
+	?>
+</textarea></td>
+        <td valign="top">Put the TLDs (Top Level Domains) that you want blocked. A TLD is the last part of a domain like .COM or .NET. You can block emails from various countries this way by adding a TLD such as .CN or .RU (these will block Russia and China).<br/>
+		Enter the TLD name including the '.' e.g. .XXX<br/>
+		A list of TLDs can be found at
+		<a href="http://en.wikipedia.org/wiki/List_of_Internet_top-level_domains" target="_blank">Wikipedia List of Internet top-level domains</a>.</td>
+      </tr>
+	  
+	  
       <tr bgcolor="white">
         <td valign="top">Check Spam Words:</td>
         <td valign="top"><input name="chkspamwords" type="checkbox" value="Y" <?php if ($chkspamwords=='Y') echo  "checked=\"checked\"";?>/></td>
