@@ -4,14 +4,15 @@ Donate link: http://www.blogseye.com/buy-the-book/
 Requires at least: 3.0
 Tested up to: 3.5
 Contributors: Keith Graham
-Stable tag: 3.8
+Stable tag: 4.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 The Stop Spammer Registrations Plugin checks comments and logins 15 different ways to block spammers.
 
 == Description ==
-Eliminates 99% of spam registrations and comments. Checks all attempts to leave spam against StopForumSpam.com, Project Honeypot, BotScout, DNSBL lists such as Spamhaus.org, known spammer hosts such as Ubiquity Servers, disposable email addresses, very long email address and names, and HTTP_ACCEPT header. Checks for robots that hit your site too fast, and puts a fake comment and login screen where only spammers will find them. In all the plugin uses 15 different strategies to block spammers. 
+In all the plugin uses 15 different strategies to block spammers. 
+Eliminates 99% of spam registrations and comments. Checks all attempts to leave spam against StopForumSpam.com, Project Honeypot, BotScout, DNSBL lists such as Spamhaus.org, known spammer hosts such as Ubiquity Servers, disposable email addresses, very long email address and names, and HTTP_ACCEPT header. Checks for robots that hit your site too fast, and puts a fake comment and login screen where only spammers will find them. 
 
 The Stop Spammer Registrations Plugin now checks for spammer IPs much earlier in the comment and registration process. When it detects a spammer IP, the plugin stops WordPress from completing any further operations and an access denied message is presented to the spammer. You control the access denied message, or you can redirect the spammer to another page or website.
 
@@ -155,37 +156,58 @@ This has some functions partially complete, but I had to release as is to fix th
 = 3.8 =
 * fixed options page bug with the Check SFS checkbox. 
 * Fixed blacklist options issue. 
-* White listed PayPal IPs to stop interference with paypal callbacks (not optional).
+* White listed PayPal IPs to stop interference with PayPal callbacks (not optional).
 * added ability to reject by TLD in email (users can stop .ru or .cn if they want).
 * made options and history options non-autoload to preserve memory usage.
 * changed the way the network checkbox works. Users must be able to manage the network to set the feature and see the network options when set. When the network box is checked the only way to admin the network is through the network admin dashboard.
 * compensates for a bug in Apple Safari that does not sent HTTP_REFERER from the iPhone and iPad. Disables the HTTP_REFERER check if the user agent appears to be from an iphone or ipad.
 * corrected link to options from admin panel (again). I hope I have it right at last.
 
-== Frequently Asked Questions ==
+= 4.0 =
+* Removed functions that caused issues with Buddy Press
+* Reorganized and simplified the plugin. It is a more streamlined now. It checks for spam only on form submission (POST) as soon as WP is initialized. It no longer does any checks in the register and login functions so it should be more compatible with other plugins. It only does checks when a form is submitted so it should have less impact on WordPress resources.
+* Removed email validation hooks. 
+* Added a spam event type summary to the history page.
+* changed the order of spam checks. Cache check first, then most likely or simple checks, database access last.
+* fixed a bug in cache checking.
+* added an activation check to see if the current user is reported as a spammer. Plugin will not install unless the user passes all spam tests. 
+* added a button to the options screen to test if current user appears to be a spammer.
+* fixed bug in log file cleanup.
+* fixed autoload options issue. Change to autoload=false only happens once.
+* added ability to add reason and IP to deny message.
+* Removed the "loop_start" hook and replaced it with a before comment form hook. This will mean that some themes will not use the red herring forms if they do not comply with WP standards.
 
+== Frequently Asked Questions ==
+= I have found a bug =
+Please report it NOW. I fill try to fix it and incorporate the fix into the next release. I try to respond quickly to bugs that are possible to fix (all others take a few days). I keep a bleeding edge BETA test of the plugin (sometimes its very ALPHA) at my website: http://www.blogseye.com/beta-test-plugins/
+If you are adventurous you can download the latest versions of some of my plugins before I release them.
+= I used an older version of the plugin and it worked, but the latest version breaks my site =
+You can download previous versions of the plugin at: http://wordpress.org/extend/plugins/stop-spammer-registrations-plugin/developers/
+Don't forget to report to me what the problem is so I can try to fix it.
+= I can't install the plugin because it thinks that I am a spammer =
+Unprofessional webmasters sometimes report IP address to Stop Forum Spam unnecessarily. If you are listed on SFS, there is a from at www.StopForumSpam.com. They can delete your entry.
+Users of proxy servers will sometimes be blocked if spammers are abusing the proxy or the proxy does not fully comply with standards. This causes an issue for some firewalled servers who need the proxy servers to reach their users.
+Web sites hosted on servers used by spammers will be blocked. It behooves bloggers to use legitimate spam free hosting companies.
+I can't fix some issues. The plugin is very aggressive. It is suitable for users who want a clean site and are not concerned if they exclude a very small minority who are using tainted IP addresses, or who turn off basic HTTP functionality.
+
+I am sorry that the plugin is not right for you.
 = Help, I'm locked out of my Website =
 Not everyone who is marked as a spammer is actually a spammer. It is quite possible that you have been marked as a spammer on one of the spammer databases. You can delete the "stop-spammer-registrations-plugin" in your wp-content/plugins folder and you will be able to get in. There is no "back door", because spammers could use it.
+Delete the plugin using FTP or other file access to your server.
 Reinstall the plugin and check off the box, "Automatically add admins to white list". Then save your settings. This puts your IP address into the white list. You should be able to get in. Then inspect the log to determine why you were locked out. Was your email or IP address marked as spam in one of the databases? If so, contact the website that maintains the database and ask them to remove you.
-
 = I can't log into WordPress from my Android/iPhone app. =
-Check your log files to find out exactly why the app was rejected. It usually is because the HTTP_REFERER header was not sent correctly. This is one sign of badly written spam software. It is also, unfortunately, a sign of badly written login software. Uncheck the box on the Stop Spammer settings page "Block with missing or invalid HTTP_REFERER".
-
+Check your log files to find out exactly why the app was rejected. It usually is because the HTTP_REFERER header was not sent correctly. This is one sign of badly written spam software. It is also, unfortunately, a sign of badly written login software. Uncheck the box on the Stop Spammer settings page "Block with missing or invalid HTTP_REFERER". I white list iPhones and iPads using Safari on some checks because of bugs in the headers it sends.
 = My blog started sending spammers to a Cell phone site =
 In the 3.5 version I added the ability to send spammers to an alternate URL, and I included an example that you could use for spamming spammers. I made a mistake in my code that caused this feature to be stuck "ON". It was a stupid mistake on my part, and not malicious. Your site was not hacked. It was my own dumb fault. The plugin has become way to big and complicated and I miss things in testing. Rest assured that you can't spam spammers. These are robots creating the spam, and no flesh and blood spammers ever see the results of the redirect.
-
 = I see errors in the error listing below the cache listing =
 It could be that there is something in your system that is causing errors. Copy the errors and email them to me, or paste them into a comment on the WordPress plugin page.
-
 = You plugin is stopping new registrations, but how do I clean up existing spam registrations? =
 Unfortunately, WordPress does not record the IP address of User registrations. This is a design flaw in WordPress. They do record the IP of comments. I cannot run a check against logins without their IP address, so you have to remove users the old fashioned way, one at a time. 
 You might try listing the emails of all registered users, and then deleting them. You can then ask all users to re-register, but that would probably annoy your legitimate users.
-
 = I have a cool idea for a feature for Stop-Spammer-Registrations-Plugin. =
 Most of the features in the plugin have come from the users of the plugin. By all means stop by my website and leave a comment. I read all of them, and if the are feasible, I try to include them.
-
-= You should have a PayPal button =
-No I shouldn't. I don't make any money off of the plugin, except that one or two plugin users out out thousands buy my book. I have no reason to believe that anyone would click a PayPal button. If I make 40&cent; per book on one or two books a month, I get the satisfaction that some might actually read my stories. The money is not important.
+= I would like to support your programming efforts =
+Just rate the plugin on WordPress.org and by one of my books. I don't make any money off of the plugin, except that one or two plugin users out of thousands buy my book. If I make 40&cent; per book on one or two books a month, I get the satisfaction that some might actually read my stories. The money is not important. I like to program and plugins are fun to code. I really like the WordPress API.
 
 
 == Screenshots ==

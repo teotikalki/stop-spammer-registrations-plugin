@@ -28,6 +28,40 @@
 			$stats['hist']=$hist;
 			$stats['spcount']=$spcount;
 			update_option('kpg_stop_sp_reg_stats',$stats);
+			echo "<h2>Reasons Cleared</h2>";
+		}	
+		if (array_key_exists('kpg_stop_clear_reason',$_POST)) {
+			$stats['cntjscript']=0;
+			$stats['cntsfs']=0;
+			$stats['cntreferer']=0;
+			
+			$stats['cntdisp']=0;
+			$stats['cntrh']=0;
+			$stats['cntdnsbl']=0;
+			
+			$stats['cntubiquity']=0;
+			$stats['cntakismet']=0;
+			$stats['cntspamwords']=0;
+			
+			$stats['cntsession']=0;
+			$stats['cntlong']=0;
+			$stats['cntagent']=0;
+			
+			$stats['cnttld']=0;
+			$stats['cntemdom']=0;			
+			$stats['cntcacheip']=0;
+			
+			$stats['cntcacheem']=0;
+			$stats['cnthp']=0;
+			$stats['cntbotscout']=0;
+			
+			$stats['cntaccept']=0;
+			$stats['cntpassed']=0;
+			$stats['cntwhite']=0;
+			$stats['cntgood']=0;
+		
+			update_option('kpg_stop_sp_reg_stats',$stats);
+			extract($stats);
 			echo "<h2>History Cleared</h2>";
 		}
 		if (array_key_exists('kpg_stop_add_black_list',$_POST)) {
@@ -60,16 +94,17 @@
 	$nonce=wp_create_nonce('kpgstopspam_update');
 
 ?>
+
 <div class="wrap">
-  <form method="post" name="kpg_ssp_bl" action="">
+  <form action="" method="post" name="kpg_ssp_bl" id="kpg_ssp_bl">
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <input type="hidden" name="kpg_stop_add_black_list" value="" />
   </form>
-  <form method="post" name="kpg_ssp_wl" action="">
+  <form action="" method="post" name="kpg_ssp_wl" id="kpg_ssp_wl">
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <input type="hidden" name="kpg_stop_add_white_list" value="" />
   </form>
-<script type="text/javascript" >
+  <script type="text/javascript" >
 function addblack(ip) {
 	document.kpg_ssp_bl.kpg_stop_add_black_list.value=ip;
 	document.kpg_ssp_bl.submit();
@@ -81,50 +116,49 @@ function addwhite(ip) {
 	return false;
 }
 </script>
-  <h2>Stop Spammers Plugin Stats Version 3.8</h2>
- <?php 
+  <h2>Stop Spammers Plugin Stats Version 4.0</h2>
+  <?php 
 
 	$nag='';
 	if ($spmcount>0) {
-		if ($spmcount>10000) {
+		if ($spmcount>20000) {
 			$nag="<br/> This plugin is really working hard for you. Don't you think that it's time to <a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">buy the book</a>?</p>";
 		}
-		if ($spmcount>20000) {
+		if ($spmcount>40000) {
 			$nag="<p> WOW! This plugin is great. It's time to <a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">buy the book</a> (99&cent; cheap)</p>";
 		}
-		if ($spmcount>30000) {
+		if ($spmcount>60000) {
 			$nag="<p> AMAZING! Look at all the spammers stopped. Please <a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">buy the book</a> (99&cent; cheap)</p>";
 		}
-		if ($spmcount>50000) {
+		if ($spmcount>100000) {
 			$nag="<p> You know, if you already bought the book, I have written others that you can buy. Please <a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">buy a book</a>.</p>";
 		}
-		if ($spmcount>100000) {
+		if ($spmcount>150000) {
 			$nag="<p><a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">Oh well...</a></p>";
 		}
 ?>
- <h3>Stop Spammers has stopped <?php echo $spmcount; ?> spammers since <?php echo $spmdate; ?>.</h3>
+  <h3>Stop Spammers has stopped <?php echo $spmcount; ?> spammers since <?php echo $spmdate; ?>.</h3>
   <?php echo $nag; ?>
- 
-<?php 
+  <?php 
 }
 	if ($spcount>0) {
 ?>
   <h3>Stop Spammers has stopped <?php echo $spcount; ?> spammers since <?php echo $spdate; ?>.</h3>
-<?php 
+  <?php 
 	}
 	$num_comm = wp_count_comments( );
 	$num = number_format_i18n($num_comm->spam);
 	if ($num_comm->spam>0) {	
 ?>
   <p>There are <a href='edit-comments.php?comment_status=spam'><?php echo $num; ?></a> spam comments waiting for you to report them</p>
-<?php 
+  <?php 
 	}
 	$num_comm = wp_count_comments( );
 	$num = number_format_i18n($num_comm->moderated);
 	if ($num_comm->moderated>0) {	
 ?>
   <p>There are <a href='edit-comments.php?comment_status=moderated'><?php echo $num; ?></a> comments waiting to be moderated</p>
-<?php 
+  <?php 
 	}
 	
 		$me=admin_url('options-general.php?page=stopspammersoptions');
@@ -135,33 +169,121 @@ function addwhite(ip) {
 		}
 
 ?>
+  <p><a href="#" onclick="window.location.href=window.location.href;return false;">Refresh</a> - <a href="<?php echo $me; ?>">View Options</a> </p>
+  
+    <hr/>
+  <h3>Spam Reasons</h3>
+   <form method="post" action="">
+     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
+    <input type="hidden" name="kpg_stop_clear_reason" value="true" />
+    <input value="Clear Reason Summary" type="submit" />
+  </form>
+  <style type="text/css">
+	#reasontab {
+		background-color:#eeeeee;
+	}
+	#reasontab tr {
+		background-color:#ffffff;
+	}
+	#reasontab td {
+		text-align:right;
+	}
+  </style>
+  <table width="100%" cellpadding="2" cellspacing="2"  id="reasontab">
+    <tr>
+      <td>Javascript Trap</td>
+      <td><?php echo $cntjscript; ?></td>
+      <td>SFS database</td>
+      <td><?php echo $cntsfs; ?></td>
+      <td>HTTP_REFERER</td>
+      <td><?php echo $cntreferer; ?></td>
+      <td>Disposable email</td>
+       <td><?php echo $cntdisp; ?></td>
+      <td>Red Herring</td>
+      <td><?php echo $cntrh; ?></td>
+    </tr>
+    <tr>
+      <td>DSNBL database</td>
+      <td><?php echo $cntdnsbl; ?></td>
+      <td>Ubiquity Servers</td>
+      <td><?php echo $cntubiquity; ?></td>
+      <td>Akismet (login)</td>
+      <td><?php echo $cntakismet; ?></td>
+       <td>Spam Words</td>
+      <td><?php echo $cntspamwords; ?></td>
+      <td>Session speed</td>
+      <td><?php echo $cntsession; ?></td>
+    </tr>
+    <tr>
+      <td>Long email</td>
+      <td><?php echo $cntlong; ?></td>
+      <td>Missing Agent</td>
+      <td><?php echo $cntagent; ?></td>
+      <td>Blocked TLD</td>
+      <td><?php echo $cnttld; ?></td>
+      <td>Blocked Email Domain</td>
+      <td><?php echo $cntemdom; ?></td>
+      <td>Cached Bad IP</td>
+      <td><?php echo $cntcacheip; ?></td>
+    </tr>
+    <tr>
+      <td>Cached Bad Email</td>
+      <td><?php echo $cntcacheem; ?></td>
+      <td>Project Honeypot</td>
+      <td><?php echo $cnthp; ?></td>
+      <td>Botscout</td>
+      <td><?php echo $cntbotscout; ?></td>
+      <td>Black List Email</td>
+      <td><?php echo $cntblem; ?></td>
+      <td>Long Author Name</td>
+      <td><?php echo $cntlongauth; ?></td>
+    </tr>
+    <tr>
+      <td>Black List IP</td>
+      <td><?php echo $cntblip; ?></td>
+      <td>Bad Accept Header</td>
+      <td><?php echo $cntaccept; ?></td>
+      <td>Passed</td>
+      <td><?php echo $cntpassed; ?></td>
+      <td>White List</td>
+      <td><?php echo $cntwhite; ?></td>
+      <td>In Good Cache</td>
+      <td><?php echo $cntgood; ?></td>
+    </tr>
+  </table>
+  <hr/>
 
-<p><a href="#" onclick="window.location.href=window.location.href;return false;">Refresh</a> - <a href="<?php echo $me; ?>">View Options</a>
-</p>
-<?php
+  
+  <?php
 	if (count($hist)==0) {
 		echo "<p>No Activity Recorded.</p>";
 	} else {
   ?>
-  <hr/>
   <h3>Recent Activity</h3>
   <form method="post" action="">
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <input type="hidden" name="kpg_stop_clear_hist" value="true" />
-    <input value="Clear Recent Activity" type="submit">
+    <input value="Clear Recent Activity" type="submit" />
   </form>
   </p>
-		<table style="background-color:#eeeeee;" cellspacing="2">
-		<tr style="background-color:ivory;text-align:center;"><td>date/time</td><td>email</td><td>IP</td><td>user id</td><td>script</td><td>reason
-<?php
+  <table style="background-color:#eeeeee;" cellspacing="2">
+    <tr style="background-color:ivory;text-align:center;">
+      <td>date/time</td>
+      <td>email</td>
+      <td>IP</td>
+      <td>user id</td>
+      <td>script</td>
+      <td>reason
+        <?php
 	if (function_exists('is_multisite') && is_multisite()) {
-?>		
-		</td><td>blog</td>
-<?php
+?>
+      </td>
+      <td>blog</td>
+      <?php
 }
-?>		
-		</tr>
-<?php
+?>
+    </tr>
+    <?php
 		foreach($hist as $key=>$data) {
 			//$hist[$now]=array($ip,$email,$author,$sname,'begin');
 			$em=strip_tags(trim($data[1]));
@@ -208,52 +330,53 @@ function addwhite(ip) {
 			echo "</tr>";
 		}
 	?>
-		</table>
-<?php
+  </table>
+  <?php
 		
 	
    }
    if (count($badems)==0&&count($badips)==0&&count($goodips)==0) {
 ?>
- 	<p>Nothing in the cache.</p>
-  
-<?php
+  <p>Nothing in the cache.</p>
+  <?php
    } else {
 ?>
   <h3>Cached Values</h3>
-  <table><tr><td>
-  <form method="post" action="">
-    <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
-    <input type="hidden" name="kpg_stop_clear_cache" value="true" />
-    <input value="Clear the Cache" type="submit">
-  </form>
-  </td></tr></table>
+  <table>
+    <tr>
+      <td><form method="post" action="">
+          <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
+          <input type="hidden" name="kpg_stop_clear_cache" value="true" />
+          <input value="Clear the Cache" type="submit" />
+        </form></td>
+    </tr>
+  </table>
   <table align="center" width="60%">
     <tr>
-	<?php
+      <?php
 		if (count($badems)>0) {
 	?>
-	<td width="35%" align="center">Rejected Emails</td>
-	<?php
+      <td width="35%" align="center">Rejected Emails</td>
+      <?php
 		}
 	?>
-	<?php
+      <?php
 		if (count($badips)>0) {
 	?>
       <td width="30%" align="center">Rejected IPs</td>
-	<?php
+      <?php
 		}
 	?>
-	<?php
+      <?php
 		if (count($goodips)>0) {
 	?>
       <td width="30%" align="center">Good IPs</td>
-	<?php
+      <?php
 		}
 	?>
     </tr>
     <tr>
-	<?php
+      <?php
 		if (count($badems)>0) {
 	?>
       <td style="border:1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
@@ -263,36 +386,34 @@ function addwhite(ip) {
 			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a><br/>";
 		}
 	?></td>
-	<?php
+      <?php
 		}
 	?>
-	<?php
+      <?php
 		if (count($badips)>0) {
 	?>
-
       <td  style="border:1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 		foreach ($badips as $key => $value) {
 			//echo "$key; Date: $value<br/>\r\n";
 			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a><br/>";
 		}
 	?></td>
- 	<?php
+      <?php
 		}
 	?>
-	<?php
+      <?php
 		if (count($goodips)>0) {
 	?>
-
       <td  style="border:1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 		foreach ($goodips as $key => $value) {
 			//echo "$key; Date: $value<br/>\r\n";
 			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a><br/>";
 		}
 	?></td>
- 	<?php
+      <?php
 		}
 	?>
-   </tr>
+    </tr>
   </table>
   <?PHP
 } 
@@ -310,34 +431,30 @@ function addwhite(ip) {
 
 	if (function_exists('is_multisite') && is_multisite()) {
 	?>
-	<p>If you are looking for the list of spam on the blogs, I've broken that out into a separate plugin. 
-	It works with this plugin and allows you to report spam from a single page for all blogs. It is less likely to time out than the old version.
-	Please try it out:  <a href="http://wordpress.org/extend/plugins/mu-manage-comments-plugin/" target="_blank">MU Manage Comments Plugin</a></p>
-	<?php
+  <p>If you are looking for the list of spam on the blogs, I've broken that out into a separate plugin. 
+    It works with this plugin and allows you to report spam from a single page for all blogs. It is less likely to time out than the old version.
+    Please try it out: <a href="http://wordpress.org/extend/plugins/mu-manage-comments-plugin/" target="_blank">MU Manage Comments Plugin</a></p>
+  <?php
 	}
 ?>
   <?php
      $f=dirname(__FILE__)."/../sfs_debug_output.txt";
 	 if (file_exists($f)) {
 	    ?>
-<h3>Error Log</h3>
-<p>If debugging is turned on, the plugin will drop a record each time it encounters a PHP error. 
-Most of these errors are not fatal and do not effect the operation of the plugin. Almost all come from the unexpected data that
-spammers include in their effort to fool us. The author's goal is to eliminate any and
-all errors. These errors should be corrected. Fatal errors should be reported to the author at www.blogseye.com.</p>
-
-		
-<form method="post" action="">
+  <h3>Error Log</h3>
+  <p>If debugging is turned on, the plugin will drop a record each time it encounters a PHP error. 
+    Most of these errors are not fatal and do not effect the operation of the plugin. Almost all come from the unexpected data that
+    spammers include in their effort to fool us. The author's goal is to eliminate any and
+    all errors. These errors should be corrected. Fatal errors should be reported to the author at www.blogseye.com.</p>
+  <form method="post" action="">
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <input type="hidden" name="kpg_stop_delete_log" value="true" />
-    <input value="Delete Error Log File" type="submit">
-</form>
-
-<pre>
+    <input value="Delete Error Log File" type="submit" />
+  </form>
+  <pre>
 <?php readfile($f); ?>
 </pre>
-<?php
+  <?php
 	 }
 ?>
-
 </div>

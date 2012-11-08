@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
-Version: 3.8
+Version: 4.0
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -20,64 +20,96 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 *	each hook has to remove the other hooks to prevent multiple entries into the code 
 *
 *************************************************************/
-	add_action('init','kpg_load_all_checks'); // loads up everthing conditionally
-
+add_action('init','kpg_load_all_checks'); // loads up everthing conditionally
 function kpg_load_all_checks() {
-	// in order to lighten the server load, I only load the checks when there is a $_POST set.
-	// it is dumb to load everything if there is no spam attempt
+	// check the Post to see if we load the checks. This is for the validattions only
 	if(is_user_logged_in()) {
-		// no reason to continue - we don't need to load all this for a user who is approved and logged in
 		return;
 	}
 	// get a session to set the timer
 	if (!session_id()) {
 		session_start();
 	}
-	
-	if (isset($_POST)&&!empty($_POST)) {
-		// here we go - not in a post so we can set all the stuff we need
-		// put sanitize_email back, but remove the filter when when fired.
-		add_filter('sanitize_email','kpg_sfs_sanitize_email');
-		add_filter('user_registration_email','kpg_sfs_reg_fixup');	
-		add_filter('login_init','kpg_sfs_login_checkNR');	
-		add_filter('before_signup_form','kpg_sfs_login_check');	
-		add_action('pre_comment_on_post','kpg_sfs_login_check');	
-		add_filter('preprocess_comment','kpg_sfs_newcomment');	
-		add_action('admin_init','kpg_sfs_login_check');
-		add_action('xmlrpc_call','kpg_sfs_login_check'); // might be a get for all I know
-		add_filter('wp_mail','kpg_sfs_reg_check_send_mail'); // god knows how plugins will send mail
-		add_filter('wpmu_validate_user_signup','kpg_sfs_reg_validate_blog_signup');	
-		add_filter('wpmu_validate_blog_signup','kpg_sfs_reg_validate_blog_signup');	
+	kpg_load_all_checks_no_post();
+
+	if(!isset($_POST)) { // no post defined
+		$_SESSION['kpg_stop_spammers_time']=time();
 		return;
 	}
-	// not in a post so set the session timeout so it can be checked in the post
+	if (empty($_POST)) { // no post sent
+		$_SESSION['kpg_stop_spammers_time']=time();
+		return;
+	}
+	// I am using a plugin with your-email, your-name fields - might as well test them, too.
+	if (!array_key_exists('akismet_comment_nonce',$_POST) &&
+		!array_key_exists('email',$_POST) &&
+		!array_key_exists('user_email',$_POST) &&
+		!array_key_exists('user_login',$_POST) &&
+		!array_key_exists('author',$_POST) &&
+		!array_key_exists('your-name',$_POST) &&
+		!array_key_exists('your-email',$_POST) &&
+		!array_key_exists('user_name',$_POST)  )
+	{
+		// none of the required comment or login fields
+		$_SESSION['kpg_stop_spammers_time']=time();
+		// since we are not int a post we can call the inits for the non-post items
+		return;
+	}
+	// here we can check to see if the posted data is correct
+	
+	// get the email author and ip
+	$em='';
+	if (array_key_exists('email',$_POST)) {
+		$em=$_POST['email'];
+	} else if (array_key_exists('user_email',$_POST)) {
+		$em=$_POST['user_email'];
+	} else if (array_key_exists('user_login',$_POST)) {
+		$em=$_POST['user_login'];
+	} else if (array_key_exists('signup_email',$_POST)) {
+		$em=$_POST['signup_email'];
+	}
+	//echo "\r\n<!--\r\n step 3 \r\n-->\r\n";
+	
+	if (strpos($em,'@')===false) { // not an email, but a username (or some other crap)
+		$em='';
+	}
+	// see if they have an author or username
+	$author='';
+	if (array_key_exists('author',$_POST)) {
+		$author=$_POST['author'];
+	} else if (array_key_exists('user_name',$_POST)) {
+		$author=$_POST['user_name'];
+	}
+	//echo "\r\n<!--\r\n step 4 \r\n-->\r\n";
+	// get the ip 
+	$ip=$_SERVER['REMOTE_ADDR'];
+	$ip=check_forwarded_ip($ip);
+	
+	//  this is called once in "init" no need to call it ever again
+	sfs_errorsonoff();
+    $ansa=kpg_sfs_check($em,$author,$ip);
+	sfs_errorsonoff('off');
 	$_SESSION['kpg_stop_spammers_time']=time();
-	// the only thing to set is the red herring forms. The loop might be anywhere
-	add_action('loop_start','kpg_sfs_red_herring_comment');
-	add_filter('login_message','kpg_sfs_red_herring_login');	
-	add_filter('before_signup_form','kpg_sfs_red_herring_signup');	 // for MU blog signups
-	add_filter('wp_mail','kpg_sfs_reg_check_send_mail'); // god knows how plugins will send mail
-	add_action('xmlrpc_call','kpg_sfs_login_check'); // might be a get for all I know
-	add_action('comment_form_before_fields','kpg_sfs_javascript');
-	add_action( 'template_redirect', 'kpg_sfs_check_404s' ); // check if bogus search for wp-login
 	
 	return;
 }
-
-// make a function to unset all the hooks once a check to the db is done in order to prevent recusive checks
-function kpg_sfs_reg_unhook() {
-	@remove_filter( 'sanitize_email','kpg_sfs_sanitize_email');
-	@remove_filter( 'user_registration_email', 'kpg_sfs_reg_fixup' );
-	@remove_filter( 'login_init', 'kpg_sfs_login_check' );
-	@remove_filter( 'before_signup_form', 'kpg_sfs_login_check' );
-	@remove_action( 'pre_comment_on_post', 'kpg_sfs_login_check' );
-	@remove_filter( 'preprocess_comment', 'kpg_sfs_newcomment');	
-	@remove_action( 'admin_init', 'kpg_sfs_login_check' );
-	@remove_action( 'xmlrpc_call', 'kpg_sfs_login_check' );
-	@remove_filter( 'wp_mail', 'kpg_sfs_reg_check_send_mail' );
+function kpg_load_all_checks_no_post() {
+	add_action( 'template_redirect', 'kpg_sfs_check_404s' ); // check if bogus search for wp-login
+	// optional checks
+	$options=kpg_sp_get_options();
+	if (array_key_exists('chkwpmail',$options)&&$options['chkwpmail']=='Y'){
+		add_filter('wp_mail','kpg_sfs_reg_check_send_mail');
+	}
+	if (array_key_exists('redherring',$options)&&$options['redherring']=='Y') {
+		add_action('comment_form_before','kpg_sfs_red_herring_comment'); // moved to comment form before
+		add_filter('login_message','kpg_sfs_red_herring_login');	
+		add_filter('before_signup_form','kpg_sfs_red_herring_signup');
+	}
+	if (array_key_exists('chkjscript',$options)&&$options['chkjscript']=='Y') {
+		add_action('comment_form_before_fields','kpg_sfs_javascript');
+	}
 	return;
 }
-
 
 
 function load_sfs_mu() {
@@ -111,16 +143,14 @@ function load_sfs_mu_options_file() {
 *
 *************************************************************/
 function kpg_sfs_red_herring_comment($query) {
-	remove_action('loop_start','kpg_sfs_red_herring_comment');
+	remove_action('comment_form_before','kpg_sfs_red_herring_comment');
     if (is_feed()) return $query;
 	$sname=kpg_sfs_get_SCRIPT_URI();
 	if (empty($sname)) return;
 	if (strpos($sname,'/feed')) return $query;
-	$options=kpg_sp_get_options();
-	if (array_key_exists('redherring',$options)&&$options['redherring']!='Y') return $query;
    $rhnonce=wp_create_nonce('kpgstopspam_redherring');
 ?>
-<div style="position:absolute;width:1px;height:1px;left:-1000px;top:-1000px;overflow:hidden;">
+<div style="position:absolute;width:1px;height:1px;left:-1000px;top:-1000px;overflow:hidden;display:none;">
 <br/>
 <br/>
 <br/>
@@ -153,8 +183,6 @@ function kpg_sfs_red_herring_comment($query) {
 *************************************************************/
 function kpg_sfs_red_herring_signup() {
 	remove_filter('before_signup_form','kpg_sfs_red_herring_signup');	 
-	$options=kpg_sp_get_options();
-	if (array_key_exists('redherring',$options)&&$options['redherring']!='Y') return;
 	$rhnonce=wp_create_nonce('kpgstopspam_redherring');
 	// put a bugus signup form with the akismet nonce - maybe doesn't work but it might
 	$errors = new WP_Error();
@@ -192,8 +220,6 @@ function kpg_sfs_red_herring_signup() {
 function kpg_sfs_javascript() {
 	//echo "\r\n\r\n<!-- Made it to comment_form_before_fields -->\r\n\r\n";
 	remove_filter('comment_form_before_fields','kpg_sfs_javascript');	 
-	$options=kpg_sp_get_options();
-	if ((!array_key_exists('chkjscript',$options))||($options['chkjscript']!='Y')) return;
 	$jsnonce=wp_create_nonce('kpgstopspam_javascript');
 	$badjsnonce=wp_create_nonce('kpgstopspam_javascript_bad');
 // place some javascript on the page so that only humans using javascript use it
@@ -215,8 +241,6 @@ function kpg_sfs_javascript() {
 *************************************************************/
 function kpg_sfs_red_herring_login($message) {
 	remove_filter('login_message','kpg_sfs_red_herring_login');	
-	$options=kpg_sp_get_options();
-	if (array_key_exists('redherring',$options)&&$options['redherring']!='Y') return $message;
    $rhnonce=wp_create_nonce('kpgstopspam_redherring');
 ?>
 <div style="position:absolute;width:1px;height:1px;left:-1000px;top:-1000px;overflow:hidden;">
@@ -250,67 +274,7 @@ function kpg_sfs_red_herring_login($message) {
 	return $message;
 }
 
-/************************************************************
-* 	kpg_sfs_login_check()
-*	
-*	hooked from login, registration and comments forms.
-*   This works differently than the email checks.
-*   this looks up the IP address only and does a wp_die if 
-*   there is a hit in the cache or one of the db sites
-*
-*************************************************************/
-function kpg_sfs_login_checkNR() {
-	$ansa=kpg_sfs_login_check();
-	return;
-}
 
-function kpg_sfs_login_check() {
-	// there are multiple entry points.
-	// Login check is hooked from the "PRE" forms and has no parameters
-	// we start here gathering information and then passing it on to the full check with email, author and ip
-	// prevent from running multiple times
-	//echo "\r\n<!--\r\n step 1 \r\n-->\r\n";
-	kpg_sfs_reg_unhook();
-	if(is_user_logged_in()) {
-		return; // I know that I checked it before, but check again
-	}
-	//echo "\r\n<!--\r\n step 2 \r\n-->\r\n";
-	// get things from the post to pass to the check
-	// see if they are sending an email
-	$em='';
-	if (array_key_exists('email',$_POST)) {
-		$em=$_POST['email'];
-	} else if (array_key_exists('user_email',$_POST)) {
-		$em=$_POST['user_email'];
-	} else if (array_key_exists('user_login',$_POST)) {
-		$em=$_POST['user_login'];
-	} else if (array_key_exists('signup_email',$_POST)) {
-		$em=$_POST['signup_email'];
-	}
-	//echo "\r\n<!--\r\n step 3 \r\n-->\r\n";
-	
-	if (strpos($em,'@')===false) { // not an email, but a username (or some other crap)
-		$em='';
-	}
-	// see if they have an author or username
-	$author='';
-	if (array_key_exists('author',$_POST)) {
-		$author=$_POST['author'];
-	} else if (array_key_exists('user_name',$_POST)) {
-		$author=$_POST['user_name'];
-	}
-	//echo "\r\n<!--\r\n step 4 \r\n-->\r\n";
-	// get the ip 
-	$ip=$_SERVER['REMOTE_ADDR'];
-	$ip=check_forwarded_ip($ip);
-	// now call the generic checker
-	//echo "\r\n<!--\r\n step 5 \r\n-->\r\n";
-	sfs_errorsonoff();
-    $ansa=kpg_sfs_check($em,$author,$ip);
-	sfs_errorsonoff('off');
-	//echo "\r\n<!--\r\n step 6 \r\n-->\r\n";
-	return $ansa;
-}
 /************************************************************
 * 	kpg_sfs_reg_check_send_mail()
 *	Hooked from wp_mail
@@ -320,9 +284,6 @@ function kpg_sfs_reg_check_send_mail($stuff) {
 	if(is_user_logged_in()) {
 		return $stuff;
 	}
-	// see if we have to do this on wp_mail
-	$options=kpg_sp_get_options();
-	if (array_key_exists('chkwpmail',$options)&&$options['chkwpmail']=='N') return $stuff;
 	$email='';
 	$header=array();
 	if (is_array($stuff)&&array_key_exists('header',$stuff)) $header=$stuff['header'];
@@ -337,7 +298,6 @@ function kpg_sfs_reg_check_send_mail($stuff) {
 		$from_email = str_replace( '>', '', $from_email );
 		$from_email = trim( $from_email );
 	}
-	kpg_sfs_reg_unhook();
 	// get the ip 
 	$ip=$_SERVER['REMOTE_ADDR'];
 	$ip=check_forwarded_ip($ip);
@@ -366,6 +326,12 @@ function kpg_sfs_get_SCRIPT_URI() {
 *   This just caches badips for spiders trolling for a login
 *************************************************************/
 function kpg_sfs_check_404s() {
+	sfs_errorsonoff();
+    kpg_sfs_check_404();
+	sfs_errorsonoff('off');
+    return;
+}
+function kpg_sfs_check_404() {
 	// fix request_uri on IIS
 	if (!isset($_SERVER['REQUEST_URI'])) {
 		$_SERVER['REQUEST_URI'] = substr($_SERVER['PHP_SELF'],1 );
@@ -380,26 +346,33 @@ function kpg_sfs_check_404s() {
 	}
 	if (!is_404()) return;
 	remove_action('template_redirect', 'kpg_sfs_check_404s');
+	$plink = $_SERVER['REQUEST_URI']; 
+	if (strpos($plink,'?')!==false)  $plink=substr($plink,0,strpos($plink,'?'));
+	if (strpos($plink,'#')!==false)  $plink=substr($plink,0,strpos($plink,'#'));
+	$plink=basename($plink);
+	if (strpos($plink."\t","wp-signup.php\t")===false 
+		&& strpos($plink."\t","wp-register.php\t")===false // where is this?
+		&& strpos($plink."\t","wp-comments-post.php\t")===false
+		&& strpos($plink."\t","xmlrpc.php\t")===false) {
+			return;
+	}
+
+	
 	// check to see if we should even be here
 	$options=kpg_sp_get_options();
 	if (!array_key_exists('chkwplogin',$options) || $options['chkwplogin']!='Y') return;	
 	
 	$ip=$_SERVER['REMOTE_ADDR'];
 	$ip=check_forwarded_ip($ip);
-
+    // check the white lists to prevent accidental blockage
+	
+	if (!$deny&&(kpg_sp_searchi($ip,$wlist))) {
+		return;
+	}
+	
+	
 	$stats=kpg_sp_get_stats();
 
-	//extract($options);
-	$plink = $_SERVER['REQUEST_URI']; 
-	if (strpos($plink,'?')!==false)  $plink=substr($plink,0,strpos($plink,'?'));
-	if (strpos($plink,'#')!==false)  $plink=substr($plink,0,strpos($plink,'#'));
-	$plink=basename($plink);
-	if (strpos($plink."\t","wp-login.php\t")===false 
-		&& strpos($plink."\t","wp-signup.php\t")===false 
-		&& strpos($plink."\t","wp-comments-post.php\t")===false
-		&& strpos($plink."\t","xmlrpc.php\t")===false) {
-			return;
-	}
 	// have a bogus hit on a login or signup
 	// register the bad ip
 	$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
@@ -422,142 +395,36 @@ function kpg_sfs_check_404s() {
     update_option('kpg_stop_sp_reg_stats',$stats);
     return;
 }
+
+
 /************************************************************
-* 	kpg_sfs_sanitize_email()
-*   Most functions sanitize emails. So if this in a post then 
-*   it must be a login, comment or signup.
-*   
-*   I hope this catches all of the signups that have been slipping through
-*   due to custom themes and signup plugins.
-*
+*  function kpg_sfs_check_admin()
+* Checks to see if the current admin can login
 *************************************************************/
-function kpg_sfs_sanitize_email($em,$d1='',$d2='') {
-	// any function that checks email needs to use sanitize_email
-	// this does the check 
-	@remove_filter( 'sanitize_email','kpg_sfs_sanitize_email');	
-	if(is_user_logged_in()) {
-		return $email;
-	}
-	$author='';
-	if (array_key_exists('author',$_POST)) {
-		$author=$_POST['author'];
-	} else if (array_key_exists('user_name',$_POST)) {
-		$author=$_POST['user_name'];
-	} else if (array_key_exists('signupuser',$_POST)) {
-		$author=$_POST['signupuser'];
-	}
+register_activation_hook( __FILE__, 'kpg_sfs_check_admin' );
+$sfs_check_activation=substr(md5(uniqid(rand(), true)), 16, 16);
+function kpg_sfs_check_admin() {
+	global $sfs_check_activation;
+	// this confirms that the the current user is able to login
+	// it refuses to install the plugin if the user fails spam tests
 	$ip=$_SERVER['REMOTE_ADDR'];
 	$ip=check_forwarded_ip($ip);
-	sfs_errorsonoff();
-    kpg_sfs_check($em,$author,$ip);
-	sfs_errorsonoff('off');
-	
-	return $email;
-}
+	//echo "Checking IP address for spam conflicts<br/>";
+	$sfs_check_activation=substr(md5(uniqid(rand(), true)), 16, 16);
+	if (kpg_sfs_check($sfs_check_activation,'Activation test',$ip)===false) {
+		// break the installation
+		echo "<br/>Your current configuration reports that you will be denied access as a spammer.<br/>
+		Do not use this plugin until you can resolve this issue.
+		If you are not a spammer, please copy the information above and leave it as a comment at http://www.blogseye.com
+		<br/>
+		This message is from the 'stop-spammer-registrations' plugin<br/>
+		";
+		die();
+	}
+	$options=kpg_sp_get_options();
+	kpg_sfs_reg_add_user_to_whitelist($options);
 
-/************************************************************
-* 	kpg_sfs_validate_signup()
-*	Hooked from wpmu_validate_blog_signup($blogname, $blog_title, $user = '') 
-*	this is when wpmu_validate_blog_signup is hooked
-*
-* wpmu_validate_blog_signup (also validate_user_signup)
-*
-*************************************************************/
-function kpg_sfs_reg_validate_blog_signup($results) {
-	// this can gets the email and ip and stuff
-	// calls the fixup routine and either dies or allows.
-	
-	// email or author might be in signupuser,user_email or user_name
-	
-	if(is_user_logged_in()) {
-		return $results;
-	}
-	$em='';
-	if (array_key_exists('email',$_POST)) {
-		$em=$_POST['email'];
-	} else if (array_key_exists('user_email',$_POST)) {
-		$em=$_POST['user_email'];
-	} else if (array_key_exists('signup_email',$_POST)) {
-		$em=$_POST['signup_email'];
-	} else if (array_key_exists('signup_for',$_POST)) {
-		$em=$_POST['signup_for'];
-	} else if (array_key_exists('signupuser',$_POST)) {
-		$em=$_POST['signupuser'];
-	}
-	if (strpos($em,'@')===false) { // not an email, but a username (or some other crap)
-		$em='';
-	}
-	$author='';
-	if (array_key_exists('author',$_POST)) {
-		$author=$_POST['author'];
-	} else if (array_key_exists('user_name',$_POST)) {
-		$author=$_POST['user_name'];
-	} else if (array_key_exists('signupuser',$_POST)) {
-		$author=$_POST['signupuser'];
-	}
-	// get the ip 
-	$ip=$_SERVER['REMOTE_ADDR'];
-	$ip=check_forwarded_ip($ip);
-	sfs_errorsonoff();
-    kpg_sfs_check($em,$author,$ip);
-	sfs_errorsonoff('off');
-	return $results;
-}
-
-
-
-/************************************************************
-* 	kpg_sfs_reg_fixup()
-*	Hooked from is_email() 
-*	this is called when the email must be returned
-*************************************************************/
-function kpg_sfs_reg_fixup($email) {
-	kpg_sfs_reg_unhook();
-	if(is_user_logged_in()) {
-		return $email;
-	}
-	// we have only the email, need the author and ip
-	$em=$email;
-	if (empty($em)) {
-		if (array_key_exists('email',$_POST)) {
-			$em=$_POST['email'];
-		} else if (array_key_exists('user_email',$_POST)) {
-			$em=$_POST['user_email'];
-		} else if (array_key_exists('signup_email',$_POST)) {
-			$em=$_POST['signup_email'];
-		} else if (array_key_exists('signupuser',$_POST)) {
-		$em=$_POST['signupuser'];
-		}
-		if (strpos($em,'@')===false) { // not an email, but a username (or some other crap)
-			$em='';
-		}
-	}
-	// see if they have an author or username
-	$author='';
-	if (array_key_exists('author',$_POST)) {
-		$author=$_POST['author'];
-	} else if (array_key_exists('user_name',$_POST)) {
-		$author=$_POST['user_name'];
-	}
-	// get the ip 
-	$ip=$_SERVER['REMOTE_ADDR'];
-	$ip=check_forwarded_ip($ip);
-	sfs_errorsonoff();
-    kpg_sfs_check($em,$author,$ip);
-	sfs_errorsonoff('off');
-
-	return $email;
-}
-/************************************************************
-* 	kpg_sfs_newcomment()
-*	hooked from comments - have to return commmentdata
-*
-*************************************************************/
-function kpg_sfs_newcomment($commentdata) {
-	kpg_sfs_login_check();
-	return $commentdata;
-}
-
+}	
 
 
 /************************************************************
@@ -568,10 +435,7 @@ function kpg_sfs_newcomment($commentdata) {
 *
 *************************************************************/
 function kpg_sfs_check($email='',$author='',$ip) {
-	if(is_user_logged_in()) {
-		return $email;
-	}
-	// some themes and plugins call is_email on every page and in admin. We'll ignore some of them
+    global $sfs_check_activation;
     $sname=$_SERVER["REQUEST_URI"];	
 	if (empty($sname)) {
 		$sname=$_SERVER["SCRIPT_NAME"];	
@@ -579,37 +443,41 @@ function kpg_sfs_check($email='',$author='',$ip) {
 	if (empty($sname)) {
 		$sname=' none? ';
 	}
-	if (
-		strpos($sname,'index.php')!==false||
-		strpos($sname,'archive.php')!==false||
-		strpos($sname,'archives.php')!==false||
-		strpos($sname,'links.php')!==false||
-		strpos($sname,'pages.php')!==false||
-		strpos($sname,'seach.php')!==false||
-		strpos($sname,'single.php')!==false||
-		strpos($sname,'page.php')!==false
-	) {
-		return $email; // no check for the above files
-	}
+// No need to verify where we are.
+//	if (
+//		strpos($sname,'index.php')!==false||
+//		strpos($sname,'archive.php')!==false||
+//		strpos($sname,'archives.php')!==false||
+//		strpos($sname,'links.php')!==false||
+//		strpos($sname,'pages.php')!==false||
+//		strpos($sname,'seach.php')!==false||
+//		strpos($sname,'single.php')!==false||
+//		strpos($sname,'page.php')!==false
+//	) {
+//		return $email; // no check for the above files
+//	}
 
 	$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
-	$stats=kpg_sp_get_stats();
-	extract($stats);
 	$options=kpg_sp_get_options();
 	extract($options);
-	
-	if ($chkcomments!='Y') {
-		if (strpos($sname,'wp-comments-post.php')!==false) return $email;
-	}
-	if ($chklogin!='Y') {
-		if (strpos($sname,'wp-login.php')!==false) return $email;
-	}
-	if ($chksignup!='Y') {
-		if (strpos($sname,'wp-signup.php')!==false) return $email;
-	}
-	if ($chkxmlrpc!='Y') {
-		if (strpos($sname,'xmlrpc.php')!==false) return $email;
-	}
+	$stats=kpg_sp_get_stats();
+	extract($stats);
+
+	if ($email!=$sfs_check_activation) {
+// from a user who wanted to exclure some of the checking.	
+		if ($chkcomments!='Y') {
+			if (strpos($sname,'wp-comments-post.php')!==false) return $email;
+		}
+		if ($chklogin!='Y') {
+			if (strpos($sname,'wp-login.php')!==false) return $email;
+		}
+		if ($chksignup!='Y') {
+			if (strpos($sname,'wp-signup.php')!==false) return $email;
+		}
+		if ($chkxmlrpc!='Y') {
+			if (strpos($sname,'xmlrpc.php')!==false) return $email;
+		}
+    }
 	
 	
 	// clean up cache and history	
@@ -622,7 +490,6 @@ function kpg_sfs_check($email='',$author='',$ip) {
 	$stats['badems']=$badems;
 	$stats['goodips']=$goodips;
 	$stats['hist']=$hist;
-
     $sname=$_SERVER["REQUEST_URI"];	
 	if (empty($sname)) {
 		$sname=$_SERVER["SCRIPT_NAME"];	
@@ -637,19 +504,23 @@ function kpg_sfs_check($email='',$author='',$ip) {
 			$blog=$blog_id;
 		}
 	}
-	$email=trim($email);
-	$email=strip_tags($email);
-	$whodunnit='';
-	// cleanup the input that is breaking the serialize functions here (I hope)
-	$em=sanitize_email(strip_tags($email));
-	$em=sanitize_text_field($em);
-	$em=remove_accents($em);
-	$em=utf8_decode($em);
-	$em=really_clean($em);
+	$em=$email;
+	if ($email!=$sfs_check_activation) {
+		$email=trim($email);
+		$email=strip_tags($email);
+
+		// cleanup the input that is breaking the serialize functions here (I hope)
+		$em=sanitize_email(strip_tags($email));
+		$em=sanitize_text_field($em);
+		$em=remove_accents($em);
+		$em=utf8_decode($em);
+		$em=really_clean($em);
+	}
 	$author=sanitize_text_field($author);
 	$author=remove_accents($author);
 	$author=utf8_decode($author);
 	$author=really_clean($author);
+	$whodunnit='';
 	// think of other things that might kill the serialize functions
 	if (strlen($author)>80) $author=substr($author,0,77).'...';
 	if (strlen($em)>80) $em=substr($em,0,80).'...';
@@ -663,94 +534,104 @@ function kpg_sfs_check($email='',$author='',$ip) {
 	$deny=false;
 	// testing area goes here before other checks including white list
 	// move this down past the white lists after testing is done
-	// chkjscript
-	if (!$deny&&!empty($_POST)&&array_key_exists('kpg_jscript',$_POST)) {
-		$nonce=$_POST['kpg_jscript'];
-		if (!empty($nonce)&&wp_verify_nonce($nonce,'kpgstopspam_javascript_bad')) { 
-				$whodunnit.='JavaScript Trap';
-				$deny=true;
-		}
-	}
-	
 	
 	// first check white lists 
 
 	// paypal is whitelisted
-	if (kpg_sp_checkPayPal($ip)){
-	    $hist[$now][4]='White List PayPal';
-		$stats['hist']=$hist;
-		update_option('kpg_stop_sp_reg_stats',$stats);
-		return $email;
-	}
-	if (!$deny&&(kpg_sp_searchi($ip,$wlist))) {
-	    $hist[$now][4]='White List IP';
-		$stats['hist']=$hist;
-		update_option('kpg_stop_sp_reg_stats',$stats);
-		return $email;
-	}
-	if (!$deny&&!empty($em)&&kpg_sp_searchi($em,$wlist)) {
-	    $hist[$now][4]='White List EMAIL';
-		$stats['hist']=$hist;
-		update_option('kpg_stop_sp_reg_stats',$stats);
-		return $email;
-	}
-	//$admin_email = get_settings('admin_email');
-	//if ($admin_email==$em) {
-	//	return $email; // whitelist admin email - probably not a good idea
-	//}
+	if ($email!=$sfs_check_activation) {
+		if (!$deny&&kpg_sp_checkPayPal($ip)){
+			$hist[$now][4]='White List PayPal';
+			$stats['hist']=$hist;
+			$cntwhite++;
+			$stats['cntwhite']=$cntwhite;
+			update_option('kpg_stop_sp_reg_stats',$stats);
+			return $email;
+		}
+		if (!$deny&&(kpg_sp_searchi($ip,$wlist))) {
+			$hist[$now][4]='White List IP';
+			$stats['hist']=$hist;
+			$cntwhite++;
+			$stats['cntwhite']=$cntwhite;
+			update_option('kpg_stop_sp_reg_stats',$stats);
+			return $email;
+		}
+		if (!$deny&&!empty($em)&&kpg_sp_searchi($em,$wlist)) {
+			$hist[$now][4]='White List EMAIL';
+			$stats['hist']=$hist;
+			$cntwhite++;
+			$stats['cntwhite']=$cntwhite;
+			update_option('kpg_stop_sp_reg_stats',$stats);
+			return $email;
+		}
 	// check to see if the ip is in the goodips cache
 	
-	if (!$deny&&kpg_sp_searchi($ip,$goodips)) {
-	    $hist[$now][4]='Cached good ip';
-		$stats['hist']=$hist;
-		update_option('kpg_stop_sp_reg_stats',$stats);
-		return $email;
+		if (!$deny&&kpg_sp_searchKi($ip,$goodips)) {
+			$hist[$now][4]='Cached good ip';
+			$stats['hist']=$hist;
+			$cntgood++;
+			$stats['cntgood']=$cntgood;
+			update_option('kpg_stop_sp_reg_stats',$stats);
+			return $email;
+		}
 	}
 	// not white listed, now try the simple rejects that don't require remote access.
 
+	// begin by checking the caches for bad ips. Do this before the regular checks
+	// this way only the first appearance of a bad actor is recorded by type
+
+	if (!$deny&&kpg_sp_searchKi($ip,$badips)) {
+		$whodunnit.='Cached bad ip';
+		$deny=true;
+		$cntcacheip++;
+	} 
+	if (!$deny && kpg_sp_searchi($ip,$blist)) {
+	    $whodunnit.='Black List IP';
+		$deny=true;
+		$cntblip++;
+	}
 	
 	
 	// check to see if they are coming in from the comment form and a post
-	if (!$deny&&$chksession!='N'&&defined("WP_CACHE")&&!WP_CACHE&&!is_user_logged_in() ) {
-		// we are in a comment - we need to check the transient variable
-		if (!empty($_POST)) {
+	if (!$deny&&$chksession!='N') {
+		if (!defined("WP_CACHE")||(!WP_CACHE)) { // checking the cache does not work id caching
+			// we are in a comment - we need to check the transient variable
 			// only works for comments - not doing logins because I can login in under a second
-			if (strpos($sname,'wp-comments-post.php')!==false) { 
-				if (!isset($_SESSION['kpg_stop_spammers_time'])) { // ignore no session - might be because of cache software 
-					// did not set the session on the way in
-					//$whodunnit.='No Session';
-					//$deny=true;
-				} else {
+			if (strpos($sname,'wp-comments-post.php')!==false
+				// can't include login.php because in firefox its filled in and I just press the button.
+				||strpos($sname,'signup.php')!==false) 
+			{ 
+				if (isset($_SESSION['kpg_stop_spammers_time'])) {
 					$stime=$_SESSION['kpg_stop_spammers_time'];
 					$tm=time()-$stime;
-					if (strpos($sname,'wp-comments-post.php')!==false&&(time()-$stime)<5) { 
+					if ($tm>0&&$tm<5) { // zero seconds is wrong, too. it means that session was set somewhere.
 						// takes longer than 4 seconds to really type a comment
 						$whodunnit.="Too Quick ($tm)";
 						$deny=true;
-					}
-					if (strpos($sname,'wp-comments-post.php')!==false&&(time()-$stime)>4) { 
+						$cntsession++;
+					} else {
 						$whodunnit.="($tm) "; // to follow timing
 					}
 				}
 			}
 		}
-	
 	}
 	
 	// check to see if it is coming from the red herring form
 	$nonce='';
-	if (!$deny&&!empty($_POST)&&array_key_exists('akismet_comment_nonce',$_POST)) {
+	if (!$deny&&array_key_exists('akismet_comment_nonce',$_POST)) {
 		$nonce=$_POST['akismet_comment_nonce'];
 		if (!empty($nonce)&&wp_verify_nonce($nonce,'kpgstopspam_redherring')) { 
 				$whodunnit.='Red Herring';
 				$deny=true;
+				$cntrh++;
 		}
 	}
-	if (!$deny&&!empty($_POST)&&array_key_exists('rememberme',$_POST)) {
+	if (!$deny&&array_key_exists('rememberme',$_POST)) {
 		$nonce=$_POST['rememberme'];
 		if (!empty($nonce)&&wp_verify_nonce($nonce,'kpgstopspam_redherring')) { 
 				$whodunnit.='Red Herring';
 				$deny=true;
+				$cntrh++;
 		}
 	}
 	if (!$deny&&!empty($_GET)&&array_key_exists('redir',$_GET)) {
@@ -758,30 +639,42 @@ function kpg_sfs_check($email='',$author='',$ip) {
 		if (!empty($nonce)&&wp_verify_nonce($nonce,'kpgstopspam_redherring')) { 
 				$whodunnit.='Red Herring';
 				$deny=true;
+				$cntrh++;
 		}
+	}
+	// chkjscript
+	if (!$deny&&array_key_exists('kpg_jscript',$_POST)) {
+		$nonce=$_POST['kpg_jscript'];
+		if (!empty($nonce)&&wp_verify_nonce($nonce,'kpgstopspam_javascript_bad')) { 
+				$whodunnit.='JavaScript Trap';
+				$cntjscript++;
+				$deny=true;
+		}
+	}
+	$ref='';
+	if (array_key_exists('HTTP_REFERER',$_SERVER)) {
+		$ref=$_SERVER['HTTP_REFERER'];
+	}
+	$ua='';
+	if (array_key_exists('HTTP_USER_AGENT',$_SERVER)) {
+		$ua=$_SERVER['HTTP_USER_AGENT'];
 	}
 	
 	
+	
 	// try checking to see if there is a referrer
-	if (!$deny&&$chkreferer=='Y'&&!empty($_POST)) {
+	if (!$deny&&$chkreferer=='Y') {
 		// someone is sending a post. Therefore the referer must be from our site.
 		// apple safari on the iphone does not send the referrer so we need to ignore this.
-		$ua='';
-		if (array_key_exists('HTTP_USER_AGENT',$_SERVER)) {
-			$ua=$_SERVER['HTTP_USER_AGENT'];
-		}
 		if (strpos(strtolower($ua),'iphone')===false&&strpos(strtolower($ua),'ipad')===false) {
 			// require the referer
-			$ref='';
-			if (array_key_exists('HTTP_REFERER',$_SERVER)) {
-				$ref=$_SERVER['HTTP_REFERER'];
-			}
 			// check to see if our domain is found in the referer
 			$host=$_SERVER['HTTP_HOST'];
 			if (empty($ref)||strpos($ref,$host)===false) {
 				// bad referer
-				$whodunnit.='Bad or Missing HTTP_REFERER';
+				$whodunnit.="http referer";
 				$deny=true;
+				$cntreferer++;
 			}
 		}
 	}
@@ -796,6 +689,7 @@ function kpg_sfs_check($email='',$author='',$ip) {
 			if ($bua!==false) {
 				$deny=true;
 				$whodunnit.='Blacklist User agent:'.$bua;
+				$cntagent++;
 			}
 		}
 	}
@@ -805,6 +699,7 @@ function kpg_sfs_check($email='',$author='',$ip) {
 		if (kpg_sp_searchL($em,$badTLDs)) {
 			$whodunnit.='Bad TLD';
 			$deny=true;
+			$cnttld++;
 		}
 	}
 
@@ -813,31 +708,37 @@ function kpg_sfs_check($email='',$author='',$ip) {
 		if (!$deny && kpg_sp_searchi($em,$blist)) {
 			$whodunnit.='Black List EMAIL';
 			$deny=true;
+			$cntblem++;
 		}
 		if (!$deny) { 
 			$emdomain=explode('@',$em);
 			if (count($emdomain)==2&&kpg_sp_searchi($em[1],$baddomains)) {
 				$whodunnit.='Blocked Domain';
 				$deny=true;
+				$cntemdom++;
 			}
 		}
 		if (!$deny && array_key_exists($em,$badems)) {
 			$deny=true;
 			$whodunnit.='Cached bad email';
+			$cntcacheem++;
 		} 
 		if (!$deny && $chklong=='Y' && strlen($em)>64) {
 			$deny=true;
 			$whodunnit.='email too long';
+			$cntlong++;
 		}
 		if (!$deny && $chklong=='Y' && strlen($em)<7) {
 			$deny=true;
 			$whodunnit.='email too short';
+			$cntlong++;
 		}
 		if (!$deny && $chkdisp=='Y') {
 			$ansa=kpg_check_disp($em);
 			if ($ansa!==false) {
 				$deny=true;
 				$whodunnit.='Disposable em:'.$em;
+				$cntdisp++;
 			}
 		}
 		if (!$deny && $chkspamwords=='Y') {
@@ -845,6 +746,7 @@ function kpg_sfs_check($email='',$author='',$ip) {
 			if ($ansa!==false) {
 				$deny=true;
 				$whodunnit.='Email Spamwords:'.$ansa;
+				$cntspamwords++;
 			}
 		}
 	}
@@ -854,23 +756,16 @@ function kpg_sfs_check($email='',$author='',$ip) {
 		if (!$deny && $chklong=='Y' && strlen($author)>64) {
 				$whodunnit.='long author name '.strlen($author);
 				$deny=true;
+				$cntlongauth++;
 		}
 		if (!$deny && $chkspamwords=='Y') {
 			$ansa=kpg_check_spamwords($author,$spamwords);
 			if ($ansa!==false) {
 				$deny=true;
 				$whodunnit.='Author Spamwords:'.$ansa;
+				$cntspamwords++;
 			}
 		}
-	}
-	// simple ip checks
-	if (!$deny&&kpg_sp_searchi($ip,$badips)) {
-		$whodunnit.='Cached bad ip';
-		$deny=true;
-	} 
-	if (!$deny && kpg_sp_searchi($ip,$blist)) {
-	    $whodunnit.='Black List IP';
-		$deny=true;
 	}
 	$accept_head=false; 
 	if (array_key_exists('HTTP_ACCEPT',$_SERVER)) $accept_head=true; // real browsers send HTTP_ACCEPT
@@ -878,6 +773,7 @@ function kpg_sfs_check($email='',$author='',$ip) {
 		// no accept header - real browsers send the HTTP_ACCEPT header
 		$whodunnit.='No Accept header;';
 		$deny=true;
+		$cntaccept++;
 	}
 	// Ubiquity servers rent their servers to spammers and should be blocked
 	if (!$deny&&$chkubiquity=='Y') {
@@ -885,14 +781,16 @@ function kpg_sfs_check($email='',$author='',$ip) {
 		if ($ansa!==false) {
 				$deny=true;
 				$whodunnit.=$ansa;
+				$cntubiquity++;
 		}
 	}
 	// try akismet
-	if (!$deny&&$chkakismet=='Y'&&(strpos($sname,'login.php')||strpos($sname,'register.php')||strpos($sname,'signup.php'))) { 
+	if (!$deny&&$chkakismet=='Y'&&(strpos($sname,'login.php')!==false||strpos($sname,'register.php')!==false||strpos($sname,'signup.php')!==false)) { 
 		$ansa=kpg_akismet_check($ip);
 		if ($ansa!==false) {
 				$deny=true;
 				$whodunnit.='Akismet';
+				$cntakismet++;
 		}
 	}
 	// here is the database lookups section. Simple checks did not work. We need to do a lookup
@@ -935,6 +833,7 @@ function kpg_sfs_check($email='',$author='',$ip) {
 				// sfsage is the age in days. we get lastscene from
 					$deny=true;
 					$whodunnit.="SFS, $lastseen, $frequency";
+					$cntsfs++;
 				}
 			}
 		}
@@ -948,6 +847,7 @@ function kpg_sfs_check($email='',$author='',$ip) {
 		if ($ansa!==false) {
 				$deny=true;
 				$whodunnit.=$ansa;
+				$cntdnsbl++;
 		}
 	}
 
@@ -966,6 +866,7 @@ function kpg_sfs_check($email='',$author='',$ip) {
 				if ($result[1]<$hnyage&&$result[2]>$hnylevel&&$result[3]>=4) { // 4 - comment spam, threat level 25 is average. 
 					$deny=true;
 					$whodunnit.='HTTP:bl, '.$result[1].', '.$result[2].', '.$result[3];
+					$cnthp++;
 				} 
 			} 
 		}
@@ -986,6 +887,7 @@ function kpg_sfs_check($email='',$author='',$ip) {
 					if ($result[0]=='Y'&&$result[2]>$botfreq) {
 						$deny=true;
 						$whodunnit.='BotScout, '.$result[2];
+						$cntbotscout++;
 					}
 				}
 			}
@@ -996,11 +898,26 @@ function kpg_sfs_check($email='',$author='',$ip) {
 		$hist[$now][4].=' passed';
 		$goodips[$ip]=$now;
 		$stats['hist']=$hist;
+		$stats['cntpassed']=$cntpassed+1;
 		$stats['goodips']=$goodips; // uncomment to cache good ips.
 		update_option('kpg_stop_sp_reg_stats',$stats);
-		return $email;
+		return;
 	}
-	
+	if ($email!=''&&$email==$sfs_check_activation) {
+		// failed activation check
+		// report reason
+		echo "<br/>Reason code: $whodunnit <br/>
+		ip: $ip<br/>
+		server uri: $sname<br/>
+		MU blog number: $blog<br/>
+		HTTP_REFERE: $ref<br/>
+		User agent: $ua<br/>
+		Accept head present: $accept_head<br/>
+		<br/>";
+		
+		return false;
+	}
+
 	// update the history files.
 	// record the last few guys that have  tried to spam
 	// add the bad spammer to the history list
@@ -1018,19 +935,56 @@ function kpg_sfs_check($email='',$author='',$ip) {
 	$stats['badips']=$badips;
 	$stats['badems']=$badems;
 	$stats['hist']=$hist;
+	// reason types
+			$stats['cntjscript']=$cntjscript;
+			$stats['cntsfs']=$cntsfs;
+			$stats['cntreferer']=$cntreferer;
+			
+			$stats['cntdisp']=$cntdisp;
+			$stats['cntrh']=$cntrh;
+			$stats['cntdnsbl']=$cntdnsbl;
+			
+			$stats['cntubiquity']=$cntubiquity;
+			$stats['cntakismet']=$cntakismet;
+			$stats['cntspamwords']=$cntspamwords;
+			
+			$stats['cntsession']=$cntsession;
+			$stats['cntlong']=$cntlong;
+			$stats['cntagent']=$cntagent;
+			
+			$stats['cnttld']=$cnttld;
+			$stats['cntemdom']=$cntemdom;			
+			$stats['cntcacheip']=$cntcacheip;
+			
+			$stats['cntcacheem']=$cntcacheem;
+			$stats['cnthp']=$cnthp;
+			$stats['cntbotscout']=$cntbotscout;
+			
+			$stats['cntaccept']=$cntaccept;
+			$stats['cntpassed']=$cntpassed;
+			$stats['cntwhite']=$cntwhite;
+			$stats['cntgood']=$cntgood;
+	
+	//
 	update_option('kpg_stop_sp_reg_stats',$stats);
 	
 	if ($redir=='Y'&&!empty($redirurl)) {
+		sleep(5); // sleep for a few seconds to annoy spammers and maybe delay next hit on stopforumspam.com
 		header('HTTP/1.1 307 Moved');
 		header('Status: 307 Moved');
 		header("location: $redirurl"); 
 		exit();
 	} 
-	sleep(2); // sleep for a few seconds to annoy spammers and maybe delay next hit on stopforumspam.com
+
+	sleep(5); // sleep for a few seconds to annoy spammers and maybe delay next hit on stopforumspam.com
 	// here we do wp_die
 	//header('HTTP/1.1 403 Forbidden');
 	//echo $rejectmessage;
-	wp_die("$rejectmessage","Login Access Denied");
+	
+	// add the reason code to the login message
+	$rejectmessage=str_replace('[reason]',$whodunnit,$rejectmessage);
+	$rejectmessage=str_replace('[ip]',$ip,$rejectmessage);
+	wp_die("$rejectmessage","Login Access Denied",array('response' => 403));
 	exit();
 }
 // this checks to see if there is an ip forwarded involved here and corrects the IP
@@ -1352,16 +1306,6 @@ function kpg_sfs_reg_control()  {
 	
 
 }
-function kpg_get_sp_blog_list($orderby='blog_id' ) {
-	global $wpdb;
-	$sql="SELECT blog_id FROM $wpdb->blogs WHERE  public = '1' AND archived = '0' AND mature = '0' AND spam = '0' AND deleted = '0' ORDER BY $orderby";
-	
-	$blogs = $wpdb->get_results($sql, ARRAY_A );
-	if (empty($blogs)) {
-		return array();
-	}
-	return $blogs;
-}
 
 function kpg_sfs_reg_check($actions,$comment) {
 	$email=urlencode($comment->comment_author_email);
@@ -1570,6 +1514,16 @@ function kpg_sp_searchi($needle,$haystack) {
 	}
 	return false;
 }
+function kpg_sp_searchKi($needle,$haystack) {
+	// ignore case in_array
+	if (empty($needle)) return false;
+	if (empty($haystack)) return false;
+	if (!is_array($haystack)) return ralse;
+	foreach($haystack as $key=>$value) {
+		if (strtolower($key)==strtolower($needle)) return true;
+	}
+	return false;
+}
 function kpg_sp_searchl($needle,$haystack) {
 	// search the end of a string case insensitive
 	if (empty($needle)) return false;
@@ -1590,10 +1544,47 @@ function kpg_sp_get_stats() {
 		'badems'=>array(),
 		'goodips'=>array(),
 		'hist'=>array(),
+		
 		'spcount'=>0,
 		'spmcount'=>0,
+				
+		'cntjscript'=>0,
+		'cntsfs'=>0,
+		'cntreferer'=>0,
+		
+		'cntdisp'=>0,
+		'cntrh'=>0,
+		'cntdnsbl'=>0,
+		
+		'cntubiquity'=>0,
+		'cntakismet'=>0,		
+		'cntspamwords'=>0,
+		
+		'cntsession'=>0,
+		'cntlong'=>0,
+		'cntagent'=>0,
+		
+		'cnttld'=>0,
+		'cntemdom'=>0,		
+		'cntcacheip'=>0,
+
+		'cntcacheem'=>0,
+		'cnthp'=>0,		
+		'cntbotscout'=>0,
+
+		'cntblem'=>0,		
+		'cntlongauth'=>0,
+		'cntblip'=>0,
+
+		'cntaccept'=>0,
+		
+		'cntpassed'=>0,		
+		'cntwhite'=>0,	
+		'cntgood'=>0,	
+		
 		'autoload'=>'N',
 		'spmdate'=>'installation',
+
 		'spdate'=>'last cleared'
 	);
 	$ansa=array_merge($options,$stats);
@@ -1644,14 +1635,14 @@ function kpg_sp_get_options() {
 		'chksfs'=>'Y',
 		'chkreferer'=>'Y',
 		'chkdisp'=>'Y',
-		'redherring'=>'N',
+		'redherring'=>'Y',
 		'chkdnsbl'=>'Y',
 		'chkubiquity'=>'Y',
 		'chkakismet'=>'Y',
 		'chkcomments'=>'Y',
 		'chkspamwords'=>'N',
 		'chklogin'=>'Y',
-		'chksession'=>'N',
+		'chksession'=>'Y',
 		'chksignup'=>'Y',
 		'chklong'=>'Y',
 		'chkagent'=>'Y',
@@ -1701,11 +1692,7 @@ This site is protected by the Stop Spammer Registrations Plugin.<br/>",
 	if (empty($ansa['kpg_sp_cache'])) $ansa['kpg_sp_cache']=25;
 	if (empty($ansa['kpg_sp_hist'])) $ansa['kpg_sp_hist']=25;
 	if (!is_array($ansa['spamwords'])) $ansa['spamwords']=array();
-	/* fix stupid mistake from previous release - really dumb thing to do */
-	if ($ansa['redirurl']=='http://click.linksynergy.com/fs-bin/click?id=drdqG*JRcDg&offerid=206296.10000061&type=3&subid=0') $ansa['redirurl']='';
-	if ($ansa['rejectmessage']=='http://click.linksynergy.com/fs-bin/click?id=drdqG*JRcDg&offerid=206296.10000061&type=3&subid=0') {
-		$ansa['rejectmessage']='Access Denied<br/>This site is protected by the Stop Spammer Registrations Plugin.<br/>';
-	}
+
 	if ($ansa['autoload']=='N') {
 		delete_option('kpg_stop_sp_reg_options');
 		$ansa['autoload']='Y';
