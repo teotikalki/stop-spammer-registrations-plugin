@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
-Version: 4.0
+Version: 4.1
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -20,11 +20,31 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 *	each hook has to remove the other hooks to prevent multiple entries into the code 
 *
 *************************************************************/
-add_action('init','kpg_load_all_checks'); // loads up everthing conditionally
+// just to be absolutely safe
+if (!defined('ABSPATH')) exit;
+// try to make this work with bbpress
+if (function_exists('bbpress')) {
+	add_action('bbp_loaded','kpg_load_all_checks',99); // try hooking into bbpress loaded
+} else {
+	add_action('init','kpg_load_all_checks'); // loads up normally
+}
+function kpg_load_spam_widget() {
+	require_once('includes/stop-spam-reg-widget.php');
+}
+add_action( 'widgets_init', 'kpg_load_spam_widget' );
 function kpg_load_all_checks() {
+	// remove the hooks so we don't recurse.
+	if (function_exists('bbpress')) {
+		remove_action('bbp_loaded','kpg_load_all_checks',99); // try hooking into bbpress loaded
+	} else {
+		remove_action('init','kpg_load_all_checks'); // loads up normally
+	}
+
 	// check the Post to see if we load the checks. This is for the validattions only
-	if(is_user_logged_in()) {
-		return;
+	if (function_exists('is_user_logged_in')) { // no available in bbpress
+		if(is_user_logged_in()) {
+			return;
+		}
 	}
 	// get a session to set the timer
 	if (!session_id()) {
@@ -41,18 +61,37 @@ function kpg_load_all_checks() {
 		return;
 	}
 	// I am using a plugin with your-email, your-name fields - might as well test them, too.
-	if (!array_key_exists('akismet_comment_nonce',$_POST) &&
-		!array_key_exists('email',$_POST) &&
-		!array_key_exists('user_email',$_POST) &&
-		!array_key_exists('user_login',$_POST) &&
-		!array_key_exists('author',$_POST) &&
-		!array_key_exists('your-name',$_POST) &&
-		!array_key_exists('your-email',$_POST) &&
-		!array_key_exists('user_name',$_POST)  )
-	{
-		// none of the required comment or login fields
+	$postfields=array('akismet_comment_nonce','bbp_anonymous_email','email','user_email','user_login',
+			'author','your-name','your-email','log','psw','pass1','your_username','post_password',
+			'your_email','signup_username','signup_email','user_name','blogname','signup_for',
+			'excerpt','blog_name','url'); // last few are for trackbacks.
+	// future merge this with the options custom trigger fields
+	$is_in_post=false;
+	foreach ($postfields as $postf) {
+		if (array_key_exists($postf,$_POST)||array_key_exists(strtoupper($postf),$_POST)) {
+			$is_in_post=true;
+			break;
+		}
+	}
+	if (!$is_in_post) {
+		// did not find it. Check more generally
+		foreach($_POST as $key=>$data) {
+		    $key=strtolower($key);
+			if (stripos($key,'name')!==false||
+				stripos($key,'signup')!==false||
+				stripos($key,'user')!==false||
+				stripos($key,'pass')!==false||
+				stripos($key,'pwd')!==false||
+				stripos($key,'psw')!==false||
+				stripos($key,'email')!==false) {
+				$is_in_post=true;
+				break;
+			}
+		}
+	}
+	if (!$is_in_post) {
+		// did not find it.
 		$_SESSION['kpg_stop_spammers_time']=time();
-		// since we are not int a post we can call the inits for the non-post items
 		return;
 	}
 	// here we can check to see if the posted data is correct
@@ -63,10 +102,14 @@ function kpg_load_all_checks() {
 		$em=$_POST['email'];
 	} else if (array_key_exists('user_email',$_POST)) {
 		$em=$_POST['user_email'];
-	} else if (array_key_exists('user_login',$_POST)) {
-		$em=$_POST['user_login'];
 	} else if (array_key_exists('signup_email',$_POST)) {
 		$em=$_POST['signup_email'];
+	} else if (array_key_exists('bbp_anonymous_email',$_POST)) {
+		$em=$_POST['bbp_anonymous_email'];
+	} else if (array_key_exists('your-email',$_POST)) {
+		$em=$_POST['your-email'];
+	} else if (array_key_exists('your_email',$_POST)) {
+		$em=$_POST['your_email'];
 	}
 	//echo "\r\n<!--\r\n step 3 \r\n-->\r\n";
 	
@@ -75,21 +118,39 @@ function kpg_load_all_checks() {
 	}
 	// see if they have an author or username
 	$author='';
+	$pwd='';
+	// final fix for bbPress from Rob Cain - thanks
 	if (array_key_exists('author',$_POST)) {
 		$author=$_POST['author'];
 	} else if (array_key_exists('user_name',$_POST)) {
 		$author=$_POST['user_name'];
-	}
+	} else if (array_key_exists('your-name',$_POST)) {
+		$author=$_POST['your-name'];
+	} else if (array_key_exists('your_name',$_POST)) {
+		$author=$_POST['your_name'];
+	} else if (array_key_exists('user_login',$_POST)) {
+		$author=$_POST['user_login'];
+		if (array_key_exists('pass1',$_POST)) {
+			$pwd=$_POST['pass1'];
+		}
+	} else if (array_key_exists('your_username',$_POST)) {
+		$author=$_POST['your_username'];
+	} else if (array_key_exists('signup_username',$_POST)) {
+		$author=$_POST['signup_username'];
+	} else if (array_key_exists('log',$_POST)) {
+		$author=$_POST['log'];
+		if (array_key_exists('pwd',$_POST)) {
+			$pwd=$_POST['pwd'];
+		}
+	} // add your_username your_email
 	//echo "\r\n<!--\r\n step 4 \r\n-->\r\n";
 	// get the ip 
-	$ip=$_SERVER['REMOTE_ADDR'];
-	$ip=check_forwarded_ip($ip);
-	
+	$ip=kpg_get_ip();
 	//  this is called once in "init" no need to call it ever again
 	sfs_errorsonoff();
-    $ansa=kpg_sfs_check($em,$author,$ip);
+	kpg_sfs_check_load();
+    $ansa=kpg_sfs_check($em,$author,$ip,$pwd);
 	sfs_errorsonoff('off');
-	$_SESSION['kpg_stop_spammers_time']=time();
 	
 	return;
 }
@@ -132,11 +193,6 @@ function load_sfs_mu() {
 		}
 	}
 }
-function load_sfs_mu_options_file() {
-	sfs_errorsonoff();
-	include_once('includes/sfr-mu-options.php');
-	sfs_errorsonoff('off');
-}
 /************************************************************
 *
 * show a bogus form. If the form is hit then this is a spammer
@@ -154,7 +210,7 @@ function kpg_sfs_red_herring_comment($query) {
 <br/>
 <br/>
 <br/>
-<form action="<?php echo site_url( '/wp-comments-post.php' ); ?>" method="post" id="commentform">
+<form action="<?php echo site_url( '/wp-comments-post.php' ); ?>" method="post" id="commentform1">
 <p><input name="author" id="author" value="" size="22"  aria-required="true" type="text">
 <label for="author"><small>Name (required)</small></label></p>
 
@@ -191,7 +247,7 @@ function kpg_sfs_red_herring_signup() {
 <br/>
 <br/>
 <br/>
-<form id="setupform" method="post" action="wp-signup.php">
+<form id="setupform1" method="post" action="wp-signup.php">
 
 		<input type="hidden" name="stage" value="validate-user-signup" />
 		<?php do_action( 'signup_hidden_fields' ); ?>
@@ -249,7 +305,7 @@ function kpg_sfs_red_herring_login($message) {
 <br/>
 
 
-<form name="loginform" id="loginform" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>?redir=<?php echo $rhnonce; ?>" method="post">
+<form name="loginform1" id="loginform1" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>?redir=<?php echo $rhnonce; ?>" method="post">
 	<p>
 		<label for="user_login">User Name<br />
 		<input type="text" name="log"  value="" size="20"  /></label>
@@ -299,10 +355,10 @@ function kpg_sfs_reg_check_send_mail($stuff) {
 		$from_email = trim( $from_email );
 	}
 	// get the ip 
-	$ip=$_SERVER['REMOTE_ADDR'];
-	$ip=check_forwarded_ip($ip);
+	$ip=kpg_get_ip();
 	// now call the generic checker
 	sfs_errorsonoff();
+	kpg_sfs_check_load();
     kpg_sfs_check($from_email,$from_name,$ip); 
 	sfs_errorsonoff('off');
 	return $stuff;
@@ -362,11 +418,10 @@ function kpg_sfs_check_404() {
 	$options=kpg_sp_get_options();
 	if (!array_key_exists('chkwplogin',$options) || $options['chkwplogin']!='Y') return;	
 	
-	$ip=$_SERVER['REMOTE_ADDR'];
-	$ip=check_forwarded_ip($ip);
+	$ip=kpg_get_ip();
     // check the white lists to prevent accidental blockage
-	
-	if (!$deny&&(kpg_sp_searchi($ip,$wlist))) {
+	$wlist=$options['wlist'];
+	if ((kpg_sp_searchi($ip,$wlist))) {
 		return;
 	}
 	
@@ -405,616 +460,59 @@ register_activation_hook( __FILE__, 'kpg_sfs_check_admin' );
 $sfs_check_activation=substr(md5(uniqid(rand(), true)), 16, 16);
 function kpg_sfs_check_admin() {
 	global $sfs_check_activation;
+	$checkonactivate=false;
 	// this confirms that the the current user is able to login
 	// it refuses to install the plugin if the user fails spam tests
-	$ip=$_SERVER['REMOTE_ADDR'];
-	$ip=check_forwarded_ip($ip);
-	//echo "Checking IP address for spam conflicts<br/>";
-	$sfs_check_activation=substr(md5(uniqid(rand(), true)), 16, 16);
-	if (kpg_sfs_check($sfs_check_activation,'Activation test',$ip)===false) {
-		// break the installation
-		echo "<br/>Your current configuration reports that you will be denied access as a spammer.<br/>
-		Do not use this plugin until you can resolve this issue.
-		If you are not a spammer, please copy the information above and leave it as a comment at http://www.blogseye.com
-		<br/>
-		This message is from the 'stop-spammer-registrations' plugin<br/>
-		";
-		die();
+	if ($checkonactivate) { // no longer checking on activation - too many problems - Lock them out
+		$ip=kpg_get_ip();
+		//echo "Checking IP address for spam conflicts<br/>";
+		$sfs_check_activation=substr(md5(uniqid(rand(), true)), 16, 16);
+		kpg_sfs_check_load();
+		if (kpg_sfs_check($sfs_check_activation,'Activation test',$ip)===false) {
+			// break the installation
+			echo "<br/>Your current configuration reports that you will be denied access as a spammer.<br/>
+			Do not use this plugin until you can resolve this issue.
+			If you are not a spammer, please copy the information above and leave it as a comment at http://www.blogseye.com
+			<br/>
+			This message is from the 'stop-spammer-registrations' plugin<br/>
+			";
+			die();
+		}
 	}
 	$options=kpg_sp_get_options();
-	kpg_sfs_reg_add_user_to_whitelist($options);
+	$options['firsttime']='Y';
+	kpg_sfs_reg_add_user_to_whitelist($options); // also saves options
 
 }	
 
-
-/************************************************************
-* 	kpg_sfs_check()
-*	This is the generic email check so that it can be called
-*	from several different hooks
-*   returns the email if good. Dies if bad
-*
-*************************************************************/
-function kpg_sfs_check($email='',$author='',$ip) {
-    global $sfs_check_activation;
-    $sname=$_SERVER["REQUEST_URI"];	
-	if (empty($sname)) {
-		$sname=$_SERVER["SCRIPT_NAME"];	
-	}
-	if (empty($sname)) {
-		$sname=' none? ';
-	}
-// No need to verify where we are.
-//	if (
-//		strpos($sname,'index.php')!==false||
-//		strpos($sname,'archive.php')!==false||
-//		strpos($sname,'archives.php')!==false||
-//		strpos($sname,'links.php')!==false||
-//		strpos($sname,'pages.php')!==false||
-//		strpos($sname,'seach.php')!==false||
-//		strpos($sname,'single.php')!==false||
-//		strpos($sname,'page.php')!==false
-//	) {
-//		return $email; // no check for the above files
-//	}
-
-	$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
-	$options=kpg_sp_get_options();
-	extract($options);
-	$stats=kpg_sp_get_stats();
-	extract($stats);
-
-	if ($email!=$sfs_check_activation) {
-// from a user who wanted to exclure some of the checking.	
-		if ($chkcomments!='Y') {
-			if (strpos($sname,'wp-comments-post.php')!==false) return $email;
-		}
-		if ($chklogin!='Y') {
-			if (strpos($sname,'wp-login.php')!==false) return $email;
-		}
-		if ($chksignup!='Y') {
-			if (strpos($sname,'wp-signup.php')!==false) return $email;
-		}
-		if ($chkxmlrpc!='Y') {
-			if (strpos($sname,'xmlrpc.php')!==false) return $email;
-		}
-    }
-	
-	
-	// clean up cache and history	
-	while (count($badips)>$kpg_sp_cache) array_shift($badips);
-	while (count($badems)>$kpg_sp_cache) array_shift($badems);
-	while (count($goodips)>2) array_shift($goodips);
-	//$goodips=array(); // limiting good ips to just a few
-	while (count($hist)>$kpg_sp_hist) array_shift($hist);
-	$stats['badips']=$badips;
-	$stats['badems']=$badems;
-	$stats['goodips']=$goodips;
-	$stats['hist']=$hist;
-    $sname=$_SERVER["REQUEST_URI"];	
-	if (empty($sname)) {
-		$sname=$_SERVER["SCRIPT_NAME"];	
-	}
-	if (empty($sname)) {
-		$sname=' none? ';
-	}
-	$blog='';
-	if (function_exists('is_multisite') && is_multisite()) {
-		global $blog_id;
-		if (!isset($blog_id)||$blog_id!=1) {
-			$blog=$blog_id;
-		}
-	}
-	$em=$email;
-	if ($email!=$sfs_check_activation) {
-		$email=trim($email);
-		$email=strip_tags($email);
-
-		// cleanup the input that is breaking the serialize functions here (I hope)
-		$em=sanitize_email(strip_tags($email));
-		$em=sanitize_text_field($em);
-		$em=remove_accents($em);
-		$em=utf8_decode($em);
-		$em=really_clean($em);
-	}
-	$author=sanitize_text_field($author);
-	$author=remove_accents($author);
-	$author=utf8_decode($author);
-	$author=really_clean($author);
-	$whodunnit='';
-	// think of other things that might kill the serialize functions
-	if (strlen($author)>80) $author=substr($author,0,77).'...';
-	if (strlen($em)>80) $em=substr($em,0,80).'...';
-	// set up hist channel
-	$hist[$now]=array($ip,mysql_real_escape_string($em),mysql_real_escape_string($author),$sname,'begin',$blog);
-	//$accept_head=false; 
-	//if (array_key_exists('HTTP_ACCEPT',$_SERVER)) $accept_head=true; // real browsers send HTTP_ACCEPT
-	// first check the ip address
-	
-	// check all of the ones that do not require file access
-	$deny=false;
-	// testing area goes here before other checks including white list
-	// move this down past the white lists after testing is done
-	
-	// first check white lists 
-
-	// paypal is whitelisted
-	if ($email!=$sfs_check_activation) {
-		if (!$deny&&kpg_sp_checkPayPal($ip)){
-			$hist[$now][4]='White List PayPal';
-			$stats['hist']=$hist;
-			$cntwhite++;
-			$stats['cntwhite']=$cntwhite;
-			update_option('kpg_stop_sp_reg_stats',$stats);
-			return $email;
-		}
-		if (!$deny&&(kpg_sp_searchi($ip,$wlist))) {
-			$hist[$now][4]='White List IP';
-			$stats['hist']=$hist;
-			$cntwhite++;
-			$stats['cntwhite']=$cntwhite;
-			update_option('kpg_stop_sp_reg_stats',$stats);
-			return $email;
-		}
-		if (!$deny&&!empty($em)&&kpg_sp_searchi($em,$wlist)) {
-			$hist[$now][4]='White List EMAIL';
-			$stats['hist']=$hist;
-			$cntwhite++;
-			$stats['cntwhite']=$cntwhite;
-			update_option('kpg_stop_sp_reg_stats',$stats);
-			return $email;
-		}
-	// check to see if the ip is in the goodips cache
-	
-		if (!$deny&&kpg_sp_searchKi($ip,$goodips)) {
-			$hist[$now][4]='Cached good ip';
-			$stats['hist']=$hist;
-			$cntgood++;
-			$stats['cntgood']=$cntgood;
-			update_option('kpg_stop_sp_reg_stats',$stats);
-			return $email;
-		}
-	}
-	// not white listed, now try the simple rejects that don't require remote access.
-
-	// begin by checking the caches for bad ips. Do this before the regular checks
-	// this way only the first appearance of a bad actor is recorded by type
-
-	if (!$deny&&kpg_sp_searchKi($ip,$badips)) {
-		$whodunnit.='Cached bad ip';
-		$deny=true;
-		$cntcacheip++;
-	} 
-	if (!$deny && kpg_sp_searchi($ip,$blist)) {
-	    $whodunnit.='Black List IP';
-		$deny=true;
-		$cntblip++;
-	}
-	
-	
-	// check to see if they are coming in from the comment form and a post
-	if (!$deny&&$chksession!='N') {
-		if (!defined("WP_CACHE")||(!WP_CACHE)) { // checking the cache does not work id caching
-			// we are in a comment - we need to check the transient variable
-			// only works for comments - not doing logins because I can login in under a second
-			if (strpos($sname,'wp-comments-post.php')!==false
-				// can't include login.php because in firefox its filled in and I just press the button.
-				||strpos($sname,'signup.php')!==false) 
-			{ 
-				if (isset($_SESSION['kpg_stop_spammers_time'])) {
-					$stime=$_SESSION['kpg_stop_spammers_time'];
-					$tm=time()-$stime;
-					if ($tm>0&&$tm<5) { // zero seconds is wrong, too. it means that session was set somewhere.
-						// takes longer than 4 seconds to really type a comment
-						$whodunnit.="Too Quick ($tm)";
-						$deny=true;
-						$cntsession++;
-					} else {
-						$whodunnit.="($tm) "; // to follow timing
-					}
-				}
-			}
-		}
-	}
-	
-	// check to see if it is coming from the red herring form
-	$nonce='';
-	if (!$deny&&array_key_exists('akismet_comment_nonce',$_POST)) {
-		$nonce=$_POST['akismet_comment_nonce'];
-		if (!empty($nonce)&&wp_verify_nonce($nonce,'kpgstopspam_redherring')) { 
-				$whodunnit.='Red Herring';
-				$deny=true;
-				$cntrh++;
-		}
-	}
-	if (!$deny&&array_key_exists('rememberme',$_POST)) {
-		$nonce=$_POST['rememberme'];
-		if (!empty($nonce)&&wp_verify_nonce($nonce,'kpgstopspam_redherring')) { 
-				$whodunnit.='Red Herring';
-				$deny=true;
-				$cntrh++;
-		}
-	}
-	if (!$deny&&!empty($_GET)&&array_key_exists('redir',$_GET)) {
-		$nonce=$_GET['redir'];
-		if (!empty($nonce)&&wp_verify_nonce($nonce,'kpgstopspam_redherring')) { 
-				$whodunnit.='Red Herring';
-				$deny=true;
-				$cntrh++;
-		}
-	}
-	// chkjscript
-	if (!$deny&&array_key_exists('kpg_jscript',$_POST)) {
-		$nonce=$_POST['kpg_jscript'];
-		if (!empty($nonce)&&wp_verify_nonce($nonce,'kpgstopspam_javascript_bad')) { 
-				$whodunnit.='JavaScript Trap';
-				$cntjscript++;
-				$deny=true;
-		}
-	}
-	$ref='';
-	if (array_key_exists('HTTP_REFERER',$_SERVER)) {
-		$ref=$_SERVER['HTTP_REFERER'];
-	}
-	$ua='';
-	if (array_key_exists('HTTP_USER_AGENT',$_SERVER)) {
-		$ua=$_SERVER['HTTP_USER_AGENT'];
-	}
-	
-	
-	
-	// try checking to see if there is a referrer
-	if (!$deny&&$chkreferer=='Y') {
-		// someone is sending a post. Therefore the referer must be from our site.
-		// apple safari on the iphone does not send the referrer so we need to ignore this.
-		if (strpos(strtolower($ua),'iphone')===false&&strpos(strtolower($ua),'ipad')===false) {
-			// require the referer
-			// check to see if our domain is found in the referer
-			$host=$_SERVER['HTTP_HOST'];
-			if (empty($ref)||strpos($ref,$host)===false) {
-				// bad referer
-				$whodunnit.="http referer";
-				$deny=true;
-				$cntreferer++;
-			}
-		}
-	}
-	
-	if (!$deny && $chkagent=='Y') {
-		if (!array_key_exists('HTTP_USER_AGENT',$_SERVER)) {
-			$whodunnit.='Missing User Agent';
-			$deny=true;
-		}
-		if (!$deny) {
-			$bua=kpg_check_bad_agents();
-			if ($bua!==false) {
-				$deny=true;
-				$whodunnit.='Blacklist User agent:'.$bua;
-				$cntagent++;
-			}
-		}
-	}
-			
-	if (!$deny && !empty($badTLDs)) {
-		// check the ending to see if the tld should be banned
-		if (kpg_sp_searchL($em,$badTLDs)) {
-			$whodunnit.='Bad TLD';
-			$deny=true;
-			$cnttld++;
-		}
-	}
-
-	// These are the simple email checks
-	if (!empty($em)) {
-		if (!$deny && kpg_sp_searchi($em,$blist)) {
-			$whodunnit.='Black List EMAIL';
-			$deny=true;
-			$cntblem++;
-		}
-		if (!$deny) { 
-			$emdomain=explode('@',$em);
-			if (count($emdomain)==2&&kpg_sp_searchi($em[1],$baddomains)) {
-				$whodunnit.='Blocked Domain';
-				$deny=true;
-				$cntemdom++;
-			}
-		}
-		if (!$deny && array_key_exists($em,$badems)) {
-			$deny=true;
-			$whodunnit.='Cached bad email';
-			$cntcacheem++;
-		} 
-		if (!$deny && $chklong=='Y' && strlen($em)>64) {
-			$deny=true;
-			$whodunnit.='email too long';
-			$cntlong++;
-		}
-		if (!$deny && $chklong=='Y' && strlen($em)<7) {
-			$deny=true;
-			$whodunnit.='email too short';
-			$cntlong++;
-		}
-		if (!$deny && $chkdisp=='Y') {
-			$ansa=kpg_check_disp($em);
-			if ($ansa!==false) {
-				$deny=true;
-				$whodunnit.='Disposable em:'.$em;
-				$cntdisp++;
-			}
-		}
-		if (!$deny && $chkspamwords=='Y') {
-			$ansa=kpg_check_spamwords($em,$spamwords);
-			if ($ansa!==false) {
-				$deny=true;
-				$whodunnit.='Email Spamwords:'.$ansa;
-				$cntspamwords++;
-			}
-		}
-	}
-	// check the author field
-    // getting a lot of huge author names
-	if (!empty($author)) {
-		if (!$deny && $chklong=='Y' && strlen($author)>64) {
-				$whodunnit.='long author name '.strlen($author);
-				$deny=true;
-				$cntlongauth++;
-		}
-		if (!$deny && $chkspamwords=='Y') {
-			$ansa=kpg_check_spamwords($author,$spamwords);
-			if ($ansa!==false) {
-				$deny=true;
-				$whodunnit.='Author Spamwords:'.$ansa;
-				$cntspamwords++;
-			}
-		}
-	}
-	$accept_head=false; 
-	if (array_key_exists('HTTP_ACCEPT',$_SERVER)) $accept_head=true; // real browsers send HTTP_ACCEPT
-	if (!$deny&&$accept=='Y'&&!$accept_head) {
-		// no accept header - real browsers send the HTTP_ACCEPT header
-		$whodunnit.='No Accept header;';
-		$deny=true;
-		$cntaccept++;
-	}
-	// Ubiquity servers rent their servers to spammers and should be blocked
-	if (!$deny&&$chkubiquity=='Y') {
-		$ansa=kpg_check_ubiquity($ip);
-		if ($ansa!==false) {
-				$deny=true;
-				$whodunnit.=$ansa;
-				$cntubiquity++;
-		}
-	}
-	// try akismet
-	if (!$deny&&$chkakismet=='Y'&&(strpos($sname,'login.php')!==false||strpos($sname,'register.php')!==false||strpos($sname,'signup.php')!==false)) { 
-		$ansa=kpg_akismet_check($ip);
-		if ($ansa!==false) {
-				$deny=true;
-				$whodunnit.='Akismet';
-				$cntakismet++;
-		}
-	}
-	// here is the database lookups section. Simple checks did not work. We need to do a lookup
-	if (!$deny && $chksfs=='Y' ) { 
-		$query="http://www.stopforumspam.com/api?ip=$ip";
-		if ($chkemail=='Y'&&!empty($em)) {
-			$query=$query."&email=$em";
-		}
-		$check='';
-		$check=kpg_sfs_reg_getafile($query);
-		if (!empty($check)) {
-			if (substr($check,0,4)=="ERR:") {
-				$whodunnit.=$check.', ';
-			}
-			$lastseen='';
-			$frequency='';
-			$n=strpos($check,'<appears>yes</appears>');
-			if ($n!==false) {
-			    if (strpos($check,'<lastseen>',$n)!==false) {
-					$k=strpos($check,'<lastseen>',$n);
-					$k+=10;
-					$j=strpos($check,'</lastseen>',$k);
-					$lastseen=date('Y-m-d',time() + ( get_option( 'gmt_offset' ) * 3600 ));
-					if (($j-$k)>12&&($j-$k)<24) $lastseen=substr($check,$k,$j-$k); // should be about 20 characters
-					if (strpos($lastseen,' ')) $lastseen=substr($lastseen,0,strpos($lastseen,' ')); // trim out the time to save room.
-					if (strpos($check,'<frequency>',$n)!==false) {
-						$k=strpos($check,'<frequency>',$n);
-						$k+=11;
-						$j=strpos($check,'</frequency',$k);
-						$frequency='9999';			
-						if (($j-$k)&&($j-$k)<7) $frequency=substr($check,$k,$j-$k); // should be a number greater than 0 and probably no more than a few thousand.
-					}
-				}
-
-				// have freqency and lastseen date - make these options in next release
-				// check freq and age
-				if (!empty($frequency) && !empty($lastseen) && ($frequency!=255) && ($frequency>=$sfsfreq) && (strtotime($lastseen)>(time()-(60*60*24*$sfsage))) )   { 
-				//if ( ($frequency>=$sfsfreq) && (strtotime($lastseen)>(time()-(60*60*24*$sfsage))) )   { 
-				// frequency we got from the db, sfsfreq is the min we'll accept (default 0)
-				// sfsage is the age in days. we get lastscene from
-					$deny=true;
-					$whodunnit.="SFS, $lastseen, $frequency";
-					$cntsfs++;
-				}
-			}
-		}
-		//$whodunnit.="Passed SFS, $query $check";
-	} 
-	
-	// testing the DNSBL sites for a bad ip. This is useful for email spammers, but I do not know if
-	// email spammers are the same as comment spammers.
-	if (!$deny&&$chkdnsbl=='Y') {
-		$ansa=@kpg_check_all_dnsbl($ip);
-		if ($ansa!==false) {
-				$deny=true;
-				$whodunnit.=$ansa;
-				$cntdnsbl++;
-		}
-	}
-
-	if (!$deny&&$honeyapi!='') {
-		// do a further check on project honeypot here
-		$lookup = $honeyapi . '.' . implode('.', array_reverse(explode ('.', $ip ))) . '.dnsbl.httpbl.org';
-		$result = explode( '.', @gethostbyname($lookup));
-		if (count($result)>2) {
-			if ($result[0] == 127) {
-				// query successful
-				// 127 is a good lookup
-				//  [3] = type of threat - we are only interested in comment spam at this point - if user demand I will change.
-				// [2] is the threat level. 25 is recommended
-				// [1] is numbr of days since last report
-				//if ($result[2]>25&&$result[3]==4) { // 4 - comment spam, threat level 25 is average. 
-				if ($result[1]<$hnyage&&$result[2]>$hnylevel&&$result[3]>=4) { // 4 - comment spam, threat level 25 is average. 
-					$deny=true;
-					$whodunnit.='HTTP:bl, '.$result[1].', '.$result[2].', '.$result[3];
-					$cnthp++;
-				} 
-			} 
-		}
-	}
-	if (!$deny&&$botscoutapi!='') {
-		// try the ip on botscoutapi
-	    $query="http://botscout.com/test/?ip=$ip&key=$botscoutapi";
-		$check='';
-		$check=@kpg_sfs_reg_getafile($query);
-		if (!empty($check)) {
-			if (substr($check,0,4)=="ERR:") {
-				$whodunnit.=$check.', ';
-			}
-			if(strpos($check,'|')) {
-				$result=explode('|',$check);
-				if (count($result)>2) {
-					//  Y|IP|3 - found, type, database occurences
-					if ($result[0]=='Y'&&$result[2]>$botfreq) {
-						$deny=true;
-						$whodunnit.='BotScout, '.$result[2];
-						$cntbotscout++;
-					}
-				}
-			}
-		}
-	}
-	$hist[$now][4]=$whodunnit;
-	if (!$deny) {
-		$hist[$now][4].=' passed';
-		$goodips[$ip]=$now;
-		$stats['hist']=$hist;
-		$stats['cntpassed']=$cntpassed+1;
-		$stats['goodips']=$goodips; // uncomment to cache good ips.
-		update_option('kpg_stop_sp_reg_stats',$stats);
-		return;
-	}
-	if ($email!=''&&$email==$sfs_check_activation) {
-		// failed activation check
-		// report reason
-		echo "<br/>Reason code: $whodunnit <br/>
-		ip: $ip<br/>
-		server uri: $sname<br/>
-		MU blog number: $blog<br/>
-		HTTP_REFERE: $ref<br/>
-		User agent: $ua<br/>
-		Accept head present: $accept_head<br/>
-		<br/>";
-		
-		return false;
-	}
-
-	// update the history files.
-	// record the last few guys that have  tried to spam
-	// add the bad spammer to the history list
-	$spcount++;
-	$spmcount++;
-	$stats['spcount']=$spcount;
-	$stats['spmcount']=$spmcount;
-	// Cache the bad guy
-	if (!empty($em)) $badems[$em]=$now;
-	if (!empty($ip)) $badips[$ip]=$now;
-	asort($badips);
-	asort($badems);
-	while (count($badips)>$kpg_sp_cache) array_shift($badips);
-	while (count($badems)>$kpg_sp_cache) array_shift($badems);
-	$stats['badips']=$badips;
-	$stats['badems']=$badems;
-	$stats['hist']=$hist;
-	// reason types
-			$stats['cntjscript']=$cntjscript;
-			$stats['cntsfs']=$cntsfs;
-			$stats['cntreferer']=$cntreferer;
-			
-			$stats['cntdisp']=$cntdisp;
-			$stats['cntrh']=$cntrh;
-			$stats['cntdnsbl']=$cntdnsbl;
-			
-			$stats['cntubiquity']=$cntubiquity;
-			$stats['cntakismet']=$cntakismet;
-			$stats['cntspamwords']=$cntspamwords;
-			
-			$stats['cntsession']=$cntsession;
-			$stats['cntlong']=$cntlong;
-			$stats['cntagent']=$cntagent;
-			
-			$stats['cnttld']=$cnttld;
-			$stats['cntemdom']=$cntemdom;			
-			$stats['cntcacheip']=$cntcacheip;
-			
-			$stats['cntcacheem']=$cntcacheem;
-			$stats['cnthp']=$cnthp;
-			$stats['cntbotscout']=$cntbotscout;
-			
-			$stats['cntaccept']=$cntaccept;
-			$stats['cntpassed']=$cntpassed;
-			$stats['cntwhite']=$cntwhite;
-			$stats['cntgood']=$cntgood;
-	
-	//
-	update_option('kpg_stop_sp_reg_stats',$stats);
-	
-	if ($redir=='Y'&&!empty($redirurl)) {
-		sleep(5); // sleep for a few seconds to annoy spammers and maybe delay next hit on stopforumspam.com
-		header('HTTP/1.1 307 Moved');
-		header('Status: 307 Moved');
-		header("location: $redirurl"); 
-		exit();
-	} 
-
-	sleep(5); // sleep for a few seconds to annoy spammers and maybe delay next hit on stopforumspam.com
-	// here we do wp_die
-	//header('HTTP/1.1 403 Forbidden');
-	//echo $rejectmessage;
-	
-	// add the reason code to the login message
-	$rejectmessage=str_replace('[reason]',$whodunnit,$rejectmessage);
-	$rejectmessage=str_replace('[ip]',$ip,$rejectmessage);
-	wp_die("$rejectmessage","Login Access Denied",array('response' => 403));
-	exit();
-}
 // this checks to see if there is an ip forwarded involved here and corrects the IP
-function check_forwarded_ip($ip) {
-	if (substr($ip,0,3)=='10.' ||
-		$ip=='127.0.0.1' ||
-		substr($ip,0,8)=='192.168.' ||
-		(substr($ip,0,7)>='172.16.' && substr($ip,0,7)<='172.31.')
-	) {
-		$oldip=$ip;
-		// see if there is a forwarded header
+function kpg_get_ip() {
+	$ip=$_SERVER['REMOTE_ADDR'];
+	if (array_key_exists('HTTP-X-FORWARDED-FOR',$_SERVER)) {
+		$ip=$_SERVER('HTTP-X-FORWARDED-FOR');
+	} else if (array_key_exists('X-FORWARDED-FOR',$_SERVER)) {
+		$ip=$_SERVER('X-FORWARDED-FOR');
+	} else {
+		// search for lower case versions
 		if (function_exists('getallheaders')) {
 			$hlist=getallheaders();
-			// ucase 
-			$ip='';
 			foreach ($hlist as $key => $data) {
-				if (substr(strtoupper($key),0,strlen('X-FORWARDED-FOR'))=='X-FORWARDED-FOR') {
-					// hit on the forwarded ip
-					if (strpos($data,',')!==false) {
-						$ips=explode(',',$data);
-					} else {
-						$ips=array($data);
-					}
-					$ip=trim($ips[count($ips)-1]); // gets the last ip - most likely to be spoofed, perhaps the first ip would be better?
+				// can be X-FORWARDED-FOR or HTTP-X-FORWARDED-FOR upper or lower case
+				if (strpos(strtoupper($key),'X-FORWARDED-FOR')!==false) { 
+					$ip=$data;
 					break;
 				}
 			}
-			if (empty($ip)) return $oldip;
 		}
 	}
+	// some of these return a list of ips with commas - check for a list
+	$ip=trim($ip);
+	$ip=trim($ip,',');
+	if (strpos($ip,',')!==false) {
+		$ips=explode(',',$ip);
+		$ip=trim($ips[count($ips)-1]); // gets the last ip - most likely to be spoofed?
+	}
+	if (empty($ip)) $ip=$_SERVER['REMOTE_ADDR']; // in case I screwed it up
 	return $ip;
 }
 // still getting errors from bad data. I am now stripping all but ascii characters from 32 to 126
@@ -1031,280 +529,6 @@ function really_clean($s) {
 		if ($ss[$j]<127&&$ss[$j]>31) $s.=pack('C',$ss[$j]);
 	}
 	return $s;
-}
-function kpg_check_bad_agents() {
-	$badagents=array("asterias","Atomic_Email_Hunter","b2w/0.1","BackDoorBot/1.0","Black Hole","BlowFish/1.0","BotALot","BotRightHere","BuiltBotTough","Bullseye/1.0","BunnySlippers","Cegbfeieh","CheeseBot","CherryPicker","CherryPickerElite/1.0","CherryPickerSE/1.0","CopyRightCheck","cosmos","Crescent","Crescent Internet ToolPak HTTP OLE Control v.1.0","discobot","DittoSpyder","DOC","Download Ninja","EmailCollector","EmailSiphon","EmailWolf","EroCrawler","ExtractorPro","Fasterfox","Fetch","Foobot","grub-client","Harvest/1.5","hloader","httplib","HTTrack","humanlinks","ieautodiscovery","InfoNaviRobot","JennyBot","k2spider","Kenjin Spider","Keyword Density/0.9","larbin","LexiBot","libWeb/clsHTTP","libwww","LinkextractorPro","linko","LinkScan/8.1a Unix","LinkWalker","LNSpiderguy","lwp-trivial","lwp-trivial/1.34","Mata Hari","Microsoft.URL.Control","Microsoft URL Control - 5.01.4511","Microsoft URL Control - 6.00.8169","MIIxpc","MIIxpc/4.2","Missigua Locator","Mister PiX","moget","moget/2.1","MSIECrawler","NetAnts","NICErsPRO","NPBot","Offline Explorer","Openfind","Openfind data gathere","ProPowerBot/2.14","ProWebWalker","QueryN Metasearch","RepoMonkey","RepoMonkey Bait & Tackle/v1.01","RMA","sitecheck.Internetseer.com","SiteSnagger","SnapPreviewBot","SpankBot","spanner","suzuran","Szukacz/1.4","Teleport","TeleportPro","Teleport Pro/1.29","Telesoft","TurnitinBot","The Intraformant","TheNomad","TightTwatBot","Titan","toCrawl/UrlDispatcher","True_Robot","True_Robot/1.0","turingos","UbiCrawler","URLy Warning","VCI","VCI WebViewer VCI WebViewer Win32","Web Image Collector","Web Downloader/6.9","WebAuto","WebBandit","WebBandit/3.50","WebCopier","WebCopier v4.0","WebEnhancer","WebmasterWorldForumBot","WebReaper","WebSauger","Website Quester","Webster Pro","WebStripper","WebZip","WebZip/4.0","Wget","Wget/1.5.3","Wget/1.6","WWW-Collector-E","Xenu's","Xenu's Link Sleuth 1.1c","Zao","Zeus","Zeus 32297 Webster Pro V2.9 Win32","ZyBORG","Java/1.");
-	$agent=$_SERVER['HTTP_USER_AGENT'];
-	if (empty($agent)) return false;
-	foreach ($badagents as $a) {
-		if (strpos(strtolower($agent),strtolower($a))!==false) {
-			return $a;
-		}
-	}
-	return false;
-}
-function kpg_check_spamwords($chk,$spamwords) {
-	// list of common spam words form wordpress: http://codex.wordpress.org/Spam_Words
-	// these should be safe except for sites selling drugs, porn or gambling
-	// there has to be better lists than this somewhere. This is dated and not especially applicable, although safe.
-	// if these appear in email address or user id, we don't want them.
-	if(empty($spamwords)) return false;
-	if(empty($chk)) return false;
-	$c=strtolower($chk);
-	$c=str_replace(' ','-',$c);
-	$c=str_replace('_','-',$c);
-	$c=str_replace('.','-',$c);
-	foreach ($spamwords as $s) {
-		if (strpos($c,$s)!==false) {
-			return $s;
-		}
-	}
-	return false;
-
-}
-function kpg_check_disp($em) {
-	if (empty($em)) return false;
-
-	$disposables=array('0815.ru','0clickemail.com','0wnd.net','0wnd.org','10minutemail.com','1chuan.com','1zhuan.com','20minutemail.com','2prong.com','3d-painting.com','4warding.com','4warding.net','4warding.org','675hosting.com','675hosting.net','675hosting.org','6url.com','75hosting.com','75hosting.net','75hosting.org','9ox.net','a-bc.net','afrobacon.com','ajaxapp.net','amilegit.com','amiri.net','amiriindustries.com','anonbox.net','anonymail.dk','anonymbox.com','antichef.com','antichef.net','antispam.de','baxomale.ht.cx','beefmilk.com','binkmail.com','bio-muesli.net','blogmyway.org','bobmail.info','bodhi.lawlita.com','bofthew.com','brefmail.com','bsnow.net','bugmenot.com','bumpymail.com','buyusedlibrarybooks.org','casualdx.com','centermail.com','centermail.net','chogmail.com','choicemail1.com','cool.fr.nf','correo.blogos.net','cosmorph.com','courriel.fr.nf','courrieltemporaire.com','curryworld.de','cust.in','dacoolest.com','dandikmail.com','deadaddress.com','deadspam.com','despam.it','despammed.com','devnullmail.com','dfgh.net','digitalsanctuary.com','discardmail.com','discardmail.de','disposableaddress.com','disposeamail.com','disposemail.com','dispostable.com','dm.w3internet.co.uk example.com','dodgeit.com','dodgit.com','dodgit.org','dontreg.com','dontsendmespam.de','dotmsg.com','dresssmall.com','dump-email.info','dumpandjunk.com','dumpmail.de','dumpyemail.com','e4ward.com','email60.com','emaildienst.de','emailias.com','emailinfive.com','emailmiser.com','emailtemporario.com.br','emailto.de','emailwarden.com','emailxfer.com','emz.net','enterto.com','ephemail.net','etranquil.com','etranquil.net','etranquil.org','explodemail.com','fakeinbox.com','fakeinformation.com','fakemailz.com','fastacura.com','fastchevy.com','fastchrysler.com','fastkawasaki.com','fastmazda.com','fastmitsubishi.com','fastnissan.com','fastsubaru.com','fastsuzuki.com','fasttoyota.com','fastyamaha.com','filzmail.com','fizmail.com','footard.com','forgetmail.com','frapmail.com','front14.org','fux0ringduh.com','garliclife.com','get1mail.com','getonemail.com','getonemail.net','ghosttexter.de','girlsundertheinfluence.com','gishpuppy.com','gowikibooks.com','gowikicampus.com','gowikicars.com','gowikifilms.com','gowikigames.com','gowikimusic.com','gowikinetwork.com','gowikitravel.com','gowikitv.com','great-host.in','greensloth.com','gsrv.co.uk','guerillamail.biz','guerillamail.com','guerillamail.net','guerillamail.org','guerrillamail.com','guerrillamail.net','guerrillamailblock.com','h8s.org','haltospam.com','hatespam.org','hidemail.de','hotpop.com','ieatspam.eu','ieatspam.info','ihateyoualot.info','iheartspam.org','imails.info','imstations.com','inboxclean.com','inboxclean.org','incognitomail.com','incognitomail.net','ipoo.org','irish2me.com','iwi.net','jetable.com','jetable.fr.nf','jetable.net','jetable.org','jnxjn.com','junk1e.com','kasmail.com','kaspop.com','killmail.com','killmail.net','klassmaster.com','klassmaster.net','klzlk.com','kulturbetrieb.info','kurzepost.de','lifebyfood.com','link2mail.net','litedrop.com','lookugly.com','lopl.co.cc','lortemail.dk','lovemeleaveme.com','lr78.com','maboard.com','mail.by','mail.mezimages.net','mail2rss.org','mail333.com','mail4trash.com','mailbidon.com','mailblocks.com','mailcatch.com','maileater.com','mailexpire.com','mailfreeonline.com','mailin8r.com','mailinater.com','mailinator.com','mailinator.net','mailinator2.com','mailincubator.com','mailme.lv','mailmoat.com','mailnator.com','mailnull.com','mailquack.com','mailshell.com','mailsiphon.com','mailslapping.com','mailzilla.com','mailzilla.org','mbx.cc','mega.zik.dj','meinspamschutz.de','meltmail.com','messagebeamer.de','mierdamail.com','mintemail.com','moncourrier.fr.nf','monemail.fr.nf','monmail.fr.nf','mt2009.com','mx0.wwwnew.eu','mycleaninbox.net','myspaceinc.com','myspaceinc.net','myspaceinc.org','myspacepimpedup.com','myspamless.com','mytrashmail.com','neomailbox.com','nervmich.net','nervtmich.net','netmails.com','netmails.net','netzidiot.de','neverbox.com','no-spam.ws','nobulk.com','noclickemail.com','nogmailspam.info','nomail.xl.cx','nomail2me.com','nospam.ze.tc','nospam4.us','nospamfor.us','nowmymail.com','nurfuerspam.de','objectmail.com','obobbo.com','oneoffemail.com','oneoffmail.com','onewaymail.com','oopi.org','ordinaryamerican.net','ourklips.com','outlawspam.com','owlpic.com','pancakemail.com','pimpedupmyspace.com','poofy.org','pookmail.com','privacy.net','proxymail.eu','punkass.com','putthisinyourspamdatabase.com','quickinbox.com','rcpt.at','recode.me','recursor.net','recyclemail.dk','regbypass.comsafe-mail.net','rejectmail.com','rklips.com','safersignup.de','safetymail.info','sandelf.de','saynotospams.com','selfdestructingmail.com','sendspamhere.com','shiftmail.com','shitmail.me','shortmail.net','sibmail.com','skeefmail.com','slaskpost.se','slopsbox.com','smellfear.com','snakemail.com','sneakemail.com','sofort-mail.de','sogetthis.com','soodonims.com','spam.la','spamavert.com','spambob.com','spambob.net','spambob.org','spambog.com','spambog.de','spambog.ru','spambox.info','spambox.us','spamcannon.com','spamcannon.net','spamcero.com','spamcon.org','spamcorptastic.com','spamcowboy.com','spamcowboy.net','spamcowboy.org','spamday.com','spamex.com','spamfree24.com','spamfree24.de','spamfree24.eu','spamfree24.info','spamfree24.net','spamfree24.org','spamgourmet.com','spamgourmet.net','spamgourmet.org','spamherelots.com','spamhereplease.com','spamhole.com','spamify.com','spaminator.de','spamkill.info','spaml.com','spaml.de','spammotel.com','spamobox.com','spamoff.de','spamslicer.com','spamspot.com','spamthis.co.uk','spamthisplease.com','spamtrail.com','speed.1s.fr','suremail.info','tempalias.com','tempe-mail.com','tempemail.biz','tempemail.com','tempemail.net','tempinbox.co.uk','tempinbox.com','tempomail.fr','temporarily.de','temporaryemail.net','temporaryforwarding.com','temporaryinbox.com','thankyou2010.com','thisisnotmyrealemail.com','throwawayemailaddress.com','tilien.com','tmailinator.com','tradermail.info','trash-amil.com','trash-mail.at','trash-mail.com','trash-mail.de','trash2009.com','trashdevil.com','trashdevil.de','trashmail.at','trashmail.com','trashmail.de','trashmail.me','trashmail.net','trashmail.org','trashmailer.com','trashymail.com','trashymail.net','turual.com','twinmail.de','tyldd.com','uggsrock.com','upliftnow.com','uplipht.com','venompen.com','viditag.com','viewcastmedia.com','viewcastmedia.net','viewcastmedia.org','walala.org','wegwerfadresse.de','wegwerfmail.de','wegwerfmail.net','wegwerfmail.org','wetrainbayarea.com','wetrainbayarea.org','wh4f.org','whopy.com','whyspam.me','wilemail.com','willselfdestruct.com','winemaven.info','wronghead.com','wuzup.net','wuzupmail.net','wwwnew.eu','xagloo.com','xemaps.com','xents.com','xmaily.com','xoxy.net','yep.it','yogamaven.com','yopmail.com','yopmail.fr','yopmail.net','yuurok.com','zippymail.info','zoemail.org');
-	$emdomain=explode('@',$em);
-	if (count($emdomain)==2&&in_array(strtolower($emdomain[1]),$disposables)) {
-		// the email is a disposable email address
-		// do you really want this guy????
-		return true;
-	}
-	return false;
-}
-
-function kpg_akismet_check($ip) {
-	if (empty($ip)) return false;
-	// give akismet a try - it seems to know more than anyone
-	$api_key=get_option('wordpress_api_key');
-	$agent=$_SERVER['HTTP_USER_AGENT'];
-	$blogurl=site_url();
-	$api_key=urlencode($api_key);
-	$agent=urlencode($agent);
-	$blogurl=urlencode($blogurl);
-	if (empty($api_key)||empty($agent)||empty($blogurl)) return false;
-	$request="blog=$blogurl&user_ip=$ip&user_agent=$agent";
-	$host = $http_host = $api_key.'.rest.akismet.com';
-    $path = '/1.1/comment-check';
-    $port = 80;
-    $akismet_ua = "WordPress/3.1.1 | Akismet/2.5.3";
-    $content_length = strlen( $request );
-    $http_request  = "POST $path HTTP/1.0\r\n";
-    $http_request .= "Host: $host\r\n";
-    $http_request .= "Content-Type: application/x-www-form-urlencoded\r\n";
-    $http_request .= "Content-Length: {$content_length}\r\n";
-    $http_request .= "User-Agent: {$akismet_ua}\r\n";
-    $http_request .= "\r\n";
-    $http_request .= $request;
-    $response = '';
-	//$f=fopen('akismet.txt',"a");
-    if( false != ( $fs = @fsockopen( $http_host, $port, $errno, $errstr, 10 ) ) ) {
-        fwrite( $fs, $http_request );
-         while ( !feof( $fs ) )
-            $response .= fgets( $fs, 1160 ); // One TCP-IP packet
-        fclose( $fs );
-		//fwrite($f,"\r\n$response\r\n");
-        $response = explode( "\r\n\r\n", $response, 2 );
-    }
-	//fwrite($f,"\r\n$request\r\n");
-	//fwrite($f,"\r\n$http_request\r\n");
-	//fclose($f);
-    if ( 'true' == $response[1] )
-        return true;
-    else
-        return false;
-}	
-
-function kpg_check_ubiquity($ip) {
-	if (empty($ip)) return false;
-	$userve=array(
-'XSServer',
-array('46.251.228.0','46.251.229.255'),
-array('109.230.197.0','109.230.197.255'),
-array('109.230.213.0','109.230.213.255'),
-array('109.230.216.0','109.230.217.255'),
-array('109.230.220.0','109.230.223.255'),
-array('109.230.246.0','109.230.246.255'),
-array('109.230.248.0','109.230.249.255'),
-array('109.230.251.0','109.230.251.255'),
-'Ubiquity-Nobis',
-array('23.19.0.0','23.19.255.255'),
-array('64.120.0.0','64.120.127.255'),
-array('67.201.0.0','67.201.7.255'),
-array('67.201.40.0','67.201.40.255'),
-array('67.201.48.0','67.201.49.255'),
-array('69.147.224.0','69.147.225.255'),
-array('69.174.60.0','69.174.63.255'),
-array('70.32.32.0','70.32.47.255'),
-array('72.37.145.0','72.37.145.255'),
-array('72.37.204.0','72.37.204.255'),
-array('72.37.218.0','72.37.219.255'),
-array('72.37.221.0','72.37.221.255'),
-array('72.37.222.0','72.37.223.255'),
-array('72.37.224.0','72.37.231.255'),
-array('72.37.237.0','72.37.237.255'),
-array('72.37.242.0','72.37.243.255'),
-array('72.37.246.0','72.37.247.255'),
-array('108.62.0.0','108.62.255.255'),
-array('173.208.0.0','173.208.127.255'),
-array('173.234.0.0','173.234.255.255'),
-array('174.34.128.0','174.34.191.255'),
-array('216.6.224.0','216.6.239.255'),
-array('176.31.50.64','176.31.50.95'),
-'Balticom',
-array('46.23.32.0','46.23.47.255'),
-array('82.193.64.0','82.193.95.255'),
-array('83.99.128.0','83.99.255.255'),
-array('109.73.96.0','109.73.111.255'),
-array('212.142.64.0','212.142.127.255'),
-'Everhost',
-array('31.2.216.0','31.2.223.255'),
-array('31.47.208.0','31.47.215.255'),
-array('31.220.128.0','31.220.131.255'),
-array('46.108.155.0','46.108.155.255'),
-array('89.42.8.0','89.42.8.255'),
-array('89.42.108.0','89.42.109.255'),
-array('89.44.16.0','89.44.31.255'),
-array('93.118.64.0','93.118.79.255'),
-array('94.60.152.0','94.60.159.255'),
-array('94.60.160.0','94.60.191.255'),
-array('94.60.192.0','94.60.199.255'),
-array('94.63.0.0','94.63.31.255'),
-array('94.63.32.0','94.63.47.255'),
-array('94.63.56.0','94.63.63.255'),
-array('94.63.64.0','94.63.71.255'),
-array('94.63.128.0','94.63.135.255'),
-array('94.63.152.0','94.63.159.255'),
-array('94.63.192.0','94.63.207.255'),
-array('94.177.4.0','94.177.5.255'),
-array('95.64.24.0','95.64.31.255'),
-array('95.64.32.0','95.64.32.255'),
-array('95.64.41.0','95.64.41.255'),
-array('95.64.42.0','95.64.42.255'),
-array('95.64.110.0','95.64.111.255'),
-array('95.128.168.0','95.128.168.255'),
-array('95.128.174.0','95.128.175.255'),
-array('95.187.0.0','95.187.127.255'),
-array('178.255.36.0','178.255.37.255'),
-array('178.255.38.0','178.255.38.255'),
-array('188.208.0.0','188.208.15.255'),
-array('188.215.0.0','188.215.0.255'),
-array('188.215.32.0','188.215.35.255'),
-array('188.229.19.0','188.229.19.255'),
-array('188.229.20.0','188.229.23.255'),
-array('188.229.38.0','188.229.38.255'),
-array('188.229.103.0','188.229.103.255'),
-array('188.229.104.0','188.229.111.255'),
-array('188.229.124.0','188.229.127.255'),
-array('188.240.36.0','188.240.39.255'),
-array('188.240.160.0','188.240.175.255'),
-array('188.240.192.0','188.240.223.255'),
-array('188.247.128.0','188.247.128.255'),
-array('188.247.228.0','188.247.229.255'),
-'FDC',
-array('67.159.0.0','67.159.63.255'),
-array('66.90.64.0','66.90.127.255'),
-array('208.53.128.0','208.53.191.255'),
-array('50.7.0.0','50.7.255.255'),
-array('204.45.0.0','204.45.255.255'),
-array('76.73.0.0','76.73.255.255'),
-array('74.63.64.0','74.63.127.255'),
-'Exetel',
-array('109.230.244.0','109.230.245.255'),
-array('31.214.155.0','31.214.155.255'),
-'Virpus',
-array('50.115.160.0','50.115.175.255'),
-array('173.0.48.0','173.0.63.255'),
-array('199.119.224.0','199.119.227.255'),
-array('199.180.128.0','199.180.135.255'),
-array('208.89.208.0','208.89.215.255'),
-'MiscSpamServer',
-array('74.63.222.74','74.63.222.74'),
-array('86.181.176.121','86.181.176.121'),
-array('98.126.4.202','98.126.4.202'),
-array('98.126.251.234','98.126.251.234'),
-array('188.168.0.0','188.168.255.255'),
-array('81.17.22.21','81.17.22.21'),
-array('66.219.17.212','66.219.17.212'),
-array('46.29.248.0','46.29.249.255'),
-array('74.221.208.0','74.221.223.255'),
-array('109.169.57.204','109.169.57.204'),
-array('184.22.139.0','184.22.139.255'),
-array('99.187.246.108','99.187.246.108'),
-array('195.62.24.0','195.62.25.255'),
-array('141.105.65.151','141.105.65.151'),
-array('146.0.74.0','146.0.74.255'),
-array('194.28.112.0','194.28.115.255'),
-array('159.224.130.96','159.224.130.96')
-);
-$srv='';
-	for ($j=0;$j<count($userve);$j++) {
-		if (!is_array($userve[$j])) {
-			$srv=$userve[$j];
-		} else {
-			$st=ip2long($userve[$j][0]);
-			$en=ip2long($userve[$j][1]);
-			if (ip2long($ip)>=$st && ip2long($ip)<=$en) {
-				// bad one
-				return $srv;
-			}
-		}
-		//if (ip2long($ip)<$en) break; // done search
-	}
-	return false;
-}
-function kpg_check_all_dnsbl($ip) {
- 	if (empty($ip)) return false;
-	// just for the heck of it, I found a bunch of blacklist sites
-	// these use the dns returns but don't need an api key as far as I know
-   $iplist = array(
-	    'sbl.spamhaus' 	=> '.sbl.spamhaus.org',
-	    'xbl.spamhaus' 	=> '.xbl.spamhaus.org',
-	    'dsbl' 	 	=> '.list.dsbl.org',
-	    'sorbs' 	=> '.dnsbl.sorbs.net',
-	    'spamcop' 	=> '.bl.spamcop.net',
-	    'ordb' 		=> '.relays.ordb.org',
-	    'njabl' 	=> '.dnsbl.njabl.org'
-    ); 
-	foreach($iplist as $key=>$data) {
-		// check using the dns method.
-		// returns the db that caused the hit else returns false
-		$lookup = implode('.', array_reverse(explode ('.', $ip ))) . $data;
-		$result = explode( '.', gethostbyname($lookup));
-		if (count($result)>2) {
-			if ($result[0] == 127) {
-				// query successful
-				// 127 is a good lookup hit
-				//  [3] = type of threat - we are only interested in comment spam at this point - if user demand I will change.
-				// [2] is the threat level. 25 is recommended
-				// [1] is numbr of days since last report
-				return $key.':'.$result[1].','.$result[2].','.$result[3];
-			} 
-		}
-		return false;
-	}
-}
-function kpg_sfs_reg_stats_control() {
-// this displays the statistics 
-	if(!current_user_can('manage_options')) {
-		die('Access Denied');
-	}
-	// include it so as to make the core plugin smaller
-	sfs_errorsonoff();
-	require_once("includes/stop-spam-reg-stats.php");
-	sfs_errorsonoff('off');
-
-}
-function kpg_sfs_reg_control()  {
-// this is the display of information about the page.
-
-	sfs_errorsonoff();
-	require("includes/stop-spam-reg-options.php");
-	sfs_errorsonoff('off');
-	
-
 }
 
 function kpg_sfs_reg_check($actions,$comment) {
@@ -1351,12 +575,11 @@ function kpg_sfs_reg_report($actions,$comment) {
 		$href="href=\"#\"";
 		$onclick="onclick=\"sfs_ajax_report_spam(this,'$ID','$blog_id','$ajaxurl');return false;\"";
 	}
-	$action="<a $exst title=\"Report to Stop Forum Spam (SFS)\" $target $href $onclick class='delete:the-comment-list:comment-$ID::delete=1 delete vim-d vim-destructive'>Report to SFS</a>";
-	
-
-	$actions['report_spam']=$action;
+	if (!empty($email)) {
+		$action="<a $exst title=\"Report to Stop Forum Spam (SFS)\" $target $href $onclick class='delete:the-comment-list:comment-$ID::delete=1 delete vim-d vim-destructive'>Report to SFS</a>";
+		$actions['report_spam']=$action;
+	}
 	return $actions;
-
 }
 // hook the comment list with a "report Spam" filater
 add_action('admin_menu', 'kpg_sfs_reg_admin_menus');
@@ -1409,14 +632,14 @@ function kpg_sfs_reg_admin_menus() {
 function kpg_sfs_reg_add_user_to_whitelist($options) {
 	$addtowhitelist=$options['addtowhitelist'];
 	$wlist=$options['wlist'];
-	$ip=$_SERVER['REMOTE_ADDR'];
-	$ip=check_forwarded_ip($ip);
+	$ip=kpg_get_ip();
 	if ($addtowhitelist=='Y'&&!in_array($ip,$wlist)) {
 		// add this ip to your white list
 		$wlist[count($wlist)]=$ip;
 		$options['wlist']=$wlist;
-		update_option('kpg_stop_sp_reg_options',$options);
 	}
+	update_option('kpg_stop_sp_reg_options',$options);
+
 }
 
 
@@ -1497,38 +720,77 @@ function kpg_sp_rightnow() {
 		echo"</p>";
 	}
 }
-function kpg_sp_checkPayPal($ip) { // returns true if a whitelisted paypal ip
-$paypal=array('173.0.88.66','173.0.88.98','173.0.84.66','173.0.84.98','66.211.168.91','66.211.168.123','173.0.88.67','173.0.88.99','173.0.84.99','173.0.84.67','66.211.168.92','66.211.168.124','173.0.88.69','173.0.88.101','173.0.84.69','173.0.84.101','66.211.168.126','66.211.168.194','173.0.88.68','173.0.88.100','173.0.84.68','173.0.84.100','66.211.168.125','66.211.168.195','173.0.81.1','173.0.81.33','66.211.170.66','216.113.188.100','66.211.168.93','173.0.80.0/20','64.4.240.0/20','66.211.160.0/19','118.214.15.186','118.215.103.186','118.215.119.186','118.215.127.186','118.215.15.186','118.215.151.186','118.215.159.186','118.215.167.186','118.215.199.186','118.215.207.186','118.215.215.186','118.215.231.186','118.215.255.186','118.215.39.186','118.215.63.186','118.215.7.186','118.215.79.186','118.215.87.186','118.215.95.186','202.43.63.186','69.192.31.186','72.247.111.186','88.221.43.186','92.122.143.186','92.123.151.186','92.123.159.186','92.123.163.186','92.123.167.186','92.123.179.186','92.123.183.186','92.123.199.186','92.123.203.186','92.123.207.186','92.123.211.186','92.123.215.186','92.123.219.186','92.123.247.186','92.123.255.186','95.100.31.186','96.16.199.186','96.16.23.186','96.16.247.186','96.16.255.186','96.16.39.186','96.16.55.186','96.17.47.186','96.6.239.186','96.6.79.186','96.7.175.186','96.7.191.186','96.7.199.186','96.7.231.186','96.7.247.186','216.113.188.64','216.113.188.34','173.0.84.178','173.0.84.212','173.0.88.178','173.0.88.212','66.211.168.136','66.211.168.66','173.0.88.203','173.0.84.171','173.0.84.203','173.0.88.171','66.211.168.142','66.211.168.150','173.0.84.76','173.0.88.76','173.0.84.108','173.0.88.108','66.211.168.158','66.211.168.180','118.214.15.186','118.215.103.186','118.215.119.186','118.215.127.186','118.215.15.186','118.215.151.186','118.215.159.186','118.215.167.186','118.215.199.186','118.215.207.186','118.215.215.186','118.215.231.186','118.215.255.186','118.215.39.186','118.215.63.186','118.215.7.186','118.215.79.186','118.215.87.186','118.215.95.186','202.43.63.186','69.192.31.186','72.247.111.186','88.221.43.186','92.122.143.186','92.123.151.186','92.123.159.186','92.123.163.186','92.123.167.186','92.123.179.186','92.123.183.186','92.123.199.186','92.123.203.186','92.123.207.186','92.123.211.186','92.123.215.186','92.123.219.186','92.123.247.186','92.123.255.186','95.100.31.186','96.16.199.186','96.16.23.186','96.16.247.186','96.16.255.186','96.16.39.186','96.16.55.186','96.17.47.186','96.6.239.186','96.6.79.186','96.7.175.186','96.7.191.186','96.7.199.186','96.7.231.186','96.7.247.186',
-// sandbox
-'173.0.82.75','173.0.82.91','173.0.82.77','173.0.82.78','173.0.82.79','173.0.82.75','173.0.82.126','173.0.82.83','173.0.82.84','173.0.82.86','173.0.82.89','173.0.82.101'
-);
-	return kpg_sp_searchi($ip,$paypal);
-}
+
+
 function kpg_sp_searchi($needle,$haystack) {
 	// ignore case in_array
 	if (empty($needle)) return false;
 	if (empty($haystack)) return false;
-	if (!is_array($haystack)) return ralse;
+	if (!is_array($haystack)) return false;
 	foreach($haystack as $val) {
 		if (strtolower($val)==strtolower($needle)) return true;
 	}
 	return false;
 }
-function kpg_sp_searchKi($needle,$haystack) {
+
+function kpg_sp_search_ip($needle,$haystack) {
 	// ignore case in_array
 	if (empty($needle)) return false;
 	if (empty($haystack)) return false;
-	if (!is_array($haystack)) return ralse;
+	if (!is_array($haystack)) return false;
+	foreach($haystack as $sip=>$val) {
+		if (strtolower($sip)==strtolower($needle)) return true;
+		if (kpg_ip_range($sip,$needle)) return true;
+	}
+	return false;
+}
+function kpg_sp_searchi_ip($needle,$haystack) {
+	// ignore case in_array
+	if (empty($needle)) return false;
+	if (empty($haystack)) return false;
+	if (!is_array($haystack)) return false;
+	foreach($haystack as $sip) {
+		if (strtolower($sip)==strtolower($needle)) return true;
+		if (kpg_ip_range($sip,$needle)) return true;
+	}
+	return false;
+}
+
+function kpg_ip_range($ipr,$ip) {
+	if (count(explode('.',$ip))!=4) return false;
+	if (strpos($ipr,'/')===false) return false;
+	$ips=explode('/',$ipr);
+	if (count($ips)!=2) return false;
+	$ip1=$ips[0];
+	$m=$ips[1];
+	if (count(explode('.',$ip1))!=4) return false;
+	$mask=(pow(2,32)-1)-(pow(2,32-$m)-1);
+	$i=abs(ip2long($ip));
+	$r=abs(ip2long($ip1) & ($mask));
+	$mask=$mask ^ -1;
+	$r2=abs(ip2long($ip1) | ($mask));
+	if ($r<$r2) { // since the result can be negative when converted to an integer and get screwed up
+		if ($i>=$r&&$i<=$r2) return true;
+		return false;
+	}
+	if ($i>=$r2&&$i<=$r) return true;
+	return false;
+}
+
+function kpg_sp_searchK_i_del($needle,$haystack) {
+	// ignore case in_array
+	if (empty($needle)) return false;
+	if (empty($haystack)) return false;
+	if (!is_array($haystack)) return false;
 	foreach($haystack as $key=>$value) {
 		if (strtolower($key)==strtolower($needle)) return true;
 	}
 	return false;
 }
-function kpg_sp_searchl($needle,$haystack) {
+function kpg_sp_searchL($needle,$haystack) {
 	// search the end of a string case insensitive
 	if (empty($needle)) return false;
 	if (empty($haystack)) return false;
-	if (empty($needle)) return false;
     foreach($haystack as $val) {
 	    if (strpos(strtolower($val).'\t',strtolower($needle).'\t')!==false)  return true;
 	}
@@ -1631,6 +893,7 @@ function kpg_sp_get_options() {
 		'accept'=>'Y',
 		'nobuy'=>'N',
 		'chkemail'=>'Y',
+		'chkip'=>'Y',
 		'chkjscript'=>'N',
 		'chksfs'=>'Y',
 		'chkreferer'=>'Y',
@@ -1643,12 +906,14 @@ function kpg_sp_get_options() {
 		'chkspamwords'=>'N',
 		'chklogin'=>'Y',
 		'chksession'=>'Y',
+		'sesstime'=>4,
 		'chksignup'=>'Y',
 		'chklong'=>'Y',
 		'chkagent'=>'Y',
 		'chkxmlrpc'=>'Y',
 		'chkwpmail'=>'Y',
 		'chkwplogin'=>'N',
+		'chkadmin'=>'Y',
 		'chk404'=>'Y',
 		'addtowhitelist'=>'Y',
 		'muswitch'=>'N',
@@ -1659,10 +924,15 @@ function kpg_sp_get_options() {
 		'hnylevel'=>5,
 		'botage'=>9999,
 		'kpg_sp_cache'=>25,
+		'kpg_sp_cache_em'=>10,
 		'kpg_sp_hist'=>25,
+		'kpg_sp_good'=>2,
 		'redirurl'=>'', 
 		'redir'=>'N',
+		'sleep'=>10,
+		'logfilesize'=>50000,
 		'autoload'=>'N',
+		'firsttime'=>'Y',
 		'rejectmessage'=>"Access Denied<br/>
 This site is protected by the Stop Spammer Registrations Plugin.<br/>",
 		'spamwords'=>array("-online","4u","4-u","adipex","advicer","baccarrat","blackjack","bllogspot","booker","byob","car-rental-e-site","car-rentals-e-site","carisoprodol","casino","chatroom","cialis","coolhu","credit-card-debt","credit-report","cwas","cyclen","cyclobenzaprine","dating-e-site","day-trading","debt-consolidation","debt-consolidation","discreetordering","duty-free","dutyfree","equityloans","fioricet","flowers-leading-site","freenet-shopping","freenet","gambling-","hair-loss","health-insurancedeals","homeequityloans","homefinance","holdem","hotel-dealse-site","hotele-site","hotelse-site","incest","insurance-quotes","insurancedeals","jrcreations","levitra","macinstruct","mortgagequotes","online-gambling","onlinegambling","ottawavalleyag","ownsthis","paxil","penis","pharmacy","phentermine","poker-chip","poze","pussy","rental-car-e-site","ringtones","roulette ","shemale","slot-machine","thorcarlson","top-site","top-e-site","tramadol","trim-spa","ultram","valeofglamorganconservatives","viagra","vioxx","xanax","zolus","ambien","poker","bingo","allstate","insurnce","work-at-home","workathome","home-based","homebased","weight-loss","weightloss","additional-income","extra-income","email-marketing","sibutramine","seo-","fast-cash")
@@ -1678,6 +948,7 @@ This site is protected by the Stop Spammer Registrations Plugin.<br/>",
 	if ($ansa['accept']!='Y') $ansa['accept']='N';
 	if ($ansa['nobuy']!='Y') $ansa['nobuy']='N';
 	if ($ansa['chkemail']!='Y') $ansa['chkemail']='N';
+	if ($ansa['chkip']!='Y') $ansa['chkip']='N';
 	if ($ansa['chkdisp']!='Y') $ansa['chkdisp']='N';
 	if ($ansa['chksfs']!='Y') $ansa['chksfs']='N';
 	if ($ansa['chkdnsbl']!='Y') $ansa['chkdnsbl']='N';
@@ -1685,14 +956,19 @@ This site is protected by the Stop Spammer Registrations Plugin.<br/>",
 	if ($ansa['chkakismet']!='Y') $ansa['chkakismet']='N';
 	if ($ansa['chkcomments']!='Y') $ansa['chkcomments']='N';
 	if ($ansa['chklogin']!='Y') $ansa['chklogin']='N';
+	if ($ansa['chkadmin']!='Y') $ansa['chklogin']='N';
 	if ($ansa['chksignup']!='Y') $ansa['chksignup']='N';
 	if ($ansa['chkxmlrpc']!='Y') $ansa['chkxmlrpc']='N';
 	if ($ansa['chkwplogin']!='Y') $ansa['chkwplogin']='N';
 	if ($ansa['muswitch']!='Y') $ansa['muswitch']='N';
 	if (empty($ansa['kpg_sp_cache'])) $ansa['kpg_sp_cache']=25;
+	if (empty($ansa['kpg_sp_cache_em'])) $ansa['kpg_sp_cache_em']=10;
 	if (empty($ansa['kpg_sp_hist'])) $ansa['kpg_sp_hist']=25;
+	if (empty($ansa['kpg_sp_good'])) $ansa['kpg_sp_good']=2;
+    if (!is_numeric($ansa['kpg_sp_good'])) $ansa['kpg_sp_good']=2;
+    if (!is_numeric(trim($ansa['logfilesize']))) $ansa['logfilesize']=50000;
 	if (!is_array($ansa['spamwords'])) $ansa['spamwords']=array();
-
+    if (!is_numeric($ansa['sesstime'])) $ansa['sesstime']=4;
 	if ($ansa['autoload']=='N') {
 		delete_option('kpg_stop_sp_reg_options');
 		$ansa['autoload']='Y';
@@ -1857,7 +1133,7 @@ function sfs_ajax_return_spam(response) {
 	
 	
 	
-// here are the debug functions
+// debug functions
 // change the debug=false to debug=true to start debugging.
 // the plugin will drop a file sfs_debug_output.txt in the current directory (root, wp-admin, or network) 
 // directory must be writeable or plugin will crash.
@@ -1872,12 +1148,14 @@ function sfs_ErrorHandler($errno, $errmsg, $filename, $linenum, $vars) {
 	// write the answers to the file
 	// we are only conserned with the errors and warnings, not the notices
 	//if ($errno==E_NOTICE || $errno==E_WARNING) return false;
+	if ($errno==2048) return; // wordpress throws deprecated all over the place.
 	$serrno="";
 	if (
 	(strpos($filename,'stop-spam')===false)
 	&&(strpos($filename,'sfr_mu')===false)
 	&&(strpos($filename,'settings.php')===false)
 	&&(strpos($filename,'options-general.php')===false)
+	//&&(!function_exists('bbpress'))
 	) return false;
 	switch ($errno) {
 		case E_ERROR: 
@@ -1908,5 +1186,69 @@ function sfs_ErrorHandler($errno, $errmsg, $filename, $linenum, $vars) {
 	fclose($f);
 	return false;
 }
+// in bbpress the verify nonce function is not available for use in the red herring form.
+// Red herring will not work in bbpress.
+function kpg_verify_nonce($a,$b) {
+	if (function_exists('wp_verify_nonce')) {
+		return wp_verify_nonce($a, $b);
+	}
+	return false;
+}
 
+// load the optional files
+// use includes so as to make the core plugin smaller when not working
+
+function kpg_sfs_check_load() {
+	// these are the spam checking functions
+	require_once('includes/stop-spam-reg-checks.php');
+}
+function load_sfs_mu_options_file() {
+	// the MU functions should not load if not a multisite install
+	sfs_errorsonoff();
+	require_once('includes/sfr-mu-options.php');
+	sfs_errorsonoff('off');
+}
+function kpg_sfs_reg_control()  {
+// loads when user needs to change the options
+	sfs_errorsonoff();
+	require_once("includes/stop-spam-reg-options.php");
+	sfs_errorsonoff('off');
+}
+function kpg_sfs_reg_stats_control() {
+// this displays the history and cache 
+	sfs_errorsonoff();
+	require_once("includes/stop-spam-reg-stats.php");
+	sfs_errorsonoff('off');
+}
+function kpg_append_file($filename,$content) {
+	// this writes content to a file in the uploads director in the 'stop-spammer-registrations' directory
+	$path=WP_CONTENT_DIR.'/stop-spammer-registrations';
+	if (!file_exists($path)) {
+		mkdir($path);
+		if (!file_exists($path)) return false;
+	}
+	$file=$path.'/'.$filename;
+	$f=fopen($file,'a');
+	fwrite($f,$content);
+	fclose($f);
+	return true;
+}
+function kpg_read_file($filename) {
+	// read file
+	$file=WP_CONTENT_DIR.'/stop-spammer-registrations/'.$filename;
+	if (file_exists($file)) {
+		return file_get_contents($file);
+	}
+	return "File not found";
+}
+function kpg_file_exists($filename) {
+	$file=WP_CONTENT_DIR.'/stop-spammer-registrations/'.$filename;
+	if (!file_exists($file)) return false;
+	return filesize($file);
+}
+function kpg_file_delete($filename) {
+	$file=WP_CONTENT_DIR.'/stop-spammer-registrations/'.$filename;
+	
+	return unlink($file);
+}
 ?>

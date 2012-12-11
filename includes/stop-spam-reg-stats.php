@@ -3,11 +3,19 @@
 	Stop Spammer Registrations Plugin 
 	History and Stats Page
 */
+if (!defined('ABSPATH')) exit;
+
+	if(!current_user_can('manage_options')) {
+		die('Access Denied');
+	}
 	$stats=kpg_sp_get_stats();
 	extract($stats);
 	$options=kpg_sp_get_options();
 	extract($options);
 	$nonce='';
+	$trash = plugins_url( 'includes/trashcan.png', dirname(__FILE__) );
+	$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
+    // update checks
 	if (array_key_exists('kpg_stop_spammers_control',$_POST)) $nonce=$_POST['kpg_stop_spammers_control'];
 	if (wp_verify_nonce($nonce,'kpgstopspam_update')) { 
 		if (array_key_exists('kpg_stop_clear_cache',$_POST)) {
@@ -20,6 +28,7 @@
 			$stats['goodips']=$goodips;
 			update_option('kpg_stop_sp_reg_stats',$stats);
 			echo "<h2>Cache Cleared</h2>";
+			kpg_append_file('history_log.txt',"$now: Cache Cleared"."\r\n");
 		}
 		if (array_key_exists('kpg_stop_clear_hist',$_POST)) {
 			// clear the cache
@@ -28,25 +37,24 @@
 			$stats['hist']=$hist;
 			$stats['spcount']=$spcount;
 			update_option('kpg_stop_sp_reg_stats',$stats);
-			echo "<h2>Reasons Cleared</h2>";
+			echo "<h2>History Cleared</h2>";
+			kpg_append_file('history_log.txt',"$now: History Cleared"."\r\n");
 		}	
 		if (array_key_exists('kpg_stop_clear_reason',$_POST)) {
 			$stats['cntjscript']=0;
 			$stats['cntsfs']=0;
 			$stats['cntreferer']=0;
-			
 			$stats['cntdisp']=0;
 			$stats['cntrh']=0;
+
 			$stats['cntdnsbl']=0;
-			
 			$stats['cntubiquity']=0;
 			$stats['cntakismet']=0;
 			$stats['cntspamwords']=0;
-			
 			$stats['cntsession']=0;
+
 			$stats['cntlong']=0;
 			$stats['cntagent']=0;
-			
 			$stats['cnttld']=0;
 			$stats['cntemdom']=0;			
 			$stats['cntcacheip']=0;
@@ -54,15 +62,19 @@
 			$stats['cntcacheem']=0;
 			$stats['cnthp']=0;
 			$stats['cntbotscout']=0;
-			
+			$stats['cntblem']=0;
+			$stats['cntlongauth']=0;
+					
+			$stats['cntblip']=0;
 			$stats['cntaccept']=0;
 			$stats['cntpassed']=0;
 			$stats['cntwhite']=0;
 			$stats['cntgood']=0;
-		
+					
 			update_option('kpg_stop_sp_reg_stats',$stats);
 			extract($stats);
 			echo "<h2>History Cleared</h2>";
+			kpg_append_file('history_log.txt',"$now: Reasons Cleared"."\r\n");
 		}
 		if (array_key_exists('kpg_stop_add_black_list',$_POST)) {
 			$bbbb=$_POST['kpg_stop_add_black_list'];
@@ -71,7 +83,31 @@
 				$options['blist']=$blist;
 				update_option('kpg_stop_sp_reg_options',$options);
 				echo "<h2>$bbbb Added to Black List</h2>";
+				kpg_append_file('history_log.txt',"$now: $bbbb Added to Black List"."\r\n");
 			}
+		}
+		if (array_key_exists('kpg_stop_del_black_list',$_POST)) {
+			$bbbb=$_POST['kpg_stop_del_black_list'];
+			if (array_key_exists($bbbb,$badips)) {
+				unset($badips[$bbbb]);
+				$stats['badips']=$badips;
+				update_option('kpg_stop_sp_reg_stats',$stats);
+				echo "<h2>$bbbb Removed from cache</h2>";
+				kpg_append_file('history_log.txt',"$now: $bbbb Removed from cache"."\r\n");
+			} else if (array_key_exists($bbbb,$badems)) {
+				unset($badems[$bbbb]);
+				$stats['badems']=$badems;
+				update_option('kpg_stop_sp_reg_stats',$stats);
+				echo "<h2>$bbbb Removed from cache</h2>";
+				kpg_append_file('history_log.txt',"$now: $bbbb Removed from cache"."\r\n");
+			} else if (array_key_exists($bbbb,$goodips)) {
+				unset($goodips[$bbbb]);
+				$stats['goodips']=$goodips;
+				update_option('kpg_stop_sp_reg_stats',$stats);
+				echo "<h2>$bbbb Removed from cache</h2>";
+				kpg_append_file('history_log.txt',"$now: $bbbb Removed from cache"."\r\n");
+			}
+			
 		}
 		if (array_key_exists('kpg_stop_add_white_list',$_POST)) {
 			$bb=$_POST['kpg_stop_add_white_list'];
@@ -80,6 +116,7 @@
 				$options['wlist']=$wlist;
 				update_option('kpg_stop_sp_reg_options',$options);
 				echo "<h2>$bb Added to White List</h2>";
+				kpg_append_file('history_log.txt',"$now: $bb Added to White List.\r\n");
 			}
 		}
 		if (array_key_exists('kpg_stop_delete_log',$_POST)) {
@@ -88,17 +125,63 @@
 			if (file_exists($f)) {
 			    unlink($f);
 				echo "<h2>Deleted Error Log File</h2>";
+				kpg_append_file('history_log.txt',"$now: Deleted Error Log File.\r\n");
 			}
 		}
+		if (array_key_exists('kpg_stop_history_log',$_POST)) {
+			// clear the cache
+				kpg_file_delete('history_log.txt');
+				echo "<h2>Deleted Error Log File</h2>";
+				kpg_append_file('history_log.txt',"$now: Deleted History Log File.\r\n");
+		}
+}
+$me=admin_url('options-general.php?page=stopspammersoptions');
+$sme=admin_url('options-general.php?page=stopspammerstats');
+if (function_exists('is_multisite') && is_multisite() && $muswitch=='Y') {
+	switch_to_blog(1);
+	$me=get_admin_url( 1,'network/settings.php?page=adminstopspammersoptions');
+	$sme=get_admin_url( 1,'network/settings.php?page=stopspammerstats');
+	restore_current_blog();
 }
 	$nonce=wp_create_nonce('kpgstopspam_update');
 
 ?>
-
 <div class="wrap">
+	<h2>Stop Spammers Plugin Stats Version 4.1</h2>
+	<p><a href="<?php echo $sme; ?>">View History</a> - <a href="<?php echo $me; ?>">View Options</a> </p>
+	<hr/>
+
+<?php
+    if (!empty($_GET) && array_key_exists('v',$_GET) && wp_verify_nonce($_GET['v'],'kpgstopspam_fileview')) {
+		// display the file
+?>
+
+	<h3>History Log (located in content directory)</h3>
+	<form method="post" action="<?php echo $sme; ?>">
+		<input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
+		<input type="hidden" name="kpg_stop_history_log" value="true" />
+		<p class="submit">
+			<input  class="button-primary"  value="Delete History Log File" type="submit" />
+		</p>
+	</form>
+
+		<pre>		
+		<?php echo "\r\n".kpg_read_file('history_log.txt'); ?>
+		
+		</pre>
+<?php	
+	} else {
+	
+
+?>
+
   <form action="" method="post" name="kpg_ssp_bl" id="kpg_ssp_bl">
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <input type="hidden" name="kpg_stop_add_black_list" value="" />
+  </form>
+  <form action="" method="post" name="kpg_ssp_del" id="kpg_ssp_del">
+    <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
+    <input type="hidden" name="kpg_stop_del_black_list" value="" />
   </form>
   <form action="" method="post" name="kpg_ssp_wl" id="kpg_ssp_wl">
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
@@ -110,13 +193,18 @@ function addblack(ip) {
 	document.kpg_ssp_bl.submit();
 	return false;
 }
+function delblack(ip) {
+	document.kpg_ssp_del.kpg_stop_del_black_list.value=ip;
+	document.kpg_ssp_del.submit();
+	return false;
+}
+
 function addwhite(ip) {
 	document.kpg_ssp_wl.kpg_stop_add_white_list.value=ip;
 	document.kpg_ssp_wl.submit();
 	return false;
 }
 </script>
-  <h2>Stop Spammers Plugin Stats Version 4.0</h2>
   <?php 
 
 	$nag='';
@@ -161,22 +249,17 @@ function addwhite(ip) {
   <?php 
 	}
 	
-		$me=admin_url('options-general.php?page=stopspammersoptions');
-		if (function_exists('is_multisite') && is_multisite() && $muswitch=='Y') {
-			switch_to_blog(1);
-			$me=get_admin_url( 1,'network/settings.php?page=adminstopspammersoptions');
-			restore_current_blog();
-		}
 
 ?>
-  <p><a href="#" onclick="window.location.href=window.location.href;return false;">Refresh</a> - <a href="<?php echo $me; ?>">View Options</a> </p>
   
     <hr/>
   <h3>Spam Reasons</h3>
    <form method="post" action="">
      <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <input type="hidden" name="kpg_stop_clear_reason" value="true" />
-    <input value="Clear Reason Summary" type="submit" />
+    <p class="submit">
+    <input  class="button-primary" value="Clear Reason Summary" type="submit" />
+	</p>
   </form>
   <style type="text/css">
 	#reasontab {
@@ -263,7 +346,9 @@ function addwhite(ip) {
   <form method="post" action="">
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <input type="hidden" name="kpg_stop_clear_hist" value="true" />
-    <input value="Clear Recent Activity" type="submit" />
+    <p class="submit">
+    <input  class="button-primary" value="Clear Recent Activity" type="submit" />
+	</p>
   </form>
   </p>
   <table style="background-color:#eeeeee;" cellspacing="2">
@@ -271,7 +356,7 @@ function addwhite(ip) {
       <td>date/time</td>
       <td>email</td>
       <td>IP</td>
-      <td>user id</td>
+      <td>author, user/pwd</td>
       <td>script</td>
       <td>reason
         <?php
@@ -297,11 +382,13 @@ function addwhite(ip) {
 			$blog=1;
 			if (count($data)>5) $blog=$data[5];
 			if (empty($blog)) $blog=1;
-			if(empty($reason)) $reason="passed";
+			if(empty($reason)) 
+				$reason="passed";
+				
 			echo "<tr style=\"background-color:white;\">
 				<td style=\"font-size:.8em;padding:2px;\">$dt</td>
 				<td style=\"font-size:.8em;padding:2px;\">$em</td>
-				<td style=\"font-size:.8em;padding:2px;\">$ip"; 
+				<td style=\"font-size:.8em;padding:2px;\">$ip";
 		    if (strpos($reason,'passed')!==false && ($id=='/'||strpos($id,'login')!==false) && !in_array($ip,$blist) && !in_array($ip,$wlist)) {
 				$skull = plugins_url( 'includes/sk.jpg', dirname(__FILE__) );
 				echo "<a href=\"\" onclick=\"return addblack('$ip');\" title=\"Add to Black List\" alt=\"Add to Black List\" ><img src=\"$skull\" width=\"12px\" /></a>";
@@ -347,11 +434,13 @@ function addwhite(ip) {
       <td><form method="post" action="">
           <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
           <input type="hidden" name="kpg_stop_clear_cache" value="true" />
-          <input value="Clear the Cache" type="submit" />
+    <p class="submit">
+          <input  class="button-primary" value="Clear the Cache" type="submit" />
+	</p>
         </form></td>
     </tr>
   </table>
-  <table align="center" width="60%">
+  <table align="center">
     <tr>
       <?php
 		if (count($badems)>0) {
@@ -383,7 +472,9 @@ function addwhite(ip) {
 		foreach ($badems as $key => $value) {
 			//echo "$key; Date: $value<br/>\r\n";
 			$key=urldecode($key);
-			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a><br/>";
+			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a>
+<a href=\"\" onclick=\"return delblack('$key');\" title=\"Delete from Black List\" alt=\"Delete from Black List\" ><img src=\"$trash\" width=\"12px\" /></a>			
+			<br/>";
 		}
 	?></td>
       <?php
@@ -395,7 +486,9 @@ function addwhite(ip) {
       <td  style="border:1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 		foreach ($badips as $key => $value) {
 			//echo "$key; Date: $value<br/>\r\n";
-			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a><br/>";
+			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a>
+<a href=\"\" onclick=\"return delblack('$key');\" title=\"Delete from Black List\" alt=\"Delete from Black List\" ><img src=\"$trash\" width=\"12px\" /></a>			
+			<br/>";
 		}
 	?></td>
       <?php
@@ -407,7 +500,8 @@ function addwhite(ip) {
       <td  style="border:1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 		foreach ($goodips as $key => $value) {
 			//echo "$key; Date: $value<br/>\r\n";
-			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a><br/>";
+			echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a>
+			<a href=\"\" onclick=\"return delblack('$key');\" title=\"Delete from Black List\" alt=\"Delete from Black List\" ><img src=\"$trash\" width=\"12px\" /></a><br/>";
 		}
 	?></td>
       <?php
@@ -420,8 +514,7 @@ function addwhite(ip) {
 	$options=kpg_sp_get_options();
 	extract($options);
  
- 	$ip=$_SERVER['REMOTE_ADDR'];
-	$ip=check_forwarded_ip($ip);
+ 	$ip=kpg_get_ip();
 
 	if ($addtowhitelist=='Y'&&in_array($ip,$wlist)) {
 		echo "<h3>Your current IP is in your white list. This will keep you from being locked out in the future</h3>";
@@ -449,12 +542,32 @@ function addwhite(ip) {
   <form method="post" action="">
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <input type="hidden" name="kpg_stop_delete_log" value="true" />
-    <input value="Delete Error Log File" type="submit" />
+    <p class="submit">
+    <input  class="button-primary"  value="Delete Error Log File" type="submit" />
+	</p>
   </form>
   <pre>
 <?php readfile($f); ?>
 </pre>
   <?php
 	 }
+// show the history log file
+	
+	$fnonce=wp_create_nonce('kpgstopspam_fileview');
+
+	$clog=kpg_file_exists('history_log.txt');
+	if ($clog!==false) {
+		if ($clog>$logfilesize) {
+			?>
+			<p style="color:red">Your logfile has exceded its size limit (set log file size in options)</p>
+			<?php
+		}
+?>
+	<h3>Log file</h3>
+
+	<a href="<?php echo $sme; ?>&v=<?php echo $fnonce; ?>">View Log file (size=<?php echo $clog; ?> bytes)</a>
+<?php
+	}
+} // end of check for fnonce
 ?>
 </div>
