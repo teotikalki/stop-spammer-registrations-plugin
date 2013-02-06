@@ -4,7 +4,7 @@
 	Options Setup Page
 	stop-spam-reg-options.php
 */
-if (!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) exit; // just in case
 
 	if(!current_user_can('manage_options')) {
 		die('Access Denied');
@@ -33,10 +33,10 @@ if (!defined('ABSPATH')) exit;
 			<br/>
 			This message is from the 'stop-spammer-registrations' plugin<br/>
 			";
-			kpg_append_file('history_log.txt',"$now: IP Check Failed"."\r\n");
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: IP Check Failed"."\r\n");
 		} else {
 			echo "<h2>Your IP address passed all plugin spam checks</h2>";
-			kpg_append_file('history_log.txt',"$now: Ip Check Passes"."\r\n");
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Ip Check Passes"."\r\n");
 		}
 		// update first time
 		$firsttime='N';
@@ -55,180 +55,24 @@ if (!defined('ABSPATH')) exit;
 			} else {
 				$wordpress_api_key='na';
 			}
-						
-			if (array_key_exists('chksession',$_POST)) {
-				$chksession=stripslashes($_POST['chksession']);
-			} else {
-				$chksession='N';
+// check all the yes/no questions - need to take up less room
+			$ynfields=array(
+			'chksession','chkdisp','chksfs','chkubiquity',
+			'chkwplogin','chkakismet','chkakismetcomments','noplugins',
+			'chkcomments','chklogin','chksignup','chklong',
+			'chkagent','chkxmlrpc','addtowhitelist','chkadmin',
+			'chkspamwords','chkjscript','chkwpmail','redherring',
+			'chkdnsbl','chkemail','chkip','chkreferer',
+			'nobuy','redir','accept');
+			foreach ($ynfields as $yn) {
+				$tyn='N';
+				if (array_key_exists($yn,$_POST)) {
+					$tyn=stripslashes($_POST[$yn]);
+				}
+				if ($tyn!='Y') $tyn='N';
+				$options[$yn]=$tyn;
 			}
-			$options['chksession']=$chksession;
-			
-			if (array_key_exists('chkdisp',$_POST)) {
-				$chkdisp=stripslashes($_POST['chkdisp']);
-			} else {
-				$chkdisp='N';
-			}
-			$options['chkdisp']=$chkdisp;
-			
-			if (array_key_exists('chksfs',$_POST)) {
-				$chksfs=stripslashes($_POST['chksfs']);
-			} else {
-				$chksfs='N';
-			}
-			$options['chksfs']=$chksfs;
-			
-			if (array_key_exists('chkubiquity',$_POST)) {
-				$chkubiquity=stripslashes($_POST['chkubiquity']);
-			} else {
-				$chkubiquity='N';
-			}
-			$options['chkubiquity']=$chkubiquity;
-			
-			if (array_key_exists('chkwplogin',$_POST)) {
-				$chkwplogin=stripslashes($_POST['chkwplogin']);
-			} else {
-				$chkwplogin='N';
-			}
-			$options['chkwplogin']=$chkwplogin;
-			
-			if (array_key_exists('chkakismet',$_POST)) {
-				$chkakismet=stripslashes($_POST['chkakismet']);
-			} else {
-				$chkakismet='N';
-			}
-			$options['chkakismet']=$chkakismet;
-			
-
-			if (array_key_exists('chkcomments',$_POST)) {
-				$chkcomments=stripslashes($_POST['chkcomments']);
-			} else {
-				$chkcomments='N';
-			}
-			$options['chkcomments']=$chkcomments;
-			
-			if (array_key_exists('chklogin',$_POST)) {
-				$chklogin=stripslashes($_POST['chklogin']);
-			} else {
-				$chklogin='N';
-			}
-			$options['chklogin']=$chklogin;
-			
-			if (array_key_exists('chksignup',$_POST)) {
-				$chksignup=stripslashes($_POST['chksignup']);
-			} else {
-				$chksignup='N';
-			}
-			$options['chksignup']=$chksignup;
-			
-			if (array_key_exists('chklong',$_POST)) {
-				$chklong=stripslashes($_POST['chklong']);
-			} else {
-				$chklong='N';
-			}
-			$options['chklong']=$chklong;
-			
-			if (array_key_exists('chkagent',$_POST)) {
-				$chkagent=stripslashes($_POST['chkagent']);
-			} else {
-				$chkagent='N';
-			}
-			$options['chkagent']=$chkagent;
-			
-			if (array_key_exists('chkxmlrpc',$_POST)) {
-				$chkxmlrpc=stripslashes($_POST['chkxmlrpc']);
-			} else {
-				$chkxmlrpc='N';
-			}
-			$options['chkxmlrpc']=$chkxmlrpc;
-			
-			
-			if (array_key_exists('addtowhitelist',$_POST)) {
-				$addtowhitelist=stripslashes($_POST['addtowhitelist']);
-			} else {
-				$addtowhitelist='N';
-			}
-			$options['addtowhitelist']=$addtowhitelist;
-			
-			if (array_key_exists('chkadmin',$_POST)) {
-				$chkadmin=stripslashes($_POST['chkadmin']);
-			} else {
-				$chkadmin='N';
-			}
-			$options['chkadmin']=$chkadmin;
-			
-			if (array_key_exists('chkspamwords',$_POST)) {
-				$chkspamwords=stripslashes($_POST['chkspamwords']);
-			} else {
-				$chkspamwords='N';
-			}
-			$options['chkspamwords']=$chkspamwords;
-			
-			if (array_key_exists('chkjscript',$_POST)) {
-				$chkjscript=stripslashes($_POST['chkjscript']);
-			} else {
-				$chkjscript='N';
-			}
-			$options['chkjscript']=$chkjscript;
-					
-			if (array_key_exists('chkwpmail',$_POST)) {
-				$chkwpmail=stripslashes($_POST['chkwpmail']);
-			} else {
-				$chkwpmail='N';
-			}
-			$options['chkwpmail']=$chkwpmail;
-			
-			if (array_key_exists('redherring',$_POST)) {
-				$redherring=stripslashes($_POST['redherring']);
-			} else {
-				$redherring='N';
-			}
-			$options['redherring']=$redherring;
-			
-			if (array_key_exists('chkdnsbl',$_POST)) {
-				$chkdnsbl=stripslashes($_POST['chkdnsbl']);
-			} else {
-				$chkdnsbl='N';
-			}
-			$options['chkdnsbl']=$chkdnsbl;
-			
-			if (array_key_exists('chkemail',$_POST)) {
-				$chkemail=stripslashes($_POST['chkemail']);
-			} else {
-				$chkemail='N';
-			}
-			$options['chkemail']=$chkemail;
-			
-			if (array_key_exists('chkip',$_POST)) {
-				$chkip=stripslashes($_POST['chkip']);
-			} else {
-				$chkip='N';
-			}
-			$options['chkip']=$chkip;
-			
-			if (array_key_exists('chkreferer',$_POST)) {
-				$chkreferer=stripslashes($_POST['chkreferer']);
-			} else {
-				$chkreferer='N';
-			}
-			$options['chkreferer']=$chkreferer;
-			
-			
-			if (array_key_exists('nobuy',$_POST)) {
-				$nobuy=stripslashes($_POST['nobuy']);
-			} else {
-				$nobuy='N';
-			}
-			if ($nobuy!='Y') $nobuy='N';
-			$options['nobuy']=$nobuy;
-			
-			if (array_key_exists('redir',$_POST)) {
-				$redir=stripslashes($_POST['redir']);
-			} else {
-				$redir='N';
-			}
-			if ($redir!='Y') $redir='N';
-			$options['redir']=$redir;
-			
+												
 			if (array_key_exists('sleep',$_POST)) {
 				$sleep=stripslashes($_POST['sleep']);
 			} else {
@@ -245,21 +89,13 @@ if (!defined('ABSPATH')) exit;
 			if (!is_numeric($sesstime)||$sesstime<0||$sesstime>10) $sesstime=4;
 			$options['sesstime']=$sesstime;
 			
-			
-			if (array_key_exists('accept',$_POST)) {
-				$accept=stripslashes($_POST['accept']);
-			} else {
-				$accept='N';
-			}
-			if ($accept!='Y') $accept='N';
-			$options['accept']=$accept;
-			
+					
 			if (array_key_exists('logfilesize',$_POST)) {
 				$logfilesize=trim(stripslashes($_POST['logfilesize']));
 			} else {
-				$logfilesize=50000;
+				$logfilesize=0;
 			}
-			if (!is_numeric($logfilesize)) $logfilesize=50000;
+			if (!is_numeric($logfilesize)) $logfilesize=0;
 			if (empty($logfilesize)||$logfilesize<0) $logfilesize=0;
 			if ($logfilesize>500000) $logfilesize=500000;
 			$options['logfilesize']=$logfilesize;
@@ -384,8 +220,10 @@ if (!defined('ABSPATH')) exit;
 				}
 			}			
 			update_option('kpg_stop_sp_reg_options',$options);
-			kpg_append_file('history_log.txt',"$now: updated options"."\r\n");
+			extract($options); // extract again to get the new options
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: updated options"."\r\n");
 			echo "<h2>Options Updated</h2>";
+
 		} else if (array_key_exists('kpg_stop_check_me',$_POST)) {		
 				// validate the current users's spam
 				//echo "Validating Check Your IP<br/>";
@@ -399,10 +237,10 @@ if (!defined('ABSPATH')) exit;
 					<br/>
 					This message is from the 'stop-spammer-registrations' plugin<br/>
 					";
-					kpg_append_file('history_log.txt',"$now: IP Check Failed"."\r\n");
+					if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: IP Check Failed"."\r\n");
 				} else {
 					echo "<h2>Your IP address passed all plugin spam checks</h2>";
-					kpg_append_file('history_log.txt',"$now: Ip Check Passes"."\r\n");
+					if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Ip Check Passes"."\r\n");
 				}
 		} else if (array_key_exists('kpg_stop_delete_log',$_POST)) {	
 			// delete the log
@@ -410,14 +248,14 @@ if (!defined('ABSPATH')) exit;
 			if (file_exists($f)) {
 			    unlink($f);
 				echo "<h2>Deleted Error Log File</h2>";
-				kpg_append_file('history_log.txt',"$now: Error Log Deleted"."\r\n");
+				if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Error Log Deleted"."\r\n");
 			}
 		}
-		extract($options);
 
 	} else {
 		// echo "no nonce<br/>";
 	}
+
    $nonce=wp_create_nonce('kpgstopspam_update');
 ?>
 <p><a href="http://www.blogseye.com/checkspam/" target="_blank">Check an IP address to see if it passes spam checks.</a></p>
@@ -462,17 +300,7 @@ if (!defined('ABSPATH')) exit;
 	if ($nobuy!='Y') {
 ?>
   <div style="position:relative;float:right;width:35%;background-color:ivory;border:#333333 medium groove;padding:4px;margin-left:4px;">
-    <p>This plugin is free and I expect nothing in return. If you would like to support my programming, you can buy my book of short stories.</p>
-    <p>Some plugin authors ask for a donation. I ask you to spend a very small amount for something that you will enjoy. eBook versions for the Kindle and other book readers start at 99&cent;. The book is much better than you might think, and it has some very good science fiction writers saying some very nice things. <br/>
-      <a target="_blank" href="http://www.blogseye.com/buy-the-book/">Error Message Eyes: A Programmer's Guide to the Digital Soul</a></p>
-    <p>A link on your blog to one of my personal sites would also be appreciated.</p>
-    <p><a target="_blank" href="http://www.WestNyackHoney.com">West Nyack Honey</a> (I keep bees and sell the honey)<br />
-      <a target="_blank" href="http://www.cthreepo.com/blog">Wandering Blog</a> (My personal Blog) <br />
-      <a target="_blank" href="http://www.cthreepo.com">Resources for Science Fiction</a> (Writing Science Fiction) <br />
-      <a target="_blank" href="http://www.jt30.com">The JT30 Page</a> (Amplified Blues Harmonica) <br />
-      <a target="_blank" href="http://www.harpamps.com">Harp Amps</a> (Vacuum Tube Amplifiers for Blues) <br />
-      <a target="_blank" href="http://www.blogseye.com">Blog&apos;s Eye</a> (PHP coding) <br />
-      <a target="_blank" href="http://www.cthreepo.com/bees">Bee Progress Beekeeping Blog</a> (My adventures as a new beekeeper) </p>
+    <p>This plugin is free and I expect nothing in return. If you would like to support my programming effforts, please <a target="_blank" href="http://www.blogseye.com/donate/">donate a small amount</a> to help keep me interested in this project.</p>
   </div>
   <?php
 	}
@@ -524,7 +352,7 @@ if (!defined('ABSPATH')) exit;
 	}
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
-  <p style="font-weight:bold;">Version 4.1</p>
+  <p style="font-weight:bold;">Version 4.2</p>
   <script type="text/javascript" >
 	function kpg_show_hide_how() {
 		id=document.getElementById("kpg_stop_spam_div");
@@ -765,9 +593,14 @@ function sfs_ajax_return_check(response) {
         <td align="left" valign="top">Hosting companies who tolerate spammers are the source of much Comment Spam</td>
       </tr>
       <tr bgcolor="white">
-        <td valign="top">Check IP against the Akismet database:</td>
+        <td valign="top">Check IP against the Akismet db on logins:</td>
         <td align="center" valign="top"><input name="chkakismet" type="checkbox" value="Y" <?php if ($chkakismet=='Y') echo  "checked=\"checked\"";?>/></td>
-        <td align="left" valign="top">If the Akismet API key is set, then you may use Akismet to check logins or registrations, but not comments (optional)</td>
+        <td align="left" valign="top">If the Akismet API key is set, then you may use Akismet to check logins or registrations, logins and signups.</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Check IP against the Akismet db on comments:</td>
+        <td align="center" valign="top"><input name="chkakismetcomments" type="checkbox" value="Y" <?php if ($chkakismetcomments=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">If the Akismet API key is set, then you may use Akismet to check Comments and other actions (except logins) for spammers. Please note that Akismet does a much better job of managing comment spam. This, however, will extend Akismet checks to all form submissions that deal with IDs, emails and passwords. This does not mark comments as spam - it just blocks them completely.</td>
       </tr>
     </table>
     <br/>
@@ -859,6 +692,11 @@ function sfs_ajax_return_check(response) {
         <td valign="top">Check IP on wp_mail:</td>
         <td valign="top"><input name="chkwpmail" type="checkbox" value="Y" <?php if ($chkwpmail=='Y') echo  "checked=\"checked\"";?>/></td>
         <td valign="top">Check IP whenever wordpress sends mail to prevent spammers from sending mail to you or anyone else.</td>
+      </tr>
+      <tr bgcolor="white">
+        <td valign="top">Don't check plugin forms:</td>
+        <td valign="top"><input name="noplugins" type="checkbox" value="Y" <?php if ($noplugins=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td valign="top">This disables the spam check if the Wordpress form appears to be in a plugin folder. This may prevent blocking of spam during some eCommerce type functions.</td>
       </tr>
       <tr bgcolor="white">
         <td valign="top"></td>
@@ -957,7 +795,7 @@ function sfs_ajax_return_check(response) {
       </tbody>
     </table>
     <br/>
-    <p><strong>Remove &quot;Buy The Book&quot;:</strong>
+    <p><strong>Remove Donate message:</strong>
       <input type="checkbox" name ="nobuy" value="Y" <?php if ($nobuy=='Y') echo "checked=\"checked\""; ?> />
       <br/>
       <?php 
@@ -965,7 +803,7 @@ function sfs_ajax_return_check(response) {
 			echo "Thanks";		
 		} else {
 		?>
-      Check if you are tired of seeing the <a target="_blank" href="http://www.blogseye.com/buy-the-book/">Buy Keith's Book</a> links.
+      Check if you are tired of seeing the <a target="_blank" href="http://www.blogseye.com/donate/">donate</a> link.
       <?php 
 		}
 	?>

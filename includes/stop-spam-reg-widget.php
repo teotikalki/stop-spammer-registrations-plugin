@@ -1,4 +1,5 @@
 <?php
+if (!defined('ABSPATH')) exit; // just in case
 
 // this is the sidebar widget that can display the # of spam stopped.
 class Stop_spam_reg_Widget extends WP_Widget {
@@ -51,7 +52,7 @@ class Stop_spam_reg_Widget extends WP_Widget {
 		extract($stats);
 		if ($spmcount>0) { ?>
 		<?php echo $spmcount; ?> spammers stopped.</p>
-		<p style="font-size:.8em"><a target="_blank" href="http://www.blogseye.com/buy-the-book/">Buy the Book</a></p>
+
 		<?php 
 		}
 		echo $after_widget;

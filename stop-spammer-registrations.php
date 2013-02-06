@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.BlogsEye.com/
 Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
-Version: 4.1
+Version: 4.2
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -110,6 +110,8 @@ function kpg_load_all_checks() {
 		$em=$_POST['your-email'];
 	} else if (array_key_exists('your_email',$_POST)) {
 		$em=$_POST['your_email'];
+	} else if (array_key_exists('cntctfrm_contact_email',$_POST)) { // I'm using the contact form from BWS contact form, so might as well support it.
+		$em=$_POST['cntctfrm_contact_email'];
 	}
 	//echo "\r\n<!--\r\n step 3 \r\n-->\r\n";
 	
@@ -135,6 +137,8 @@ function kpg_load_all_checks() {
 		}
 	} else if (array_key_exists('your_username',$_POST)) {
 		$author=$_POST['your_username'];
+	} else if (array_key_exists('cntctfrm_contact_name',$_POST)) {
+		$author=$_POST['cntctfrm_contact_name'];
 	} else if (array_key_exists('signup_username',$_POST)) {
 		$author=$_POST['signup_username'];
 	} else if (array_key_exists('log',$_POST)) {
@@ -199,18 +203,20 @@ function load_sfs_mu() {
 *
 *************************************************************/
 function kpg_sfs_red_herring_comment($query) {
-	remove_action('comment_form_before','kpg_sfs_red_herring_comment');
+	@remove_action('comment_form_before','kpg_sfs_red_herring_comment');
+	@remove_filter('before_signup_form','kpg_sfs_red_herring_signup');	 
+	@remove_filter('login_message','kpg_sfs_red_herring_login');	
     if (is_feed()) return $query;
 	$sname=kpg_sfs_get_SCRIPT_URI();
 	if (empty($sname)) return;
 	if (strpos($sname,'/feed')) return $query;
    $rhnonce=wp_create_nonce('kpgstopspam_redherring');
 ?>
-<div style="position:absolute;width:1px;height:1px;left:-1000px;top:-1000px;overflow:hidden;display:none;">
+<div style="display:none;">
 <br/>
 <br/>
 <br/>
-<form action="<?php echo site_url( '/wp-comments-post.php' ); ?>" method="post" id="commentform1">
+<form action="<?php echo site_url( '/wp-comments-post.php' ); ?>" method="post" id="commentform1" style="display:none;">
 <p><input name="author" id="author" value="" size="22"  aria-required="true" type="text">
 <label for="author"><small>Name (required)</small></label></p>
 
@@ -238,21 +244,20 @@ function kpg_sfs_red_herring_comment($query) {
 *
 *************************************************************/
 function kpg_sfs_red_herring_signup() {
-	remove_filter('before_signup_form','kpg_sfs_red_herring_signup');	 
+	@remove_action('comment_form_before','kpg_sfs_red_herring_comment');
+	@remove_filter('before_signup_form','kpg_sfs_red_herring_signup');	 
+	@remove_filter('login_message','kpg_sfs_red_herring_login');	
 	$rhnonce=wp_create_nonce('kpgstopspam_redherring');
 	// put a bugus signup form with the akismet nonce - maybe doesn't work but it might
-	$errors = new WP_Error();
 ?>
-<div style="position:absolute;width:1px;height:1px;left:-1000px;top:-1000px;overflow:hidden;">
+<div style="display:none;">
 <br/>
 <br/>
 <br/>
-<form id="setupform1" method="post" action="wp-signup.php">
+<form id="setupform1" method="post" action="wp-signup.php" style="display:none;">
 
 		<input type="hidden" name="stage" value="validate-user-signup" />
-		<?php do_action( 'signup_hidden_fields' ); ?>
-<p style="display: none;"><input id="akismet_comment_nonce" name="akismet_comment_nonce" value="<?php echo $rhnonce;?>" type="hidden"></p>		
-		<?php show_user_form('', '', $errors); ?>
+<p style="display:none;"><input id="akismet_comment_nonce" name="akismet_comment_nonce" value="<?php echo $rhnonce;?>" type="hidden"></p>		
 		<p>
 					<input id="signupblog" type="radio" name="signup_for" value="blog"  checked='checked' />
 			<label class="checkbox" for="signupblog">Gimme a site!</label>
@@ -296,16 +301,18 @@ function kpg_sfs_javascript() {
 *
 *************************************************************/
 function kpg_sfs_red_herring_login($message) {
-	remove_filter('login_message','kpg_sfs_red_herring_login');	
+	@remove_action('comment_form_before','kpg_sfs_red_herring_comment');
+	@remove_filter('before_signup_form','kpg_sfs_red_herring_signup');	 
+	@remove_filter('login_message','kpg_sfs_red_herring_login');	
    $rhnonce=wp_create_nonce('kpgstopspam_redherring');
 ?>
-<div style="position:absolute;width:1px;height:1px;left:-1000px;top:-1000px;overflow:hidden;">
+<div style="display:none;">
 <br/>
 <br/>
 <br/>
 
 
-<form name="loginform1" id="loginform1" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>?redir=<?php echo $rhnonce; ?>" method="post">
+<form name="loginform1" id="loginform1" action="<?php echo esc_url( site_url( 'wp-login.php', 'login_post' ) ); ?>" method="post" style="display:none;">
 	<p>
 		<label for="user_login">User Name<br />
 		<input type="text" name="log"  value="" size="20"  /></label>
@@ -314,7 +321,6 @@ function kpg_sfs_red_herring_login($message) {
 		<label for="user_pass">Password<br />
 		<input type="password" name="pwd"  value="" size="20"  /></label>
 	</p>
-<?php do_action('login_form'); ?>
 	<p class="forgetmenot"><label for="rememberme"><input name="rememberme" type="checkbox" checked="checked"  value="<?php echo $rhnonce; ?>"  />Remember Me</label></p>
 	<p class="submit">
 		<input type="submit" name="wp-submit"  value="Log In"  />
@@ -389,6 +395,7 @@ function kpg_sfs_check_404s() {
 }
 function kpg_sfs_check_404() {
 	// fix request_uri on IIS
+	remove_action('template_redirect', 'kpg_sfs_check_404s');
 	if (!isset($_SERVER['REQUEST_URI'])) {
 		$_SERVER['REQUEST_URI'] = substr($_SERVER['PHP_SELF'],1 );
 		if (isset($_SERVER['QUERY_STRING'])) { 
@@ -401,7 +408,6 @@ function kpg_sfs_check_404() {
 		$_SERVER['SCRIPT_URI']=$sname;
 	}
 	if (!is_404()) return;
-	remove_action('template_redirect', 'kpg_sfs_check_404s');
 	$plink = $_SERVER['REQUEST_URI']; 
 	if (strpos($plink,'?')!==false)  $plink=substr($plink,0,strpos($plink,'?'));
 	if (strpos($plink,'#')!==false)  $plink=substr($plink,0,strpos($plink,'#'));
@@ -413,9 +419,8 @@ function kpg_sfs_check_404() {
 			return;
 	}
 
-	
+	$options=kpg_sp_get_options();	
 	// check to see if we should even be here
-	$options=kpg_sp_get_options();
 	if (!array_key_exists('chkwplogin',$options) || $options['chkwplogin']!='Y') return;	
 	
 	$ip=kpg_get_ip();
@@ -539,6 +544,19 @@ function kpg_sfs_reg_check($actions,$comment) {
 	$actions['check_spam']=$action;
 	return $actions;
 }
+
+function kpg_sfs_reg_nofollow($actions,$comment) {
+	// remove the rel="nofollow" from a comment
+	// $comment has the comment we need to call ajax to alter the comment
+	$action="<a $exst title=\"remove re=\"nofollow\"\" $target $href $onclick class='delete:the-comment-list:comment-$ID::delete=1 delete vim-d vim-destructive'>remove rel=nofollow from comment</a>";
+	$actions['remove_rnofolow']=$action;
+	
+	
+	
+	return $actions;
+
+}
+
 function kpg_sfs_reg_report($actions,$comment) {
 	// need to add a new action to the list
 	$email=urlencode($comment->comment_author_email);
@@ -606,6 +624,7 @@ function kpg_sfs_reg_net_admin_menus() {
 	add_filter('plugin_action_links', 'kpg_sp_plugin_action_links', 10, 2 );
 	add_filter('comment_row_actions','kpg_sfs_reg_check',1,2);	
 	add_filter('comment_row_actions','kpg_sfs_reg_report',1,2);	
+	//add_filter('comment_row_actions','kpg_sfs_reg_nofollow',1,2);	
 }
 function kpg_sfs_reg_admin_menus() {
 	$options=kpg_sp_get_options();
@@ -627,6 +646,7 @@ function kpg_sfs_reg_admin_menus() {
 	add_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links', 10, 2 );
 	add_filter('comment_row_actions','kpg_sfs_reg_check',1,2);	
 	add_filter('comment_row_actions','kpg_sfs_reg_report',1,2);	
+	//add_filter('comment_row_actions','kpg_sfs_reg_nofollow',1,2);	
 }
 
 function kpg_sfs_reg_add_user_to_whitelist($options) {
@@ -713,7 +733,6 @@ function kpg_sp_rightnow() {
 		// steal the akismet stats css format 
 		// get the path to the plugin
 		echo "<p><a style=\"font-style:italic;\" href=\"$me\">Stop Spammer Registrations</a> has prevented $spmcount spammers from registering or leaving comments.";
-		if ($nobuy=='N' && $spmcount>10000) echo "  <a style=\"font-style:italic;\" href=\"http://www.blogseye.com/buy-the-book/\">Buy Keith Graham&apos;s Science Fiction Book</a>";
 		echo"</p>";
 	} else {
 		echo "<p><a style=\"font-style:italic\" href=\"$me\">Stop Spammer Registrations</a> has not stopped any spammers, yet.";
@@ -901,7 +920,9 @@ function kpg_sp_get_options() {
 		'redherring'=>'Y',
 		'chkdnsbl'=>'Y',
 		'chkubiquity'=>'Y',
+		'noplugins'=>'N',
 		'chkakismet'=>'Y',
+		'chkakismetcomments'=>'N',
 		'chkcomments'=>'Y',
 		'chkspamwords'=>'N',
 		'chklogin'=>'Y',
@@ -914,7 +935,6 @@ function kpg_sp_get_options() {
 		'chkwpmail'=>'Y',
 		'chkwplogin'=>'N',
 		'chkadmin'=>'Y',
-		'chk404'=>'Y',
 		'addtowhitelist'=>'Y',
 		'muswitch'=>'N',
 		'sfsfreq'=>0,
@@ -930,7 +950,7 @@ function kpg_sp_get_options() {
 		'redirurl'=>'', 
 		'redir'=>'N',
 		'sleep'=>10,
-		'logfilesize'=>50000,
+		'logfilesize'=>0,
 		'autoload'=>'N',
 		'firsttime'=>'Y',
 		'rejectmessage'=>"Access Denied<br/>
@@ -938,6 +958,19 @@ This site is protected by the Stop Spammer Registrations Plugin.<br/>",
 		'spamwords'=>array("-online","4u","4-u","adipex","advicer","baccarrat","blackjack","bllogspot","booker","byob","car-rental-e-site","car-rentals-e-site","carisoprodol","casino","chatroom","cialis","coolhu","credit-card-debt","credit-report","cwas","cyclen","cyclobenzaprine","dating-e-site","day-trading","debt-consolidation","debt-consolidation","discreetordering","duty-free","dutyfree","equityloans","fioricet","flowers-leading-site","freenet-shopping","freenet","gambling-","hair-loss","health-insurancedeals","homeequityloans","homefinance","holdem","hotel-dealse-site","hotele-site","hotelse-site","incest","insurance-quotes","insurancedeals","jrcreations","levitra","macinstruct","mortgagequotes","online-gambling","onlinegambling","ottawavalleyag","ownsthis","paxil","penis","pharmacy","phentermine","poker-chip","poze","pussy","rental-car-e-site","ringtones","roulette ","shemale","slot-machine","thorcarlson","top-site","top-e-site","tramadol","trim-spa","ultram","valeofglamorganconservatives","viagra","vioxx","xanax","zolus","ambien","poker","bingo","allstate","insurnce","work-at-home","workathome","home-based","homebased","weight-loss","weightloss","additional-income","extra-income","email-marketing","sibutramine","seo-","fast-cash")
 		);
 	$ansa=array_merge($options,$opts);
+	// check the yn questions
+	
+	$ynfields=array(
+	'chksession','chkdisp','chksfs','chkubiquity',
+	'chkwplogin','chkakismet','chkakismetcomments','noplugins',
+	'chkcomments','chklogin','chksignup','chklong',
+	'chkagent','chkxmlrpc','addtowhitelist','chkadmin',
+	'chkspamwords','chkjscript','chkwpmail','redherring',
+	'chkdnsbl','chkemail','chkip','chkreferer',
+	'nobuy','redir','accept','muswitch');
+	foreach ($ynfields as $yn) {
+		if ($ansa[$yn]!='Y') $ansa[$yn]='N';
+	}
 	if (!is_array($ansa['wlist'])) $ansa['wlist']=array();
 	if (!is_array($ansa['blist'])) $ansa['blist']=array();
 	if (!is_array($ansa['baddomains'])) $ansa['baddomains']=array();
@@ -945,28 +978,12 @@ This site is protected by the Stop Spammer Registrations Plugin.<br/>",
 	if (empty($ansa['apikey'])) $ansa['apikey']='';
 	if (empty($ansa['honeyapi'])) $ansa['honeyapi']='';
 	if (empty($ansa['botscoutapi'])) $ansa['botscoutapi']='';
-	if ($ansa['accept']!='Y') $ansa['accept']='N';
-	if ($ansa['nobuy']!='Y') $ansa['nobuy']='N';
-	if ($ansa['chkemail']!='Y') $ansa['chkemail']='N';
-	if ($ansa['chkip']!='Y') $ansa['chkip']='N';
-	if ($ansa['chkdisp']!='Y') $ansa['chkdisp']='N';
-	if ($ansa['chksfs']!='Y') $ansa['chksfs']='N';
-	if ($ansa['chkdnsbl']!='Y') $ansa['chkdnsbl']='N';
-	if ($ansa['chkubiquity']!='Y') $ansa['chkubiquity']='N';
-	if ($ansa['chkakismet']!='Y') $ansa['chkakismet']='N';
-	if ($ansa['chkcomments']!='Y') $ansa['chkcomments']='N';
-	if ($ansa['chklogin']!='Y') $ansa['chklogin']='N';
-	if ($ansa['chkadmin']!='Y') $ansa['chklogin']='N';
-	if ($ansa['chksignup']!='Y') $ansa['chksignup']='N';
-	if ($ansa['chkxmlrpc']!='Y') $ansa['chkxmlrpc']='N';
-	if ($ansa['chkwplogin']!='Y') $ansa['chkwplogin']='N';
-	if ($ansa['muswitch']!='Y') $ansa['muswitch']='N';
 	if (empty($ansa['kpg_sp_cache'])) $ansa['kpg_sp_cache']=25;
 	if (empty($ansa['kpg_sp_cache_em'])) $ansa['kpg_sp_cache_em']=10;
 	if (empty($ansa['kpg_sp_hist'])) $ansa['kpg_sp_hist']=25;
 	if (empty($ansa['kpg_sp_good'])) $ansa['kpg_sp_good']=2;
     if (!is_numeric($ansa['kpg_sp_good'])) $ansa['kpg_sp_good']=2;
-    if (!is_numeric(trim($ansa['logfilesize']))) $ansa['logfilesize']=50000;
+    if (!is_numeric(trim($ansa['logfilesize']))) $ansa['logfilesize']=0;
 	if (!is_array($ansa['spamwords'])) $ansa['spamwords']=array();
     if (!is_numeric($ansa['sesstime'])) $ansa['sesstime']=4;
 	if ($ansa['autoload']=='N') {
@@ -1181,9 +1198,11 @@ function sfs_ErrorHandler($errno, $errmsg, $filename, $linenum, $vars) {
 	---------------------
 	";
 	// write out the error
-	$f=fopen(dirname(__FILE__)."/sfs_debug_output.txt",'a');
-	fwrite($f,$msg);
-	fclose($f);
+	$f='';
+	$f=@fopen(dirname(__FILE__)."/.sfs_debug_output.txt",'a');
+	if(empty($f)) return false;
+	@fwrite($f,$msg);
+	@fclose($f);
 	return false;
 }
 // in bbpress the verify nonce function is not available for use in the red herring form.
@@ -1222,33 +1241,30 @@ function kpg_sfs_reg_stats_control() {
 }
 function kpg_append_file($filename,$content) {
 	// this writes content to a file in the uploads director in the 'stop-spammer-registrations' directory
-	$path=WP_CONTENT_DIR.'/stop-spammer-registrations';
-	if (!file_exists($path)) {
-		mkdir($path);
-		if (!file_exists($path)) return false;
-	}
-	$file=$path.'/'.$filename;
-	$f=fopen($file,'a');
+	// changed to write to the current directory - content_dir is a bad place
+	$file=dirname(__FILE__).'/'.$filename;
+	$f=@fopen($file,'a');
+	if (!$f) return false;
 	fwrite($f,$content);
 	fclose($f);
+	@chmod($file,0640); // read/write for owner and owners groups.
 	return true;
 }
 function kpg_read_file($filename) {
 	// read file
-	$file=WP_CONTENT_DIR.'/stop-spammer-registrations/'.$filename;
+	$file=dirname(__FILE__).'/'.$filename;
 	if (file_exists($file)) {
 		return file_get_contents($file);
 	}
 	return "File not found";
 }
 function kpg_file_exists($filename) {
-	$file=WP_CONTENT_DIR.'/stop-spammer-registrations/'.$filename;
+	$file=dirname(__FILE__).'/'.$filename;
 	if (!file_exists($file)) return false;
 	return filesize($file);
 }
 function kpg_file_delete($filename) {
-	$file=WP_CONTENT_DIR.'/stop-spammer-registrations/'.$filename;
-	
-	return unlink($file);
+	$file=dirname(__FILE__).'/'.$filename;
+	return @unlink($file);
 }
 ?>

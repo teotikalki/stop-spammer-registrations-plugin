@@ -4,7 +4,7 @@
 	Checks core.
 	This stuff is no loaded unless there is a $_POST and one of the trigger fields is detected.
 */
-if (!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) exit; // just in case
 
 /************************************************************
 * 	kpg_sfs_check()
@@ -24,12 +24,22 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	}
 	$em=$email;
 
+	// even though there may be problems with the wp-cron code - don't check it
+	// some crons jobs use email or user id to update something.
+	// it may be a hacker, but cron always fails the speed test.
+	if(strpos($sname,'wp-cron.php')!==false) return;
 
 	$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
 	$options=kpg_sp_get_options();
 	extract($options);
 	$stats=kpg_sp_get_stats();
 	extract($stats);
+	
+	// it may be that the server is trying to check its own ip 
+	// not sure how this happens, but at least one user reported it.
+	if ($ip==$_SERVER['SERVER_ADDR']) {
+		$chkip='N'; // don't check yourself. - just check the non ip stuff.
+	}
     // if the check for admin
 	if ($chkadmin=='Y'&&strpos($sname,'wp-login.php')!==false&&function_exists('wp_authenticate')) {
 		if (array_key_exists('log',$_POST)&&array_key_exists('pwd',$_POST)) {
@@ -43,9 +53,10 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 				//echo "<!--\r\n\r\n";
 				//	print_r($user);
 				//echo "\r\n\r\n-->";
-				if ($caps['administrator']) {
+				
+				if (!empty($caps) && array_key_exists('administrator',$caps)) {
 					//echo "<!--\r\n\r\n user is admin \r\n\r\n-->";
-					kpg_append_file('history_log.txt',"$now:$ip,$em,$author,$sname,Admin Login\r\n");
+					if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now:$ip,$em,$author,$sname,Admin Login\r\n");
 					return; // the user is good - let them in
 				}
 			}
@@ -53,7 +64,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	}
 
 	if ($email!=$sfs_check_activation) {
-// from a user who wanted to exclure some of the checking.	
+// from a user who wanted to exclude some of the checking.	
 		if ($chkcomments!='Y') {
 			if (strpos($sname,'wp-comments-post.php')!==false) return $email;
 		}
@@ -137,7 +148,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			$cntwhite++;
 			$stats['cntwhite']=$cntwhite;
 			update_option('kpg_stop_sp_reg_stats',$stats);
-			kpg_append_file('history_log.txt',"$now:$ip,$em,$author,$sname,White List PayPal\r\n");
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now:$ip,$em,$author,$sname,White List PayPal\r\n");
 			return $email;
 		}
 		if (!$deny&& $chkip=='Y'&&(kpg_sp_searchi_ip($ip,$wlist))) {
@@ -146,7 +157,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			$cntwhite++;
 			$stats['cntwhite']=$cntwhite;
 			update_option('kpg_stop_sp_reg_stats',$stats);
-			kpg_append_file('history_log.txt',"$now:$ip,$em,$author,$sname,White List IP\r\n");
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now:$ip,$em,$author,$sname,White List IP\r\n");
 			return $email;
 		}
 		if (!$deny&&!empty($em)&&kpg_sp_searchi($em,$wlist)) {
@@ -155,7 +166,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			$cntwhite++;
 			$stats['cntwhite']=$cntwhite;
 			update_option('kpg_stop_sp_reg_stats',$stats);
-			kpg_append_file('history_log.txt',"$now:$ip,$em,$author,$sname,White List EMAIL\r\n");
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now:$ip,$em,$author,$sname,White List EMAIL\r\n");
 			return $email;
 		}
 	// check to see if the ip is in the goodips cache
@@ -166,12 +177,24 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			$cntgood++;
 			$stats['cntgood']=$cntgood;
 			update_option('kpg_stop_sp_reg_stats',$stats);
-			kpg_append_file('history_log.txt',"$now:$ip,$em,$author,$sname,Cached good ip\r\n");
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now:$ip,$em,$author,$sname,Cached good ip\r\n");
 			return $email;
 		}
 	}
 	// not white listed, now try the simple rejects that don't require remote access.
+	// check plugins if the noplugins is no - no checks if the url has the /plugin/ string
+	if (!$deny&&$chkip!='Y'&&$noplugins=='Y'&&strpos($sname,'/plugins/')!==false) { 
+		$hist[$now][4]='Not checking plugin forms';
+		$stats['hist']=$hist;
+		$cntgood++;
+		$stats['cntgood']=$cntgood;
+		update_option('kpg_stop_sp_reg_stats',$stats);
+		if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now:$ip,$em,$author,$sname,Not checking plugin forms\r\n");
+		return $email;
+	}
 
+	
+	
 	// begin by checking the caches for bad ips. Do this before the regular checks
 	// this way only the first appearance of a bad actor is recorded by type
 
@@ -419,8 +442,20 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		$deny=true;
 		$cntaccept++;
 	}
+	
+	
+	
 	// try akismet
 	if (!$deny&& $chkip=='Y'&&$chkakismet=='Y'&&(strpos($sname,'login.php')!==false||strpos($sname,'register.php')!==false||strpos($sname,'signup.php')!==false)) { 
+		$ansa=kpg_akismet_check($ip);
+		if ($ansa!==false) {
+				$deny=true;
+				$whodunnit.='Akismet';
+				$cntakismet++;
+		}
+	}
+
+	if (!$deny&& $chkip=='Y'&&$chkakismetcomments=='Y'&&(strpos($sname,'login.php')===false&&strpos($sname,'register.php')===false&&strpos($sname,'signup.php')===false)) { 
 		$ansa=kpg_akismet_check($ip);
 		if ($ansa!==false) {
 				$deny=true;
@@ -521,7 +556,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		$stats['hist']=$hist;
 		$stats['cntpassed']=$cntpassed+1;
 		$stats['goodips']=$goodips; // uncomment to cache good ips.
-		kpg_append_file('history_log.txt',"$now:$ip,$em,$author,$sname,Passed all\r\n");
+		if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now:$ip,$em,$author,$sname,Passed all\r\n");
 		update_option('kpg_stop_sp_reg_stats',$stats);
 		// comment out log in production
 		//kpg_stop_spam_log();
@@ -598,11 +633,11 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	//
 	update_option('kpg_stop_sp_reg_stats',$stats);
 	// write out the log file
-	$clogfile=kpg_file_exists('history_log.txt');
+	$clogfile=kpg_file_exists('.history_log.txt');
 	if ($clogfile===false) $clogfile=0;
 	if ($logfilesize>0&&$clogfile<=$logfilesize) {
 		// ok to write the log file.
-		kpg_append_file('history_log.txt',"$now: $ip,$em,$author,$sname,$whodunnit\r\n");
+		if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: $ip,$em,$author,$sname,$whodunnit\r\n");
 	}
 	if ($redir=='Y'&&!empty($redirurl)) {
 		sleep($sleep); // sleep for a few seconds to annoy spammers and maybe delay next hit on stopforumspam.com

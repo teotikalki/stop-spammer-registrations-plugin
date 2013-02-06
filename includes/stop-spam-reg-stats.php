@@ -3,7 +3,7 @@
 	Stop Spammer Registrations Plugin 
 	History and Stats Page
 */
-if (!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) exit; // just in case
 
 	if(!current_user_can('manage_options')) {
 		die('Access Denied');
@@ -28,7 +28,8 @@ if (!defined('ABSPATH')) exit;
 			$stats['goodips']=$goodips;
 			update_option('kpg_stop_sp_reg_stats',$stats);
 			echo "<h2>Cache Cleared</h2>";
-			kpg_append_file('history_log.txt',"$now: Cache Cleared"."\r\n");
+			
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Cache Cleared"."\r\n");
 		}
 		if (array_key_exists('kpg_stop_clear_hist',$_POST)) {
 			// clear the cache
@@ -38,7 +39,7 @@ if (!defined('ABSPATH')) exit;
 			$stats['spcount']=$spcount;
 			update_option('kpg_stop_sp_reg_stats',$stats);
 			echo "<h2>History Cleared</h2>";
-			kpg_append_file('history_log.txt',"$now: History Cleared"."\r\n");
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: History Cleared"."\r\n");
 		}	
 		if (array_key_exists('kpg_stop_clear_reason',$_POST)) {
 			$stats['cntjscript']=0;
@@ -74,7 +75,7 @@ if (!defined('ABSPATH')) exit;
 			update_option('kpg_stop_sp_reg_stats',$stats);
 			extract($stats);
 			echo "<h2>History Cleared</h2>";
-			kpg_append_file('history_log.txt',"$now: Reasons Cleared"."\r\n");
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Reasons Cleared"."\r\n");
 		}
 		if (array_key_exists('kpg_stop_add_black_list',$_POST)) {
 			$bbbb=$_POST['kpg_stop_add_black_list'];
@@ -83,7 +84,7 @@ if (!defined('ABSPATH')) exit;
 				$options['blist']=$blist;
 				update_option('kpg_stop_sp_reg_options',$options);
 				echo "<h2>$bbbb Added to Black List</h2>";
-				kpg_append_file('history_log.txt',"$now: $bbbb Added to Black List"."\r\n");
+				if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: $bbbb Added to Black List"."\r\n");
 			}
 		}
 		if (array_key_exists('kpg_stop_del_black_list',$_POST)) {
@@ -93,19 +94,19 @@ if (!defined('ABSPATH')) exit;
 				$stats['badips']=$badips;
 				update_option('kpg_stop_sp_reg_stats',$stats);
 				echo "<h2>$bbbb Removed from cache</h2>";
-				kpg_append_file('history_log.txt',"$now: $bbbb Removed from cache"."\r\n");
+				if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: $bbbb Removed from cache"."\r\n");
 			} else if (array_key_exists($bbbb,$badems)) {
 				unset($badems[$bbbb]);
 				$stats['badems']=$badems;
 				update_option('kpg_stop_sp_reg_stats',$stats);
 				echo "<h2>$bbbb Removed from cache</h2>";
-				kpg_append_file('history_log.txt',"$now: $bbbb Removed from cache"."\r\n");
+				if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: $bbbb Removed from cache"."\r\n");
 			} else if (array_key_exists($bbbb,$goodips)) {
 				unset($goodips[$bbbb]);
 				$stats['goodips']=$goodips;
 				update_option('kpg_stop_sp_reg_stats',$stats);
 				echo "<h2>$bbbb Removed from cache</h2>";
-				kpg_append_file('history_log.txt',"$now: $bbbb Removed from cache"."\r\n");
+				if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: $bbbb Removed from cache"."\r\n");
 			}
 			
 		}
@@ -116,7 +117,7 @@ if (!defined('ABSPATH')) exit;
 				$options['wlist']=$wlist;
 				update_option('kpg_stop_sp_reg_options',$options);
 				echo "<h2>$bb Added to White List</h2>";
-				kpg_append_file('history_log.txt',"$now: $bb Added to White List.\r\n");
+				if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: $bb Added to White List.\r\n");
 			}
 		}
 		if (array_key_exists('kpg_stop_delete_log',$_POST)) {
@@ -125,14 +126,14 @@ if (!defined('ABSPATH')) exit;
 			if (file_exists($f)) {
 			    unlink($f);
 				echo "<h2>Deleted Error Log File</h2>";
-				kpg_append_file('history_log.txt',"$now: Deleted Error Log File.\r\n");
+				if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Deleted Error Log File.\r\n");
 			}
 		}
 		if (array_key_exists('kpg_stop_history_log',$_POST)) {
 			// clear the cache
-				kpg_file_delete('history_log.txt');
+				kpg_file_delete('.history_log.txt');
 				echo "<h2>Deleted Error Log File</h2>";
-				kpg_append_file('history_log.txt',"$now: Deleted History Log File.\r\n");
+				if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Deleted History Log File.\r\n");
 		}
 }
 $me=admin_url('options-general.php?page=stopspammersoptions');
@@ -140,14 +141,14 @@ $sme=admin_url('options-general.php?page=stopspammerstats');
 if (function_exists('is_multisite') && is_multisite() && $muswitch=='Y') {
 	switch_to_blog(1);
 	$me=get_admin_url( 1,'network/settings.php?page=adminstopspammersoptions');
-	$sme=get_admin_url( 1,'network/settings.php?page=stopspammerstats');
+	$sme=get_admin_url( 1,'network/settings.php?page=adminstopspammerstats');
 	restore_current_blog();
 }
 	$nonce=wp_create_nonce('kpgstopspam_update');
 
 ?>
 <div class="wrap">
-	<h2>Stop Spammers Plugin Stats Version 4.1</h2>
+	<h2>Stop Spammers Plugin Stats Version 4.2</h2>
 	<p><a href="<?php echo $sme; ?>">View History</a> - <a href="<?php echo $me; ?>">View Options</a> </p>
 	<hr/>
 
@@ -166,7 +167,7 @@ if (function_exists('is_multisite') && is_multisite() && $muswitch=='Y') {
 	</form>
 
 		<pre>		
-		<?php echo "\r\n".kpg_read_file('history_log.txt'); ?>
+		<?php echo "\r\n".kpg_read_file('.history_log.txt'); ?>
 		
 		</pre>
 <?php	
@@ -205,28 +206,10 @@ function addwhite(ip) {
 	return false;
 }
 </script>
-  <?php 
-
-	$nag='';
+<?php
 	if ($spmcount>0) {
-		if ($spmcount>20000) {
-			$nag="<br/> This plugin is really working hard for you. Don't you think that it's time to <a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">buy the book</a>?</p>";
-		}
-		if ($spmcount>40000) {
-			$nag="<p> WOW! This plugin is great. It's time to <a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">buy the book</a> (99&cent; cheap)</p>";
-		}
-		if ($spmcount>60000) {
-			$nag="<p> AMAZING! Look at all the spammers stopped. Please <a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">buy the book</a> (99&cent; cheap)</p>";
-		}
-		if ($spmcount>100000) {
-			$nag="<p> You know, if you already bought the book, I have written others that you can buy. Please <a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">buy a book</a>.</p>";
-		}
-		if ($spmcount>150000) {
-			$nag="<p><a target=\"_blank\" href=\"http://www.blogseye.com/buy-the-book/\">Oh well...</a></p>";
-		}
 ?>
-  <h3>Stop Spammers has stopped <?php echo $spmcount; ?> spammers since <?php echo $spmdate; ?>.</h3>
-  <?php echo $nag; ?>
+<h3>Stop Spammers has stopped <?php echo $spmcount; ?> spammers since <?php echo $spmdate; ?>.</h3>
   <?php 
 }
 	if ($spcount>0) {
@@ -290,7 +273,7 @@ function addwhite(ip) {
       <td><?php echo $cntdnsbl; ?></td>
       <td>Ubiquity Servers</td>
       <td><?php echo $cntubiquity; ?></td>
-      <td>Akismet (login)</td>
+      <td>Akismet</td>
       <td><?php echo $cntakismet; ?></td>
        <td>Spam Words</td>
       <td><?php echo $cntspamwords; ?></td>
@@ -440,7 +423,7 @@ function addwhite(ip) {
         </form></td>
     </tr>
   </table>
-  <table align="center">
+  <table>
     <tr>
       <?php
 		if (count($badems)>0) {
@@ -555,7 +538,7 @@ function addwhite(ip) {
 	
 	$fnonce=wp_create_nonce('kpgstopspam_fileview');
 
-	$clog=kpg_file_exists('history_log.txt');
+	$clog=kpg_file_exists('.history_log.txt');
 	if ($clog!==false) {
 		if ($clog>$logfilesize) {
 			?>

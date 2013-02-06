@@ -7,6 +7,7 @@ Provides mu support to the stop spammer registrations plugin
 This hooks the options functions of wp in order to update one option from blog #1`
 
 */
+if (!defined('ABSPATH')) exit; // just in case
 
 // now we need to get a ask the user for a list of options that he wants to get
 	// call the setup from the plugin proper
