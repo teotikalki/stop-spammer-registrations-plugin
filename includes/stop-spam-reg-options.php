@@ -1,6 +1,6 @@
 <?php
 /*
-	Stop Spammer Registrations Plugin 
+	Stop Spammers Plugin 
 	Options Setup Page
 	stop-spam-reg-options.php
 */
@@ -60,10 +60,10 @@ if (!defined('ABSPATH')) exit; // just in case
 			'chksession','chkdisp','chksfs','chkubiquity',
 			'chkwplogin','chkakismet','chkakismetcomments','noplugins',
 			'chkcomments','chklogin','chksignup','chklong',
-			'chkagent','chkxmlrpc','addtowhitelist','chkadmin',
+			'chkagent','chkxmlrpc','addtowhitelist','chkadmin','chkadminlog',
 			'chkspamwords','chkjscript','chkwpmail','redherring',
 			'chkdnsbl','chkemail','chkip','chkreferer',
-			'nobuy','redir','accept');
+			'nobuy','redir','accept','notify');
 			foreach ($ynfields as $yn) {
 				$tyn='N';
 				if (array_key_exists($yn,$_POST)) {
@@ -82,7 +82,7 @@ if (!defined('ABSPATH')) exit; // just in case
 			$options['sleep']=$sleep;
 			
 			if (array_key_exists('sesstime',$_POST)) {
-				$sleep=stripslashes($_POST['sesstime']);
+				$sesstime=stripslashes($_POST['sesstime']);
 			} else {
 				$sesstime=4;
 			}
@@ -258,8 +258,8 @@ if (!defined('ABSPATH')) exit; // just in case
 
    $nonce=wp_create_nonce('kpgstopspam_update');
 ?>
-<p><a href="http://www.blogseye.com/checkspam/" target="_blank">Check an IP address to see if it passes spam checks.</a></p>
-<p><a href="http://www.blogseye.com/beta-test-plugins/" target="_blank">Get Beta Test version of this plugin.</a></p>
+  <p><a href="http://www.blogseye.com/checkspam/" target="_blank">Check an IP address to see if it passes spam checks.</a></p>
+  <p><a href="http://www.blogseye.com/beta-test-plugins/" target="_blank">Get Beta Test version of this plugin.</a></p>
   <?PHP	
 	if ($addtowhitelist=='Y'&&in_array($ip,$wlist)) {
 ?>
@@ -271,7 +271,8 @@ if (!defined('ABSPATH')) exit; // just in case
 	$current_user_name=$current_user->user_login;
 	if ($current_user_name=='admin') {
 ?>
-  <strong style="color:red;">Your current ID is 'admin'. This is very dangerous. You should rename the admin id to something else.<br/>There is a very simple admin renamer plugin at a <a href="http://wordpress.org/extend/plugins/admin-username-changer/">Admin username changer</a> (do not use in MU)</strong>
+  <strong style="color:red;">Your current ID is 'admin'. This is very dangerous. You should rename the admin id to something else.<br/>
+  There is a very simple admin renamer plugin at a <a href="http://wordpress.org/extend/plugins/admin-username-changer/">Admin username changer</a> (do not use in MU)</strong>
   <?php
 	} else {
 		echo "<p>You are currently logged in as '$current_user_name'</p>";
@@ -352,7 +353,7 @@ if (!defined('ABSPATH')) exit; // just in case
 	}
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
-  <p style="font-weight:bold;">Version 4.2</p>
+  <p style="font-weight:bold;">Version 4.3</p>
   <script type="text/javascript" >
 	function kpg_show_hide_how() {
 		id=document.getElementById("kpg_stop_spam_div");
@@ -369,7 +370,7 @@ if (!defined('ABSPATH')) exit; // just in case
     <p>Eliminates 99% of spam registrations and  comments. Checks all attempts to leave spam against <a href="http://www.stopforumspam.com/">Stop Forum Spam</a>, <a href="http://www.projecthoneypot.org/">Project Honeypot</a>, and <a href="http://www.botscout.com/">BotScout</a>, DNSBL lists such as Spamhaus.org, known spammer hosts such  as Ubiquity Servers, disposable email addresses, very long email address and  names, and HTTP_ACCEPT header. Checks for robots that hit your site too fast,  and puts a fake comment and login screen where only spammers will find them. In  all the plugin uses 15 different strategies to block spammers. </p>
     <p style="font-weight:bold;">How the plugin works: </p>
     <p>This plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments. 
-      The Stop Spammer Registrations plugin works by checking the IP address, email and user id of anyone who tries to register, login, or leave a comment. This effectively blocks spammers who try to register on blogs or leave spam. It checks a users credentials against up to three databases: <a href="http://www.stopforumspam.com/">Stop Forum Spam</a>, <a href="http://www.projecthoneypot.org/">Project Honeypot</a>, and <a href="http://www.botscout.com/">BotScout</a>. Optionally checks against Akismet for Logins and Registrations. </p>
+      The Stop Spammers plugin works by checking the IP address, email and user id of anyone who tries to register, login, or leave a comment. This effectively blocks spammers who try to register on blogs or leave spam. It checks a users credentials against up to three databases: <a href="http://www.stopforumspam.com/">Stop Forum Spam</a>, <a href="http://www.projecthoneypot.org/">Project Honeypot</a>, and <a href="http://www.botscout.com/">BotScout</a>. Optionally checks against Akismet for Logins and Registrations. </p>
     <p>Optionally the plugin will also check for disposable email addresses, check for the lack of a HTTP_ACCEPT header, and check against several DNSBL lists such as Spamhaus.org. It also checks against spammer hosts like Ubiquity-Nobis, XSServer, Balticom, Everhost, FDC, Exetel, Virpus and other servers, which are a major source of Spam Comments. </p>
     <p>Rejects very long email addresses and very long author names since spammers can't resist putting there message everywhere. It also rejects form POST data where there is no HTTP_REFERER header, because spammers often forget to include the referring site information in their software.</p>
     <p>The plugin will install a &quot;Red Herring&quot; comment form that will be invisible to normal users. Spammers will find this form and try to do their dirty deed using it. This results in the IP address being added to the deny list. This feature is turned off by default because the form might screw up your theme. Turn the option on and check your theme. If the form (a one pixel box) changes your theme presentation then turn the feature off. I highly recommend that you try this option. It stops a ton of spam.</p>
@@ -379,9 +380,9 @@ if (!defined('ABSPATH')) exit; // just in case
     <p style="font-weight:bold;">API Keys: </p>
     <p> API Keys are NOT required for the plugin to work. Stop Forum Spam does not require a key so this plugin will work immediately without a key. The API key for<a href="http://www.stopforumspam.com/"> Stop Forum Spam</a> is only used for reporting spam. In order to use the <a href="http://www.projecthoneypot.org/">Project HoneyPot</a> or <a href="http://www.botscout.com/">BotScout</a> spam databases you will need to register at those sites and get a free API key. </p>
     <p><span style="font-weight:bold;">History: </span></p>
-    <p>The Stop Spammer Registrations plugin keeps a count of the spammers that it has blocked and displays this on the WordPress dashboard. It also displays the last hits on email or IP and it also shows a history of the times it has made a check, showing rejections, passing emails and errors. When there is data to display there will also be a button to clear out the data. You can control the size of the list and clear the history. </p>
+    <p>The Stop Spammers plugin keeps a count of the spammers that it has blocked and displays this on the WordPress dashboard. It also displays the last hits on email or IP and it also shows a history of the times it has made a check, showing rejections, passing emails and errors. When there is data to display there will also be a button to clear out the data. You can control the size of the list and clear the history. </p>
     <p><span style="font-weight:bold;">Cache: </span></p>
-    <p>The Stop Spammer Registrations plugin keeps track of a number of spammer emails and IP addresses in a cache to avoid pinging databases more often than necessary. The results are saved and displayed. You can control the length of the cache list and clear it at any time. </p>
+    <p>The Stop Spammers plugin keeps track of a number of spammer emails and IP addresses in a cache to avoid pinging databases more often than necessary. The results are saved and displayed. You can control the length of the cache list and clear it at any time. </p>
     <p><span style="font-weight:bold;">Reporting Spam : </span></p>
     <p>On the comments moderation page, the plugin adds extra options to check comments against the various databases and to report to the Stop Forum Spam database. You will need a Stop Forum Spam API key in order to report spam/ </p>
     <p><span style="font-weight:bold;">Network MU Installation Option : </span></p>
@@ -392,7 +393,7 @@ if (!defined('ABSPATH')) exit; // just in case
     <p>Please report any errors that you see. </p>
     <p><span style="font-weight:bold;">Requirements : </span></p>
     <p>The plugin uses the WP_Http class to query the spam databases. Normally, if WordPress is working, then this class can access the databases. If, however, the system administrator has turned off the ability to open a url, then the plugin will not work. Sometimes placing a php.ini file in the blog's root directory with the line 'allow_url_fopen=On' will solve this.</p>
-    <p>The Stop Spammer Registrations plugin is ON when it is installed and enabled. To turn it off just disable the plugin from the plugin menu.. </p>
+    <p>The Stop Spammers plugin is ON when it is installed and enabled. To turn it off just disable the plugin from the plugin menu.. </p>
     <p>You may see your own email in the cache as spammers try to use it to leave comments. You may have to white list your own email if that is the case, to keep the plugin from locking you out.</p>
     <p>There is a button that allows you check access to the StopForumSpam database from the plugin Options page. This will tell you if the host allows opening of remote URL addresses. Please check your network access to the StopForumSpam database before reporting that the plugin doesn't work. The problem may be your host configuration. </p>
     <hr/>
@@ -588,6 +589,11 @@ function sfs_ajax_return_check(response) {
         <td align="left" valign="top">When WordPress detects a 404 file not found for someone trying to find wp-signup, this is someone probing your site to find your login so the IP is added to your bad IP cache. This is off by default. (This no longer checks wp-login.php due to the possibility of locking the admin out.)</td>
       </tr>
       <tr bgcolor="white">
+        <td valign="top">Blacklist login attempts using 'admin' userid:</td>
+        <td align="center" valign="top"><input name="chkadminlog" type="checkbox" value="Y" <?php if ($chkadminlog=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">When a spammer starts hitting the login page with a userid of 'admin' and there is no 'admin' user then it is a spammer trying to figure your password. Black list immediately. This only works if you have do not have the user 'admin'. It is dangerous to have a user name 'admin'.</td>
+      </tr>
+      <tr bgcolor="white">
         <td valign="top">Check against list of Ubiquity-Nobis and other Spam Server IPs:</td>
         <td align="center" valign="top"><input name="chkubiquity" type="checkbox" value="Y" <?php if ($chkubiquity=='Y') echo  "checked=\"checked\"";?>/></td>
         <td align="left" valign="top">Hosting companies who tolerate spammers are the source of much Comment Spam</td>
@@ -605,7 +611,8 @@ function sfs_ajax_return_check(response) {
     </table>
     <br/>
     <h4>Lists:</h4>
-    <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
+	<span style="font-size:.8em;font-style:italic;">You can use an '*' as a wild card but only at the end of the ip or email. It is not a true wild card. It really means 'starts with'. So you can say '235.5.*' but you can't say '146.*.23.1' - this will be interpreted as '146.*'.    </span>
+	<table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
       <tr bgcolor="white">
         <td valign="top">White List:</td>
         <td align="center" valign="top"><textarea name="wlist" cols="40" rows="8"><?php 
@@ -634,7 +641,8 @@ function sfs_ajax_return_check(response) {
 	}
 	?>
 </textarea></td>
-        <td valign="top">Put the domains you want blocked here. e.g. dresssmall.com. This will block all comments and registrations that use this domain for emails.</td>
+        <td valign="top"><p>Put the domains you want blocked here. e.g. dresssmall.com. This will block all comments and registrations that use this domain for emails.</p>
+        <p>One domain per line.   </p></td>
       </tr>
       <tr bgcolor="white">
         <td valign="top"> Blocked TLDs:</td>
@@ -644,9 +652,10 @@ function sfs_ajax_return_check(response) {
 	}
 	?>
 </textarea></td>
-        <td valign="top">Put the TLDs (Top Level Domains) that you want blocked. A TLD is the last part of a domain like .COM or .NET. You can block emails from various countries this way by adding a TLD such as .CN or .RU (these will block Russia and China).<br/>
+        <td valign="top"><p>Put the TLDs (Top Level Domains) that you want blocked. A TLD is the last part of a domain like .COM or .NET. You can block emails from various countries this way by adding a TLD such as .CN or .RU (these will block Russia and China).<br/>
           Enter the TLD name including the '.' e.g. .XXX<br/>
-          A list of TLDs can be found at <a href="http://en.wikipedia.org/wiki/List_of_Internet_top-level_domains" target="_blank">Wikipedia List of Internet top-level domains</a>.</td>
+          A list of TLDs can be found at <a href="http://en.wikipedia.org/wiki/List_of_Internet_top-level_domains" target="_blank">Wikipedia List of Internet top-level domains</a>.</p>
+          <p>One TLD per line. </p></td>
       </tr>
       <tr bgcolor="white">
         <td valign="top">Check Spam Words:</td>
@@ -661,7 +670,8 @@ function sfs_ajax_return_check(response) {
 	}
 	?>
 </textarea></td>
-        <td valign="top">If a word here shows up in an email address or author field then block the comment.</td>
+        <td valign="top"><p>If a word here shows up in an email address or author field then block the comment. (Wild cards do not work here. </p>
+        <p>One word per line </p></td>
       </tr>
     </table>
     <br/>
@@ -755,9 +765,8 @@ function sfs_ajax_return_check(response) {
       </tr>
       <tr bgcolor="white">
         <td valign="top">History Log file size:</td>
-        <td valign="top">
-		<input  name="logfilesize" type="text" value="<?php echo $logfilesize; ?>"/>
-		</td>
+        <td valign="top"><input  name="logfilesize" type="text" value="<?php echo $logfilesize; ?>"/>
+        </td>
         <td valign="top">A log file can be created in the content folder that contains a log of all transactions and stopped spammers. This can be much longer than the recent history shown in the history page. It can also grow to be very large. The file size entered here will be the max size in bytes of the file. If it excedes this size the plugin will no longer write to it. The file can be viewed and cleared on the history page. Enter 0 here if you don't want to write to a log.</td>
       </tr>
     </table>
@@ -791,6 +800,12 @@ function sfs_ajax_return_check(response) {
         </tr>
         <tr bgcolor="white">
           <td valign="top" colspan="4">If you want you can send the spammer to a web page. This can be a custom page explaining terms of service, or a nasty message </td>
+        </tr>
+        <tr bgcolor="white">
+          <td valign="top">Let blocked users request to be added to the white list: </td>
+          <td align="center" valign="top"><input type="checkbox" name ="notify" value="Y" <?php if ($notify=='Y') echo "checked=\"checked\""; ?> />
+          </td>
+          <td valign="top" colspan="2">In the case where a user is blocked, but the user feels that it is a mistake, you can display a link at the end of the block notification so that a user can request to be white-listed. The list of whitelist requests shows up in the statistics screen with the reason codes and an admin can decide if the user should be white listed. </td>
         </tr>
       </tbody>
     </table>

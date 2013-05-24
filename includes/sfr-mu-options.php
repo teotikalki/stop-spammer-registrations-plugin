@@ -2,7 +2,7 @@
 /*
 sfr-mu-options.php
 
-Provides mu support to the stop spammer registrations plugin
+Provides mu support to the Stop Spammers plugin
 
 This hooks the options functions of wp in order to update one option from blog #1`
 

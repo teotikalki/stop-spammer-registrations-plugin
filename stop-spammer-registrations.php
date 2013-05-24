@@ -1,9 +1,9 @@
 <?PHP
 /*
 Plugin Name: Stop Spammer Registrations Plugin
-Plugin URI: http://www.BlogsEye.com/
+Plugin URI: http://www.blogseye.com/i-make-plugins/stop-spammer-registrations-plugin/
 Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
-Version: 4.2
+Version: 4.3
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -33,6 +33,27 @@ function kpg_load_spam_widget() {
 }
 add_action( 'widgets_init', 'kpg_load_spam_widget' );
 function kpg_load_all_checks() {
+	// check to see if it is a whitelist request
+	if(isset($_POST)&&!empty($_POST)&&array_key_exists('knotify_key',$_POST)) {
+		// we have arrived at a whitelist request 
+		$knonce=$_POST['knotify_key'];
+		if (kpg_verify_nonce($knonce,'kpgstopspam_wlrequest')) {
+			// got it, update the white list request queue
+			// grab the stats and add it to the wlreq array
+			$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
+			$stats=kpg_sp_get_stats();
+		    $wlreq=$stats['wlreq'];
+			$wlreq[]=array($now,$_POST['kip'],$_POST['kem'],$_POST['kau'],$_POST['knot'],$_POST['kinf']);
+			$stats['wlreq']=$wlreq;
+			update_option('kpg_stop_sp_reg_stats',$stats);
+			wp_die("A white list request has been recorded","Access Pending",array('response' => 403));
+			
+			exit();
+		}
+		
+	
+	}
+	
 	// remove the hooks so we don't recurse.
 	if (function_exists('bbpress')) {
 		remove_action('bbp_loaded','kpg_load_all_checks',99); // try hooking into bbpress loaded
@@ -179,7 +200,8 @@ function kpg_load_all_checks_no_post() {
 
 function load_sfs_mu() {
 // check to see if this is an MU installation
-	if (function_exists('is_multisite') && is_multisite() && !function_exists('kpg_ssp_global_setup')) {
+	if (function_exists('kpg_ssp_global_setup')) return; // prevent recursion
+	if (function_exists('is_multisite') && is_multisite()) {
 		// install the global hooks to globalize the options
 		$muswitch='Y';
 		global $blog_id;
@@ -493,10 +515,15 @@ function kpg_sfs_check_admin() {
 // this checks to see if there is an ip forwarded involved here and corrects the IP
 function kpg_get_ip() {
 	$ip=$_SERVER['REMOTE_ADDR'];
-	if (array_key_exists('HTTP-X-FORWARDED-FOR',$_SERVER)) {
-		$ip=$_SERVER('HTTP-X-FORWARDED-FOR');
+	// Opera turbo? ["HTTP_X_FORWARDED_FOR"]
+	if (array_key_exists('HTTP_X_FORWARDED_FOR',$_SERVER)) {
+		$ip=$_SERVER['HTTP_X_FORWARDED_FOR'];
+	}  else if (array_key_exists('X_FORWARDED_FOR',$_SERVER)) {
+		$ip=$_SERVER['X_FORWARDED_FOR'];
+	}  else if (array_key_exists('HTTP-X-FORWARDED-FOR',$_SERVER)) {
+		$ip=$_SERVER['HTTP-X-FORWARDED-FOR'];
 	} else if (array_key_exists('X-FORWARDED-FOR',$_SERVER)) {
-		$ip=$_SERVER('X-FORWARDED-FOR');
+		$ip=$_SERVER['X-FORWARDED-FOR'];
 	} else {
 		// search for lower case versions
 		if (function_exists('getallheaders')) {
@@ -587,6 +614,7 @@ function kpg_sfs_reg_report($actions,$comment) {
 	if (strlen($evidence)>128) $evidence=substr($evidence,0,125).'...';
 	$target=" target=\"_blank\" ";
 	$href="href=\"http://www.stopforumspam.com/add.php?username=$uname&email=$email&ip_addr=$ip&evidence=$evidence&api_key=$apikey\" ";
+	$onclick='';
 	if (!empty($apikey)) {
 		//$target="target=\"kpg_sfs_reg_if1\"";
 		// make this the xlsrpc call.
@@ -649,18 +677,6 @@ function kpg_sfs_reg_admin_menus() {
 	//add_filter('comment_row_actions','kpg_sfs_reg_nofollow',1,2);	
 }
 
-function kpg_sfs_reg_add_user_to_whitelist($options) {
-	$addtowhitelist=$options['addtowhitelist'];
-	$wlist=$options['wlist'];
-	$ip=kpg_get_ip();
-	if ($addtowhitelist=='Y'&&!in_array($ip,$wlist)) {
-		// add this ip to your white list
-		$wlist[count($wlist)]=$ip;
-		$options['wlist']=$wlist;
-	}
-	update_option('kpg_stop_sp_reg_options',$options);
-
-}
 
 
 function kpg_sp_plugin_action_links( $links, $file ) {
@@ -696,24 +712,6 @@ if ( function_exists('register_uninstall_hook') ) {
 }
 
 
-function kpg_sfs_reg_getafile($f) {
-	// try this using Wp_Http
-	if( !class_exists( 'WP_Http' ) )
-		include_once( ABSPATH . WPINC. '/class-http.php' );
-	$request = new WP_Http;
-	$result = $request->request( $f );
-	// see if there is anything there
-	if (empty($result)) return '';
-	
-	if (is_array($result)) {
-		$ansa=$result['body']; 
-		return $ansa;
-	}
-	if (is_object($result) ) {
-		$ansa='ERR: '.$result->get_error_message();
-	}
-	return '';
-}
 
 // special request to add to "right now section of the admin page
 // WP 2.5+
@@ -732,89 +730,23 @@ function kpg_sp_rightnow() {
 	if ($spmcount>0) {
 		// steal the akismet stats css format 
 		// get the path to the plugin
-		echo "<p><a style=\"font-style:italic;\" href=\"$me\">Stop Spammer Registrations</a> has prevented $spmcount spammers from registering or leaving comments.";
+		echo "<p><a style=\"font-style:italic;\" href=\"$me\">Stop Spammers</a> has prevented $spmcount spammers from registering or leaving comments.";
 		echo"</p>";
 	} else {
-		echo "<p><a style=\"font-style:italic\" href=\"$me\">Stop Spammer Registrations</a> has not stopped any spammers, yet.";
+		echo "<p><a style=\"font-style:italic\" href=\"$me\">Stop Spammers</a> has not stopped any spammers, yet.";
 		echo"</p>";
 	}
+	if (count($wlreq)==1) {
+		echo "<p><a style=\"font-style:italic;\" href=\"$me\">".count($wlreq)." user</a> has been denied access and requested that you add them to the white list";
+		echo"</p>";
+	} else if (count($wlreq)>0) {
+		echo "<p><a style=\"font-style:italic;\" href=\"$me\">".count($wlreq)." users</a> have been denied access and requested that you add them to the white list";
+		echo"</p>";
+	}
+	
 }
 
 
-function kpg_sp_searchi($needle,$haystack) {
-	// ignore case in_array
-	if (empty($needle)) return false;
-	if (empty($haystack)) return false;
-	if (!is_array($haystack)) return false;
-	foreach($haystack as $val) {
-		if (strtolower($val)==strtolower($needle)) return true;
-	}
-	return false;
-}
-
-function kpg_sp_search_ip($needle,$haystack) {
-	// ignore case in_array
-	if (empty($needle)) return false;
-	if (empty($haystack)) return false;
-	if (!is_array($haystack)) return false;
-	foreach($haystack as $sip=>$val) {
-		if (strtolower($sip)==strtolower($needle)) return true;
-		if (kpg_ip_range($sip,$needle)) return true;
-	}
-	return false;
-}
-function kpg_sp_searchi_ip($needle,$haystack) {
-	// ignore case in_array
-	if (empty($needle)) return false;
-	if (empty($haystack)) return false;
-	if (!is_array($haystack)) return false;
-	foreach($haystack as $sip) {
-		if (strtolower($sip)==strtolower($needle)) return true;
-		if (kpg_ip_range($sip,$needle)) return true;
-	}
-	return false;
-}
-
-function kpg_ip_range($ipr,$ip) {
-	if (count(explode('.',$ip))!=4) return false;
-	if (strpos($ipr,'/')===false) return false;
-	$ips=explode('/',$ipr);
-	if (count($ips)!=2) return false;
-	$ip1=$ips[0];
-	$m=$ips[1];
-	if (count(explode('.',$ip1))!=4) return false;
-	$mask=(pow(2,32)-1)-(pow(2,32-$m)-1);
-	$i=abs(ip2long($ip));
-	$r=abs(ip2long($ip1) & ($mask));
-	$mask=$mask ^ -1;
-	$r2=abs(ip2long($ip1) | ($mask));
-	if ($r<$r2) { // since the result can be negative when converted to an integer and get screwed up
-		if ($i>=$r&&$i<=$r2) return true;
-		return false;
-	}
-	if ($i>=$r2&&$i<=$r) return true;
-	return false;
-}
-
-function kpg_sp_searchK_i_del($needle,$haystack) {
-	// ignore case in_array
-	if (empty($needle)) return false;
-	if (empty($haystack)) return false;
-	if (!is_array($haystack)) return false;
-	foreach($haystack as $key=>$value) {
-		if (strtolower($key)==strtolower($needle)) return true;
-	}
-	return false;
-}
-function kpg_sp_searchL($needle,$haystack) {
-	// search the end of a string case insensitive
-	if (empty($needle)) return false;
-	if (empty($haystack)) return false;
-    foreach($haystack as $val) {
-	    if (strpos(strtolower($val).'\t',strtolower($needle).'\t')!==false)  return true;
-	}
-	return false;
-}
 function kpg_sp_get_stats() {
 	// check to see if we need to load the option redirector
 	load_sfs_mu();
@@ -825,6 +757,7 @@ function kpg_sp_get_stats() {
 		'badems'=>array(),
 		'goodips'=>array(),
 		'hist'=>array(),
+		'wlreq'=>array(),
 		
 		'spcount'=>0,
 		'spmcount'=>0,
@@ -866,9 +799,12 @@ function kpg_sp_get_stats() {
 		'autoload'=>'N',
 		'spmdate'=>'installation',
 
-		'spdate'=>'last cleared'
+		'spdate'=>'last cleared',
+		'cntadminlog'=>0	
+		
 	);
 	$ansa=array_merge($options,$stats);
+	if (!is_array($ansa['wlreq'])) $ansa['wlreq']=array();
 	if (!is_array($ansa['badips'])) $ansa['badips']=array();
 	if (!is_array($ansa['badems'])) $ansa['badems']=array();
 	if (!is_array($ansa['hist'])) $ansa['hist']=array();
@@ -950,12 +886,16 @@ function kpg_sp_get_options() {
 		'redirurl'=>'', 
 		'redir'=>'N',
 		'sleep'=>10,
+		'chkadminlog'=>'N',
 		'logfilesize'=>0,
 		'autoload'=>'N',
 		'firsttime'=>'Y',
 		'rejectmessage'=>"Access Denied<br/>
 This site is protected by the Stop Spammer Registrations Plugin.<br/>",
-		'spamwords'=>array("-online","4u","4-u","adipex","advicer","baccarrat","blackjack","bllogspot","booker","byob","car-rental-e-site","car-rentals-e-site","carisoprodol","casino","chatroom","cialis","coolhu","credit-card-debt","credit-report","cwas","cyclen","cyclobenzaprine","dating-e-site","day-trading","debt-consolidation","debt-consolidation","discreetordering","duty-free","dutyfree","equityloans","fioricet","flowers-leading-site","freenet-shopping","freenet","gambling-","hair-loss","health-insurancedeals","homeequityloans","homefinance","holdem","hotel-dealse-site","hotele-site","hotelse-site","incest","insurance-quotes","insurancedeals","jrcreations","levitra","macinstruct","mortgagequotes","online-gambling","onlinegambling","ottawavalleyag","ownsthis","paxil","penis","pharmacy","phentermine","poker-chip","poze","pussy","rental-car-e-site","ringtones","roulette ","shemale","slot-machine","thorcarlson","top-site","top-e-site","tramadol","trim-spa","ultram","valeofglamorganconservatives","viagra","vioxx","xanax","zolus","ambien","poker","bingo","allstate","insurnce","work-at-home","workathome","home-based","homebased","weight-loss","weightloss","additional-income","extra-income","email-marketing","sibutramine","seo-","fast-cash")
+		'spamwords'=>array("-online","4u","4-u","adipex","advicer","baccarrat","blackjack","bllogspot","booker","byob","car-rental-e-site","car-rentals-e-site","carisoprodol","casino","chatroom","cialis","coolhu","credit-card-debt","credit-report","cwas","cyclen","cyclobenzaprine","dating-e-site","day-trading","debt-consolidation","debt-consolidation","discreetordering","duty-free","dutyfree","equityloans","fioricet","flowers-leading-site","freenet-shopping","freenet","gambling-","hair-loss","health-insurancedeals","homeequityloans","homefinance","holdem","hotel-dealse-site","hotele-site","hotelse-site","incest","insurance-quotes","insurancedeals","jrcreations","levitra","macinstruct","mortgagequotes","online-gambling","onlinegambling","ottawavalleyag","ownsthis","paxil","penis","pharmacy","phentermine","poker-chip","poze","pussy","rental-car-e-site","ringtones","roulette ","shemale","slot-machine","thorcarlson","top-site","top-e-site","tramadol","trim-spa","ultram","valeofglamorganconservatives","viagra","vioxx","xanax","zolus","ambien","poker","bingo","allstate","insurnce","work-at-home","workathome","home-based","homebased","weight-loss","weightloss","additional-income","extra-income","email-marketing","sibutramine","seo-","fast-cash"),
+		// new fields
+		'notify'=>'Y'
+
 		);
 	$ansa=array_merge($options,$opts);
 	// check the yn questions
@@ -1003,101 +943,7 @@ This site is protected by the Stop Spammer Registrations Plugin.<br/>",
 	}
 	return $ansa;
 }
-function sfs_handle_ajax_check($data) {
-	// this does a call to the sfs site to check a known spammer
-	// returns success or not
-	$query="http://www.stopforumspam.com/api?ip=91.186.18.61";
-	$check='';
-	$check=kpg_sfs_reg_getafile($query);
-	if (!empty($check)) {
-	    $check=trim($check);
-	    $check=trim($check,'0');
-		if (substr($check,0,4)=="ERR:") {
-			echo "Access to the Stop Forum Spam Database shows errors\r\n";
-			echo "response was $check\r\n";
-		}
-		//Access to the Stop Forum Spam Database is working
-		$n=strpos($check,'<response success="true">');
-		if ($n===false) {
-			echo "Access to the Stop Forum Spam Database is not working\r\n";
-			echo "response was\r\n $check\r\n";
-		} else {
-			echo "Access to the Stop Forum Spam Database is working";
-		}
-	} else {
-		echo "No response from the Stop Forum Spam AP Call\r\n";
-	}
-	return;
-}
-function sfs_handle_ajax_sub($data) {
-	// get the stuff from the $_GET and call stop forum spam
-	// this tages the stuff from the get and uses it to do the get from sfs
-	// get the configuration items
-	//kpg_ssp_global_setup();
-	$options=kpg_sp_get_options();
-	if (empty($options)) { // can't happen?
-		echo "No Options set";
-		exit();
-	}
-	//print_r($options);
-	extract($options);
-	// get the comment_id parameter	
-	$comment_id=urlencode($_GET['comment_id']);
-	if (empty($comment_id)) {
-		echo "No comment id found";
-		exit();
-	}
-	// need to pass the blog id also
-	$blog='';
-	$blog=$_GET['blog_id'];
-	if ($blog!='') {
-		switch_to_blog($blog);
-	} 
-	// get the comment
-	$comment=get_comment( $comment_id, ARRAY_A );
-	if (empty($comment)) {
-		echo "No comment found for $comment_id";
-		exit();
-	}
-	//print_r($comment);
-	$email=urlencode($comment['comment_author_email']);
-	$uname=urlencode($comment['comment_author']);
-	$ip_addr=$comment['comment_author_IP'];
-	// code added as per Paul at sto Forum Spam
-	$content=$comment['comment_content'];
-	$evidence=$comment['comment_author_url'];
-	if ($blog!='') {
-		restore_current_blog();
-	}
 
-	if (empty($evidence)) $evidence='';
-	preg_match_all('@((https?://)?([-\w]+\.[-\w\.]+)+\w(:\d+)?(/([-\w/_\.]*(\?\S+)?)?)*)@',$content, $post, PREG_PATTERN_ORDER);
-	$urls1=array();
-	$urls2=array();
-	if (is_array($post)&&is_array($post[1])) $urls1 = array_unique($post[1]); else $urls1 = array(); 
-	//bbcode
-	preg_match_all('/\[url=(.+)\]/iU', $content, $post, PREG_PATTERN_ORDER);
-	if (is_array($post)&&is_array($post[0])) $urls2 = array_unique($post[0]); else $urls2 = array(); 
-	$urls3=array_merge($urls1,$urls2);
-    if (is_array($urls3)) $evidence.="\r\n".implode("\r\n",$urls3);	
- 	$evidence=urlencode(trim($evidence,"\r\n"));
-	if (strlen($evidence)>128) $evidence=substr($evidence,0,125).'...';
-	
-	if (empty($apikey)) {
-		echo "Cannot Report Spam without API Key";
-		exit();
-	}
-$hget="http://www.stopforumspam.com/add.php?ip_addr=$ip_addr&api_key=$apikey&email=$email&username=$uname&evidence=$evidence";
-//echo $hget;
-   $ret=@kpg_sfs_reg_getafile($hget);
-	if (stripos($ret,'data submitted successfully')!==false) {
- 		echo $ret;
-	} else if (stripos($ret,'recent duplicate entry')!==false) {
- 		echo ' recent duplicate entry ';
-	} else {
- 		echo $ret;
-	}
-}
 	add_action('wp_ajax_nopriv_sfs_sub', 'sfs_handle_ajax_sub');	
 	add_action('wp_ajax_sfs_sub', 'sfs_handle_ajax_sub');	
 	add_action('wp_ajax_sfs_check', 'sfs_handle_ajax_check');	// used to check if ajax reporting works
@@ -1106,105 +952,9 @@ $hget="http://www.stopforumspam.com/add.php?ip_addr=$ip_addr&api_key=$apikey&ema
 * right out of the api playbook
 ******************************************/
 	add_action('admin_head', 'sfs_handle_ajax_new');
-	function sfs_handle_ajax_new() {
-		// this is the call that handles the call to ajax
-		// step 1: Create the script that handles the action
-?>
-<script type="text/javascript" >
-var sfs_ajax_who=null; //use this to update the message in the click
-function sfs_ajax_report_spam(t,id,blog,url) {
-	sfs_ajax_who=t;
 	
-	var data= {
-		action: 'sfs_sub',
-		blog_id: blog,
-		comment_id: id,
-		ajax_url: url
-	}
-	jQuery.get(ajaxurl, data, sfs_ajax_return_spam);
-}
-function sfs_ajax_return_spam(response) {
-    sfs_ajax_who.innerHTML="Spam reported";
-	sfs_ajax_who.style.color="green";
-	sfs_ajax_who.style.fontWeight="bolder";
-	//alert(response);
-	if (response.indexOf('data submitted successfully')>0) {
-		return false;
-	}
-	if (response.indexOf('recent duplicate entry')>0) {
-		sfs_ajax_who.innerHTML="Spam Already reported";
-		sfs_ajax_who.style.color="brown";
-		sfs_ajax_who.style.fontWeight="bolder";
-		return false;
-	}
-	sfs_ajax_who.innerHTML="Error reporting spam";
-	sfs_ajax_who.style.color="red";
-	sfs_ajax_who.style.fontWeight="bolder";
-	alert(response);
-	return false;
-}
-</script>
-<?php		
+	
 
-	}
-	
-	
-	
-// debug functions
-// change the debug=false to debug=true to start debugging.
-// the plugin will drop a file sfs_debug_output.txt in the current directory (root, wp-admin, or network) 
-// directory must be writeable or plugin will crash.
-
-function sfs_errorsonoff($old=null) {
-	$debug=true;  // change to true to debug, false to stop debugging.
-	if (!$debug) return;
-	if (empty($old)) return set_error_handler("sfs_ErrorHandler");
-	restore_error_handler();
-}
-function sfs_ErrorHandler($errno, $errmsg, $filename, $linenum, $vars) {
-	// write the answers to the file
-	// we are only conserned with the errors and warnings, not the notices
-	//if ($errno==E_NOTICE || $errno==E_WARNING) return false;
-	if ($errno==2048) return; // wordpress throws deprecated all over the place.
-	$serrno="";
-	if (
-	(strpos($filename,'stop-spam')===false)
-	&&(strpos($filename,'sfr_mu')===false)
-	&&(strpos($filename,'settings.php')===false)
-	&&(strpos($filename,'options-general.php')===false)
-	//&&(!function_exists('bbpress'))
-	) return false;
-	switch ($errno) {
-		case E_ERROR: 
-			$serrno="Fatal run-time errors. These indicate errors that can not be recovered from, such as a memory allocation problem. Execution of the script is halted. ";
-			break;
-		case E_WARNING: 
-			$serrno="Run-time warnings (non-fatal errors). Execution of the script is not halted. ";
-			break;
-		case E_NOTICE: 
-			$serrno="Run-time notices. Indicate that the script encountered something that could indicate an error, but could also happen in the normal course of running a script. ";
-			break;
-		default;
-			$serrno="Unknown Error type $errno";
-	}
-	if (strpos($errmsg,'modify header information')) return false;
- 
-	$msg="
-	Error number: $errno
-	Error type: $serrno
-	Error Msg: $errmsg
-	File name: $filename
-	Line Number: $linenum
-	---------------------
-	";
-	// write out the error
-	$f='';
-	$f=@fopen(dirname(__FILE__)."/.sfs_debug_output.txt",'a');
-	if(empty($f)) return false;
-	@fwrite($f,$msg);
-	@fclose($f);
-	return false;
-}
 // in bbpress the verify nonce function is not available for use in the red herring form.
 // Red herring will not work in bbpress.
 function kpg_verify_nonce($a,$b) {
@@ -1239,32 +989,74 @@ function kpg_sfs_reg_stats_control() {
 	require_once("includes/stop-spam-reg-stats.php");
 	sfs_errorsonoff('off');
 }
+//
+// these functions have been moved to the utility include to save load time if plugin is not needed.
+//
 function kpg_append_file($filename,$content) {
-	// this writes content to a file in the uploads director in the 'stop-spammer-registrations' directory
-	// changed to write to the current directory - content_dir is a bad place
-	$file=dirname(__FILE__).'/'.$filename;
-	$f=@fopen($file,'a');
-	if (!$f) return false;
-	fwrite($f,$content);
-	fclose($f);
-	@chmod($file,0640); // read/write for owner and owners groups.
-	return true;
+	if (!function_exists('kpg_append_file_l')) require('includes/stop-spam-utils.php');
+	return kpg_append_file_l($filename,$content);
 }
 function kpg_read_file($filename) {
-	// read file
-	$file=dirname(__FILE__).'/'.$filename;
-	if (file_exists($file)) {
-		return file_get_contents($file);
-	}
-	return "File not found";
+	if (!function_exists('kpg_read_file_l')) require('includes/stop-spam-utils.php');
+	return kpg_read_file_l($filename);
 }
 function kpg_file_exists($filename) {
-	$file=dirname(__FILE__).'/'.$filename;
-	if (!file_exists($file)) return false;
-	return filesize($file);
+	if (!function_exists('kpg_file_exists_l')) require('includes/stop-spam-utils.php');
+	return kpg_file_exists_l($filename);
 }
 function kpg_file_delete($filename) {
-	$file=dirname(__FILE__).'/'.$filename;
-	return @unlink($file);
+	if (!function_exists('kpg_file_delete_l')) require('includes/stop-spam-utils.php');
+	return kpg_file_delete_l($filename);
+}
+function sfs_errorsonoff($old=null) {
+	if (!function_exists('sfs_errorsonoff_l')) require('includes/stop-spam-utils.php');
+	return sfs_errorsonoff_l($old);
+}
+function sfs_ErrorHandler($errno, $errmsg, $filename, $linenum, $vars) {
+	if (!function_exists('sfs_ErrorHandler_l')) require('includes/stop-spam-utils.php');
+	return sfs_ErrorHandler_l($errno, $errmsg, $filename, $linenum, $vars);
+}
+function sfs_handle_ajax_sub($data) {
+	if (!function_exists('sfs_handle_ajax_sub_l')) require('includes/stop-spam-utils.php');
+	return sfs_handle_ajax_sub_l($data);
+}
+function sfs_handle_ajax_check($data) {
+	if (!function_exists('sfs_handle_ajax_check_l')) require('includes/stop-spam-utils.php');
+	return sfs_handle_ajax_check_l($data);
+}
+function sfs_handle_ajax_new() {
+	if (!function_exists('sfs_handle_ajax_new_l')) require('includes/stop-spam-utils.php');
+	return sfs_handle_ajax_new_l();
+}
+// search functions
+function kpg_sp_searchi($needle,$haystack) {
+	if (!function_exists('kpg_sp_searchi_l')) require('includes/stop-spam-utils.php');
+	return kpg_sp_searchi_l($needle,$haystack);
+}
+
+function kpg_sp_search_ip($needle,$haystack) {
+	if (!function_exists('kpg_sp_search_ip_l')) require('includes/stop-spam-utils.php');
+	return kpg_sp_search_ip_l($needle,$haystack);
+}
+function kpg_sp_searchi_ip($needle,$haystack) {
+	if (!function_exists('kpg_sp_searchi_ip_l')) require('includes/stop-spam-utils.php');
+	return kpg_sp_searchi_ip_l($needle,$haystack);
+}
+
+function kpg_ip_range($ipr,$ip) {
+	if (!function_exists('kpg_ip_range_l')) require('includes/stop-spam-utils.php');
+	return kpg_ip_range_l($ipr,$ip);
+}
+function kpg_sp_searchL($needle,$haystack) {
+	if (!function_exists('kpg_sp_searchL_l')) require('includes/stop-spam-utils.php');
+	return kpg_sp_searchL_l($needle,$haystack);
+}
+function kpg_sfs_reg_getafile($f) {
+	if (!function_exists('kpg_sfs_reg_getafile_l')) require('includes/stop-spam-utils.php');
+	return kpg_sfs_reg_getafile_l($f);
+}
+function kpg_sfs_reg_add_user_to_whitelist($options) {
+	if (!function_exists('kpg_sfs_reg_add_user_to_whitelist_l')) require('includes/stop-spam-utils.php');
+	return kpg_sfs_reg_add_user_to_whitelist_l($options);
 }
 ?>

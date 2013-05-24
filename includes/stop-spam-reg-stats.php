@@ -1,6 +1,6 @@
 <?php
 /*
-	Stop Spammer Registrations Plugin 
+	Stop Spammers Plugin 
 	History and Stats Page
 */
 if (!defined('ABSPATH')) exit; // just in case
@@ -9,6 +9,9 @@ if (!defined('ABSPATH')) exit; // just in case
 		die('Access Denied');
 	}
 	$stats=kpg_sp_get_stats();
+	//echo "<!--";
+	//print_r($stats);
+	//echo "-->";
 	extract($stats);
 	$options=kpg_sp_get_options();
 	extract($options);
@@ -30,6 +33,15 @@ if (!defined('ABSPATH')) exit; // just in case
 			echo "<h2>Cache Cleared</h2>";
 			
 			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Cache Cleared"."\r\n");
+		}
+		if (array_key_exists('kpg_stop_clear_wl',$_POST)) {
+			// clear the cache
+			$wlreq=array();
+			$stats['wlreq']=$wlreq;
+			update_option('kpg_stop_sp_reg_stats',$stats);
+			echo "<h2>White List Requests Cleared</h2>";
+			
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: White List Requests Cleared"."\r\n");
 		}
 		if (array_key_exists('kpg_stop_clear_hist',$_POST)) {
 			// clear the cache
@@ -120,6 +132,21 @@ if (!defined('ABSPATH')) exit; // just in case
 				if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: $bb Added to White List.\r\n");
 			}
 		}
+		if (array_key_exists('kpg_stop_delete_req',$_POST)) {
+			$bb=$_POST['kpg_stop_delete_req'];
+			// $wlreq is an array with arrays ip is element[1]
+			for( $j=0;$j<count($wlreq);$j++){
+				$wlip=$wlreq[$j][1];
+				if ($wlip==$bb) {
+					unset($wlreq[$j]);
+					$stats['wlreq']=$wlreq;
+					update_option('kpg_stop_sp_reg_stats',$stats);
+					echo "<h2>$wlip Removed from White List Requests</h2>";
+					if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: $wlip Removed from White List Requests"."\r\n");
+				}
+			}
+			
+		}
 		if (array_key_exists('kpg_stop_delete_log',$_POST)) {
 			// clear the cache
 			$f=dirname(__FILE__)."/../sfs_debug_output.txt";
@@ -148,8 +175,19 @@ if (function_exists('is_multisite') && is_multisite() && $muswitch=='Y') {
 
 ?>
 <div class="wrap">
-	<h2>Stop Spammers Plugin Stats Version 4.2</h2>
+	<h2>Stop Spammers Plugin Stats Version 4.3</h2>
 	<p><a href="<?php echo $sme; ?>">View History</a> - <a href="<?php echo $me; ?>">View Options</a> </p>
+<?php
+	if (count($wlreq)==1) {
+		echo "<p><a style=\"font-style:italic;\" href=\"#wlreq\">".count($wlreq)." user</a> has been denied access and requested that you add them to the white list";
+		echo"</p>";
+	} else if (count($wlreq)>0) {
+		echo "<p><a style=\"font-style:italic;\" href=\"#wlreq\">".count($wlreq)." users</a> have been denied access and requested that you add them to the white list";
+		echo"</p>";
+	}
+?>	
+	
+	
 	<hr/>
 
 <?php
@@ -188,6 +226,10 @@ if (function_exists('is_multisite') && is_multisite() && $muswitch=='Y') {
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <input type="hidden" name="kpg_stop_add_white_list" value="" />
   </form>
+  <form action="" method="post" name="kpg_ssp_req_del" id="kpg_ssp_req_del">
+    <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
+    <input type="hidden" name="kpg_stop_delete_req" value="" />
+  </form>
   <script type="text/javascript" >
 function addblack(ip) {
 	document.kpg_ssp_bl.kpg_stop_add_black_list.value=ip;
@@ -203,6 +245,11 @@ function delblack(ip) {
 function addwhite(ip) {
 	document.kpg_ssp_wl.kpg_stop_add_white_list.value=ip;
 	document.kpg_ssp_wl.submit();
+	return false;
+}
+function delreq(ip) {
+	document.kpg_ssp_req_del.kpg_stop_delete_req.value=ip;
+	document.kpg_ssp_req_del.submit();
 	return false;
 }
 </script>
@@ -405,12 +452,68 @@ function addwhite(ip) {
 		
 	
    }
+   if (count($wlreq)==0) {
+   		// maybe say something
+	} else {
+		// show white list request
+?>
+<hr/>
+<a name="wlreq" a></a>
+  <h3>White List Requests</h3>
+  <p>Users who have been blocked are requesting to be white listed.</p>
+  <table style="background-color:#eeeeee;" cellspacing="2">
+    <tr style="background-color:ivory;text-align:center;">
+		<td>Time</td>
+		<td>IP</td>
+		<td>Email</td>
+		<td>Author/Login</td>
+		<td>Reason</td>
+		<td>Request</td>
+		<td>Action</td>
+	</tr>
+
+<?php
+	foreach ($wlreq as $wl) {
+	    for ($j=0;$j<count($wl);$j++) {
+			$wl[$j]=sanitize_text_field($wl[$j]);
+		}
+		if (count($wl)<6) $wl[5]='';
+		?>	
+		<tr style="background-color:white;">
+			<td><?php echo $wl[0];?></td>
+			<td><?php echo $wl[1];?></td>
+			<td><?php echo $wl[2];?></td>
+			<td><?php echo $wl[3];?></td>
+			<td><?php echo $wl[4];?></td>
+			<td><?php echo $wl[5];?></td>
+			<td><a href='' onclick="return addwhite('<?php echo $wl[1]; ?>');" title="Add to White List" alt="Add to White List">Add</a>, <a title="Check Stop Forum Spam (SFS)" target="_stopspam" href="http://www.stopforumspam.com/search.php?q=<?php echo $wl[1]; ?>\">Check SFS</a>, <a href='' onclick="return delreq('<?php echo $wl[1]; ?>');" title="Delete Request" alt="Delete Request">Delete</a></td>
+		</tr>
+		<?php		
+	}
+	?>
+</table>
+  <table>
+    <tr>
+      <td><form method="post" action="">
+          <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
+          <input type="hidden" name="kpg_stop_clear_wl" value="true" />
+    <span class="submit">
+          <input  class="button-primary" value="Clear the White List Requests" type="submit" />
+	</span>
+        </form></td>
+    </tr>
+	</table>
+
+<?php	
+	}
+// end of white list
    if (count($badems)==0&&count($badips)==0&&count($goodips)==0) {
 ?>
   <p>Nothing in the cache.</p>
   <?php
    } else {
 ?>
+<hr/>
   <h3>Cached Values</h3>
   <table>
     <tr>

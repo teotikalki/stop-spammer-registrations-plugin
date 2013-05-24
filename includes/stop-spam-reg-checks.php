@@ -1,6 +1,6 @@
 <?php
 /*
-	Stop Spammer Registrations Plugin 
+	Stop Spammers Plugin 
 	Checks core.
 	This stuff is no loaded unless there is a $_POST and one of the trigger fields is detected.
 */
@@ -14,6 +14,7 @@ if (!defined('ABSPATH')) exit; // just in case
 *
 *************************************************************/
 function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
+	// use test@test.com to test if the system is working
     global $sfs_check_activation;
     $sname=$_SERVER["REQUEST_URI"];	
 	if (empty($sname)) {
@@ -63,7 +64,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		}
 	}
 
-	if ($email!=$sfs_check_activation) {
+	if ($email!=$sfs_check_activation && $email!='test@test.com' ) {
 // from a user who wanted to exclude some of the checking.	
 		if ($chkcomments!='Y') {
 			if (strpos($sname,'wp-comments-post.php')!==false) return $email;
@@ -104,7 +105,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			$blog=$blog_id;
 		}
 	}
-	if ($email!=$sfs_check_activation) {
+	if ($email!=$sfs_check_activation && $email!='test@test.com') {
 		$email=trim($email);
 		$email=strip_tags($email);
 
@@ -131,7 +132,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	if (strlen($pwd)>32) $pwd=substr($pwd,0,30).'...';
 	if (strlen($em)>80) $em=substr($em,0,80).'...';
 	// set up hist channel
-	$hist[$now]=array($ip,mysql_real_escape_string($em),mysql_real_escape_string($author),$sname,'begin',$blog);
+	$hist[$now]=array($ip,mysql_real_escape_string($em),mysql_real_escape_string($author),$sname,'',$blog);
 	
 	// check all of the ones that do not require file access
 	$deny=false;
@@ -141,7 +142,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	// first check white lists 
 
 	// paypal is whitelisted
-	if ($email!=$sfs_check_activation) {
+	if ($email!=$sfs_check_activation && $email!='test@test.com') {
 		if (!$deny&& $chkip=='Y'&&kpg_sp_checkPayPal($ip)){
 			$hist[$now][4]='White List PayPal';
 			$stats['hist']=$hist;
@@ -181,6 +182,12 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			return $email;
 		}
 	}
+	/***********************************************************************************
+	
+		From here on in the checks are for spammers
+	
+	
+	************************************************************************************/
 	// not white listed, now try the simple rejects that don't require remote access.
 	// check plugins if the noplugins is no - no checks if the url has the /plugin/ string
 	if (!$deny&&$chkip!='Y'&&$noplugins=='Y'&&strpos($sname,'/plugins/')!==false) { 
@@ -193,20 +200,26 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		return $email;
 	}
 
-	
+	if ($email=='test@test.com') {
+		$deny=true;
+		$whodunnit.='test email';
+	}
+
 	
 	// begin by checking the caches for bad ips. Do this before the regular checks
 	// this way only the first appearance of a bad actor is recorded by type
 
-	if (!$deny&& $chkip=='Y'&&kpg_sp_search_ip($ip,$badips)) {
+	if (!$deny && $chkip=='Y'&&kpg_sp_search_ip($ip,$badips)) {
 		$whodunnit.='Cached bad ip';
 		$deny=true;
 		$cntcacheip++;
 	} 
-	if (!$deny && $chkip=='Y'&& kpg_sp_searchi_ip($ip,$blist)) {
-	    $whodunnit.='Black List IP';
-		$deny=true;
-		$cntblip++;
+	if (!$deny && $chkip=='Y') {
+	    if (kpg_sp_searchi_ip($ip,$blist)) {
+			$whodunnit.='Black List IP';
+			$deny=true;
+			$cntblip++;
+		}
 	}
 	// Ubiquity servers rent their servers to spammers and should be blocked
 	if (!$deny&&$chkubiquity=='Y'&& $chkip=='Y') {
@@ -217,7 +230,22 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 				$cntubiquity++;
 		}
 	}
-	
+	// check to see if the user is admin
+	if (!$deny && $chkadminlog=='Y' && array_key_exists('log',$_POST) && $_POST['log']=='admin') {
+		//hit on the admin login
+		$log=$_POST['log'];
+		if (get_user_by( 'login','admin')===false) {
+			// hit on admin but no admin
+			$whodunnit.="Attack on userid 'admin'";
+			$deny=true;
+			$cntadminlog++;
+		} else {
+			//$hist[$now][4]=' found login';
+		}
+	} else {
+		// testing that the admin check is working.
+		//$hist[$now][4]=' $chkadminlog '.$_POST['log'];
+	}
 	
 	// check to see if we are timing out
 	if (!$deny && $chksession!='N' && $sesstime>0) {
@@ -331,12 +359,15 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	if (!$deny && !empty($badTLDs)) {
 		// check the ending to see if the tld should be banned
 		// get the tld
-		$tlds=explode('.',$em);
-		$tld=$tlds[count($tlds)-1];
-		if (kpg_sp_searchL($tld,$badTLDs)||kpg_sp_searchL('.'.$tld,$badTLDs)) {
-			$whodunnit.='Bad TLD';
-			$deny=true;
-			$cnttld++;
+		// need the last occurrence of '.' in $em
+		$tj=strrpos($em,'.');
+		if ($tj!==false) {
+			$tld=substr($em,$tj+1);
+			if (kpg_sp_searchL($tld,$badTLDs)) {
+				$whodunnit.='Bad TLD';
+				$deny=true;
+				$cnttld++;
+			}
 		}
 	}
 
@@ -549,7 +580,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			}
 		}
 	}
-	$hist[$now][4]=$whodunnit;
+	$hist[$now][4].=$whodunnit;
 	if (!$deny) {
 		$hist[$now][4].=' passed';
 		$goodips[$ip]=$now;
@@ -582,23 +613,26 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	// update the history files.
 	// record the last few guys that have  tried to spam
 	// add the bad spammer to the history list
-	$spcount++;
-	$spmcount++;
-	$stats['spcount']=$spcount;
-	$stats['spmcount']=$spmcount;
 	// Cache the bad guy
-	if (!empty($em)) $badems[$em]=$now;
-	if (!empty($ip)&& $chkip=='Y') $badips[$ip]=$now;
-	asort($badips);
-	asort($badems);
-	while (count($badips)>$kpg_sp_cache) array_shift($badips);
-	while (count($badems)>$kpg_sp_cache_em) array_shift($badems);
-	$stats['badips']=$badips;
-	$stats['badems']=$badems;
+	if ($email!='test@test.com') {
+		$spcount++;
+		$spmcount++;
+		$stats['spcount']=$spcount;
+		$stats['spmcount']=$spmcount;
+		if (!empty($em)) $badems[$em]=$now;
+		if (!empty($ip)&& $chkip=='Y') $badips[$ip]=$now;
+		asort($badips);
+		asort($badems);
+		while (count($badips)>$kpg_sp_cache) array_shift($badips);
+		while (count($badems)>$kpg_sp_cache_em) array_shift($badems);
+		$stats['badips']=$badips;
+		$stats['badems']=$badems;
+	}
 	// I am sick and tired of this guy filling up my logs: dukang2004@yahoo.com
-	if ($email!='dukang2004@yahoo.com') { // special case don't bother to log for now.
+	if ($email!='dukang2004@yahoo.com'&&$email!='test@test.com' ) { // special case don't bother to log for now.
 		$stats['hist']=$hist;
 	}
+	if ($email!='test@test.com') {
 	// reason types
 		$stats['cntjscript']=$cntjscript;
 		$stats['cntsfs']=$cntsfs;
@@ -629,32 +663,56 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		$stats['cntpassed']=$cntpassed;
 		$stats['cntwhite']=$cntwhite;
 		$stats['cntgood']=$cntgood;
-	
-	//
-	update_option('kpg_stop_sp_reg_stats',$stats);
-	// write out the log file
-	$clogfile=kpg_file_exists('.history_log.txt');
-	if ($clogfile===false) $clogfile=0;
-	if ($logfilesize>0&&$clogfile<=$logfilesize) {
-		// ok to write the log file.
-		if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: $ip,$em,$author,$sname,$whodunnit\r\n");
+
+		$stats['cntadminlog']=$cntadminlog;
+		
+		//
+			update_option('kpg_stop_sp_reg_stats',$stats);
+		// write out the log file
+		$clogfile=kpg_file_exists('.history_log.txt');
+		if ($clogfile===false) $clogfile=0;
+		if ($logfilesize>0&&$clogfile<=$logfilesize) {
+			// ok to write the log file.
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: $ip,$em,$author,$sname,$whodunnit\r\n");
+		}
 	}
 	if ($redir=='Y'&&!empty($redirurl)) {
-		sleep($sleep); // sleep for a few seconds to annoy spammers and maybe delay next hit on stopforumspam.com
+		//sleep($sleep); // sleep for a few seconds to annoy spammers and maybe delay next hit on stopforumspam.com
 		header('HTTP/1.1 307 Moved');
 		header('Status: 307 Moved');
 		header("location: $redirurl"); 
 		exit();
 	} 
 
-	sleep($sleep); // sleep for a few seconds to annoy spammers and maybe delay next hit on us and/or stopforumspam.com
-	// here we do wp_die
-	//header('HTTP/1.1 403 Forbidden');
-	//echo $rejectmessage;
 	
 	// add the reason code to the login message
 	$rejectmessage=str_replace('[reason]',$whodunnit,$rejectmessage);
 	$rejectmessage=str_replace('[ip]',$ip,$rejectmessage);
+	if ($notify=='Y') {
+		// need to offer blocked user the chance to whitelisted
+		// reason is in $whodunnit.
+		$knonce=wp_create_nonce('kpgstopspam_wlrequest');
+
+		$r2="
+		<p>
+		If you feel that you have been blocked in error, you may notify the Admin and ask to placed on the
+		system white list. This site's admin will be notified and can review the reason why you were blocked.<br/>
+			<form name=\"DOIT2\" method=\"POST\" action=\"\">
+			 <input type=\"hidden\" name=\"kip\" value=\"$ip\" />
+			 <input type=\"hidden\" name=\"kem\" value=\"$em\" />
+			 <input type=\"hidden\" name=\"kau\" value=\"$author\" />
+			 <input type=\"hidden\" name=\"knot\" value=\"$whodunnit\" />
+			 <input type=\"hidden\" name=\"knotify_key\" value=\"$knonce\" />
+			 Please ask nicely to be admitted here.<br/>
+			 <textarea cols=\"80\" rows=\"5\" name=\"kinf\" value\"\"></textarea>
+		     <input type=\"submit\" value=\"Request to be added to the White List\" />
+			</form>
+		</p>
+		
+		";
+		$rejectmessage=$rejectmessage.$r2;
+	
+	}
 	wp_die("$rejectmessage","Login Access Denied",array('response' => 403));
 	exit();
 }

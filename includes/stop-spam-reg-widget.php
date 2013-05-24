@@ -46,7 +46,7 @@ class Stop_spam_reg_Widget extends WP_Widget {
 			echo $before_title . $title . $after_title;
 		// widget stuff goes here
 		?>
-		<p >This site protected by:<br/> <a target="_blank" href="http://wordpress.org/extend/plugins/stop-spammer-registrations-plugin/">Stop Spammer Registrations plugin for Wordpress</a><br/>
+		<p >This site protected by:<br/> <a target="_blank" href="http://wordpress.org/extend/plugins/stop-spammer-registrations-plugin/">Stop Spammers plugin for Wordpress</a><br/>
 		<?php
 		$stats=kpg_sp_get_stats();
 		extract($stats);

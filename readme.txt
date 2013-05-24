@@ -1,24 +1,24 @@
-=== Stop Spammer Registrations Plugin ===
+=== Stop Spammers ===
 Tags: spam, comment, registration, login, spammers,MU, StopForumSpam, Honeypot, BotScout,DNSBL, Spamhaus.org, Ubiquity Servers, HTTP_ACCEPT, disposable email
 Donate link: http://www.blogseye.com/donate/
 Requires at least: 3.0
 Tested up to: 3.5
 Contributors: Keith Graham
-Stable tag: 4.2
+Stable tag: 4.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-The Stop Spammer Registrations Plugin checks comments and logins 15 different ways to block spammers.
+The Stop Spammers Plugin checks comments and logins 15 different ways to block spammers.
 
 == Description ==
-In all the plugin uses 15 different strategies to block spammers. 
-Eliminates 99% of spam registrations and comments. Checks all attempts to leave spam against StopForumSpam.com, Project Honeypot, BotScout, DNSBL lists such as Spamhaus.org, known spammer hosts such as Ubiquity Servers, disposable email addresses, very long email address and names, and HTTP_ACCEPT header. Checks for robots that hit your site too fast, and puts a fake comment and login screen where only spammers will find them. 
+Stop Spammers uses more than 15 different ways to detect spammers. It checks Logins, Registrations, and comments for spam users and blocks them when it finds them.
+Stop Spammers Eliminates 99% of spam registrations and comments. Checks all attempts to leave spam against StopForumSpam.com, Project Honeypot, BotScout, DNSBL lists such as Spamhaus.org, known spammer hosts such as Ubiquity Servers, disposable email addresses, very long email address and names, and HTTP_ACCEPT header. Checks for robots that hit your site too fast, and puts a fake comment and login screen where only spammers will find them. 
 
-The Stop Spammer Registrations Plugin now checks for spammer IPs much earlier in the comment and registration process. When it detects a spammer IP, the plugin stops WordPress from completing any further operations and an access denied message is presented to the spammer. You control the access denied message, or you can redirect the spammer to another page or website.
+The Stop Spammers Plugin now checks for spammer IPs much earlier in the comment and registration process. When it detects a spammer IP, the plugin stops WordPress from completing any further operations and an access denied message is presented to the spammer. You control the access denied message, or you can redirect the spammer to another page or website.
 
 How the plugin works: 
 
-This plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments. The Stop Spammer Registrations plugin works by checking the IP address, email and user id of anyone who tries to register, login, or leave a comment. This effectively blocks spammers who try to register on blogs or leave spam. It checks a users credentials against up to three databases: Stop Forum Spam, Project Honeypot, and BotScout. Optionally checks against Akismet for Logins and Registrations. 
+This plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments. The Stop Spammers plugin works by checking the IP address, email and user id of anyone who tries to register, login, or leave a comment. This effectively blocks spammers who try to register on blogs or leave spam. It checks a users credentials against up to three databases: Stop Forum Spam, Project Honeypot, and BotScout. Optionally checks against Akismet for Logins and Registrations. 
 
 Optionally the plugin will also check for disposable email addresses, check for the lack of a HTTP_ACCEPT header, and check against several DNSBL lists such as Spamhaus.org. It also checks against spammer hosts like Ubiquity-Nobis, XSServer, Balticom, Everhost, FDC, Exetel, Virpus and other servers, which are a major source of Spam Comments. 
 
@@ -38,12 +38,12 @@ API Keys are NOT required for the plugin to work. Stop Forum Spam does not requi
 
 History: 
 
-The Stop Spammer Registrations plugin keeps a count of the spammers that it has blocked and displays this on the WordPress dashboard. It also displays the last hits on email or IP and it also shows a history of the times it has made a check, showing rejections, passing emails and errors. When there is data to display there will also be a button to clear out the data. You can control the size of the list and clear the history.
+The Stop Spammers plugin keeps a count of the spammers that it has blocked and displays this on the WordPress dashboard. It also displays the last hits on email or IP and it also shows a history of the times it has made a check, showing rejections, passing emails and errors. When there is data to display there will also be a button to clear out the data. You can control the size of the list and clear the history.
 If a user tries to log in and passes all checks for spammers an icon appears next to the IP address. Only users you know should be allowed to login, so by clicking the icon, you can add the IP to your black list. 
 
 Cache: 
 
-The Stop Spammer Registrations plugin keeps track of a number of spammer emails and IP addresses in a cache to avoid pinging databases more often than necessary. The results are saved and displayed. You can control the length of the cache list and clear it at any time. The plugin caches IP addresses that do not fail, assuming that they may be valid users. In order to prevent re-checking these IP addresses, the plugin stores the last two IP addresses that passed all tests.
+The Stop Spammers plugin keeps track of a number of spammer emails and IP addresses in a cache to avoid pinging databases more often than necessary. The results are saved and displayed. You can control the length of the cache list and clear it at any time. The plugin caches IP addresses that do not fail, assuming that they may be valid users. In order to prevent re-checking these IP addresses, the plugin stores the last two IP addresses that passed all tests.
 
 Reporting Spam: 
 
@@ -216,6 +216,22 @@ This has some functions partially complete, but I had to release as is to fix th
 * Changed formatting of Red Herring forms to try to prevent threading failure on bbpress and some themes. This may reduce the effectiveness of red herring forms, but will prevent threading from breaking.
 * fixed issue with non-admins logging in. No longer throws an error.
 * Removed "buy the book" nag messages in widget and settings.
+
+
+= 4.3 =
+* Fixed a bug in determining the ip address of pages forwarded by a proxy server.
+* Modified IP code to work correctly with Opera Turbo.
+* added a check for dictionary attacks against admin.
+* broke out common code to a separate include file.
+* fixed a bug on the settings page.
+* rewrote the MU detection and loading code.
+* added a white list request form to the deny message. White list request will be shown on the statistics page and the "Right Now" section of the main admin page.
+* added a check for email "test@test.com" that allows users to check if the spam detection is working without black listing themselves. Try to leave a message using "test@test.com" and you'll be able to see what spammers see.
+* rewrote list lookups so that the wild card '*' can be used. Now 238.3.* ip address can be white listed or black listed. The wild card only works for the end of emails and ips. '*.dn' will not work.
+* fixed TLD block list. Many reports that it did not work. I rewrote and tested on different installations.
+* I changed the name of the plugin to Stop Spammers. We'll see if it breaks Wordpress. I think this is the most dangerous thing I've tried.
+* changed how logging works. Now, by default there is no log at all.
+
 
 == Frequently Asked Questions ==
 = Help, I'm locked out of my Website =
