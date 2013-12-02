@@ -360,21 +360,7 @@ function kpg_load_all_checks_no_post() {
 	add_filter('login_message','kpg_sfs_red_herring_login');	
 	add_filter('before_signup_form','kpg_sfs_red_herring_signup');
 	$options=kpg_sp_get_options();
-	if ($options['poison']=='Y') {
-		//new poison link add
-		add_action('loop_start','kpg_sp_poison');
-	}
 	return;
-}
-function kpg_sp_poison() {
-	@remove_action('loop_start','kpg_sp_poison');
-	// testing the poison link
-	$pnonce=wp_create_nonce('kpgstopspam_poison');
-	echo '<span style="position:absolute;left:-100px;width:0;visibility:hidden;display:none;">
-	<a style="visibility:hidden;" href="'.site_url().'?commentid='.$pnonce.'" rel="nofollow">Add Comment</a>
-	<a style="visibility:hidden;" href="'.site_url().'?loginid='.$pnonce.'" rel="nofollow">Register</a>
-	</span>';
-
 }
 /************************************************************
 *
@@ -387,6 +373,17 @@ function kpg_sfs_red_herring_comment($query) {
 	@remove_filter('login_message','kpg_sfs_red_herring_login');	
 	// check (late) to see if we should continue
 	$options=kpg_sp_get_options();
+// poison link
+	if ($options['poison']=='Y') {
+		$pnonce=wp_create_nonce('kpgstopspam_poison');
+		echo '<span style="position:absolute;left:-100px;width:0;visibility:hidden;display:none;">
+		<a style="visibility:hidden;" href="'.site_url().'?commentid='.$pnonce.'" rel="nofollow">Add Comment</a>
+		<a style="visibility:hidden;" href="'.site_url().'?loginid='.$pnonce.'" rel="nofollow">Register</a>
+		</span>';
+	}
+	
+	
+	
 	if (array_key_exists('redherring',$options)&&$options['redherring']=='Y') {
 		// continue
 	} else {
