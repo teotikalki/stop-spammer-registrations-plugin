@@ -10,7 +10,7 @@ This hooks the options functions of wp in order to update one option from blog #
 if (!defined('ABSPATH')) exit; // just in case
 
 // now we need to get a ask the user for a list of options that he wants to get
-	// call the setup from the plugin proper
+// call the setup from the plugin proper
 // kpg_ssp_global_setup(); // when plugin is loaded this get's done
 
 $kpg_ssp_semaphore=0;
@@ -107,7 +107,7 @@ function kpg_ssp_global_unsetup() {
 		remove_filter('delete_option_'.$value,'kpg_pf_global_delete');
 		remove_filter('pre_option_'.$value,'kpg_pf_global_get',1);
 	}
-		return;
+	return;
 }
 
 ?>

@@ -6,285 +6,287 @@
 */
 if (!defined('ABSPATH')) exit; // just in case
 
-	if(!current_user_can('manage_options')) {
-		die('Access Denied');
-	}
+if(!current_user_can('manage_options')) {
+	die('Access Denied');
+}
+
+sfs_errorsonoff();
+
 ?>
 
 <div class="wrap">
   <h2>Stop Spammers Plugin Options</h2>
   <?php
-    global $sfs_check_activation;
-	$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
-
-	$stats=kpg_sp_get_stats();
-	extract($stats);
-	$options=kpg_sp_get_options();
-	extract($options);
-	$ip=kpg_get_ip();
-	if ($firsttime=='Y') {
-		// check the IP for the first time
-		kpg_sfs_check_load();
-		if (kpg_sfs_check($sfs_check_activation,'Check IP',$ip)===false) {
-			// break the installation
-			echo "<br/>Your current configuration reports that you will be denied access as a spammer.<br/>
+global $sfs_check_activation;
+$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
+$options=kpg_sp_get_options();
+extract($options);
+$muswitch='N';
+if (function_exists('is_multisite') && is_multisite()) {
+	$muswitch=get_option('kpg_muswitch');
+	if (empty($muswitch)) $muswitch='Y';
+	if ($muswitch!='N') $muswitch='Y';
+}
+$ip=kpg_get_ip();
+if ($firsttime=='Y') {
+	// check the IP for the first time
+	kpg_sfs_check_load();
+	if (kpg_sfs_check($sfs_check_activation,'Check IP',$ip)===false) {
+		// break the installation
+		echo "<br/>Your current configuration reports that you will be denied access as a spammer.<br/>
 			Do not use this plugin until you can resolve this issue.
 			If you are not a spammer, please copy the information above and leave it as a comment at http://www.blogseye.com
 			<br/>
 			This message is from the 'stop-spammer-registrations' plugin<br/>
 			";
-			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: IP Check Failed"."\r\n");
-		} else {
-			echo "<h2>Your IP address passed all plugin spam checks</h2>";
-			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Ip Check Passes"."\r\n");
-		}
-		// update first time
-		$firsttime='N';
-		$options['firsttime']='N';
-		update_option('kpg_stop_sp_reg_options',$options);
+		if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: IP Check Failed"."\r\n");
+	} else {
+		echo "<h2>Your IP address passed all plugin spam checks</h2>";
+		if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Ip Check Passes"."\r\n");
 	}
-	$wordpress_api_key=get_option('wordpress_api_key');
-    if (empty($wordpress_api_key)) $wordpress_api_key='';
-	$nonce='';
-	if (array_key_exists('kpg_stop_spammers_control',$_POST)) $nonce=$_POST['kpg_stop_spammers_control'];
-	if (wp_verify_nonce($nonce,'kpgstopspam_update')) { 
-		if (array_key_exists('action',$_POST)) {
-			if (array_key_exists('wordpress_api_key',$_POST)) {
-				$wordpress_api_key=stripslashes($_POST['wordpress_api_key']);
-				if ($wordpress_api_key!='na') update_option('wordpress_api_key',$wordpress_api_key);
-			} else {
-				$wordpress_api_key='na';
+	// update first time
+	$firsttime='N';
+	$options['firsttime']='N';
+	update_option('kpg_stop_sp_reg_options',$options);
+}
+$wordpress_api_key=get_option('wordpress_api_key');
+if (empty($wordpress_api_key)) $wordpress_api_key='';
+$nonce='';
+if (array_key_exists('kpg_stop_spammers_control',$_POST)) $nonce=$_POST['kpg_stop_spammers_control'];
+if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) { 
+	if (array_key_exists('action',$_POST)) {
+		if (array_key_exists('wordpress_api_key',$_POST)) {
+			$wordpress_api_key=stripslashes($_POST['wordpress_api_key']);
+			if ($wordpress_api_key!='na') update_option('wordpress_api_key',$wordpress_api_key);
+		} else {
+			$wordpress_api_key='na';
+		}
+		
+		// check all the yes/no questions - need to take up less room
+		$ynfields=array(
+		'chksession','chkdisp','chksfs','chkubiquity',
+		'chkwplogin','chkakismet','chkakismetcomments','noplugins',
+		'chkcomments','chklogin','chksignup','chklong',
+		'chkagent','chkxmlrpc','addtowhitelist','chkadmin','chkadminlog',
+		'chkspamwords','chkwpmail','redherring',
+		'chkdnsbl','chkemail','chkip','chkreferer',
+		'nobuy','redir','accept','notify','poison','wlreqmail');
+		foreach ($ynfields as $yn) {
+			$tyn='N';
+			if (array_key_exists($yn,$_POST)) {
+				$tyn=stripslashes($_POST[$yn]);
 			}
-// check all the yes/no questions - need to take up less room
-			$ynfields=array(
-			'chksession','chkdisp','chksfs','chkubiquity',
-			'chkwplogin','chkakismet','chkakismetcomments','noplugins',
-			'chkcomments','chklogin','chksignup','chklong',
-			'chkagent','chkxmlrpc','addtowhitelist','chkadmin','chkadminlog',
-			'chkspamwords','chkjscript','chkwpmail','redherring',
-			'chkdnsbl','chkemail','chkip','chkreferer',
-			'nobuy','redir','accept','notify');
-			foreach ($ynfields as $yn) {
-				$tyn='N';
-				if (array_key_exists($yn,$_POST)) {
-					$tyn=stripslashes($_POST[$yn]);
-				}
-				if ($tyn!='Y') $tyn='N';
-				$options[$yn]=$tyn;
-			}
-												
-			if (array_key_exists('sleep',$_POST)) {
-				$sleep=stripslashes($_POST['sleep']);
-			} else {
-				$sleep=10;
-			}
-			if (!is_numeric($sleep)||$sleep<0||$sleep>30) $sleep=10;
-			$options['sleep']=$sleep;
-			
-			if (array_key_exists('sesstime',$_POST)) {
-				$sesstime=stripslashes($_POST['sesstime']);
-			} else {
-				$sesstime=4;
-			}
-			if (!is_numeric($sesstime)||$sesstime<0||$sesstime>10) $sesstime=4;
-			$options['sesstime']=$sesstime;
-			
-					
-			if (array_key_exists('logfilesize',$_POST)) {
-				$logfilesize=trim(stripslashes($_POST['logfilesize']));
-			} else {
-				$logfilesize=0;
-			}
-			if (!is_numeric($logfilesize)) $logfilesize=0;
-			if (empty($logfilesize)||$logfilesize<0) $logfilesize=0;
-			if ($logfilesize>500000) $logfilesize=500000;
-			$options['logfilesize']=$logfilesize;
-			
-			if (array_key_exists('apikey',$_POST)) $apikey=stripslashes($_POST['apikey']);
+			if ($tyn!='Y') $tyn='N';
+			$options[$yn]=$tyn;
+		}
+		
+		
+		if (array_key_exists('sesstime',$_POST)) {
+			$sesstime=stripslashes($_POST['sesstime']);
+		} else {
+			$sesstime=4;
+		}
+		if (!is_numeric($sesstime)||$sesstime<0||$sesstime>10) $sesstime=4;
+		$options['sesstime']=$sesstime;
+		
+		
+		if (array_key_exists('logfilesize',$_POST)) {
+			$logfilesize=trim(stripslashes($_POST['logfilesize']));
+		} else {
+			$logfilesize=0;
+		}
+		if (!is_numeric($logfilesize)) $logfilesize=0;
+		if (empty($logfilesize)||$logfilesize<0) $logfilesize=0;
+		if ($logfilesize>500000) $logfilesize=500000;
+		$options['logfilesize']=$logfilesize;
+		
+		if (array_key_exists('apikey',$_POST)) {
+			$apikey=stripslashes($_POST['apikey']);
 			$options['apikey']=$apikey;
-			if (array_key_exists('honeyapi',$_POST)) $honeyapi=stripslashes($_POST['honeyapi']);
-			$options['honeyapi']=$honeyapi;
-			if (array_key_exists('botscoutapi',$_POST)) $botscoutapi=stripslashes($_POST['botscoutapi']);
-			$options['botscoutapi']=$botscoutapi;
-			if (array_key_exists('blist',$_POST)) {
-			    $blist=$_POST['blist'];
-				$blist=explode("\n",$blist);
-				$tblist=array();
-				foreach($blist as $bl) {
-					$bl=trim($bl);
-					if (!empty($bl)) $tblist[]=$bl;
-				}
-				$options['blist']=$tblist;				
-				$blist=$tblist;
+			//echo "<br/>updated apikey $apikey<br/>";
+		}
+		if (array_key_exists('honeyapi',$_POST)) $honeyapi=stripslashes($_POST['honeyapi']);
+		$options['honeyapi']=$honeyapi;
+		if (array_key_exists('botscoutapi',$_POST)) $botscoutapi=stripslashes($_POST['botscoutapi']);
+		$options['botscoutapi']=$botscoutapi;
+		if (array_key_exists('blist',$_POST)) {
+			$blist=$_POST['blist'];
+			$blist=explode("\n",$blist);
+			$tblist=array();
+			foreach($blist as $bl) {
+				$bl=trim($bl);
+				if (!empty($bl)) $tblist[]=$bl;
 			}
-			if (array_key_exists('spamwords',$_POST)) {
-			    $spamwords=$_POST['spamwords'];
-				$spamwords=explode("\n",$spamwords);
-				$tblist=array();
-				foreach($spamwords as $bl) {
-					$bl=trim($bl);
-					if (!empty($bl)) $tblist[]=$bl;
-				}
-				$options['spamwords']=$tblist;				
-				$spamwords=$tblist;
+			$options['blist']=$tblist;				
+			$blist=$tblist;
+		}
+		if (array_key_exists('spamwords',$_POST)) {
+			$spamwords=$_POST['spamwords'];
+			$spamwords=explode("\n",$spamwords);
+			$tblist=array();
+			foreach($spamwords as $bl) {
+				$bl=trim($bl);
+				if (!empty($bl)) $tblist[]=$bl;
 			}
-			if (array_key_exists('wlist',$_POST)) {
-			    $wlist=$_POST['wlist'];
-				$wlist=explode("\n",$wlist);
-				$tblist=array();
-				foreach($wlist as $bl) {
-					$bl=trim($bl);
-					if (!empty($bl)) $tblist[]=$bl;
-				}
-				$options['wlist']=$tblist;				
-				$wlist=$tblist;
+			$options['spamwords']=$tblist;				
+			$spamwords=$tblist;
+		}
+		if (array_key_exists('wlist',$_POST)) {
+			$wlist=$_POST['wlist'];
+			$wlist=explode("\n",$wlist);
+			$tblist=array();
+			foreach($wlist as $bl) {
+				$bl=trim($bl);
+				if (!empty($bl)) $tblist[]=$bl;
 			}
-			
-			
+			$options['wlist']=$tblist;				
+			$wlist=$tblist;
+		}
+		
+		
 
-			if (array_key_exists('badTLDs',$_POST)) {
-			    $badTLDs=$_POST['badTLDs'];
-				$badTLDs=explode("\n",$badTLDs);
-				$tblist=array();
-				foreach($badTLDs as $bl) {
-					$bl=trim($bl);
-					if (!empty($bl)) $tblist[]=$bl;
-				}
-				$options['badTLDs']=$tblist;				
-				$badTLDs=$tblist;
+		if (array_key_exists('badTLDs',$_POST)) {
+			$badTLDs=$_POST['badTLDs'];
+			$badTLDs=explode("\n",$badTLDs);
+			$tblist=array();
+			foreach($badTLDs as $bl) {
+				$bl=trim($bl);
+				if (!empty($bl)) $tblist[]=$bl;
 			}
+			$options['badTLDs']=$tblist;				
+			$badTLDs=$tblist;
+		}
 
-			if (array_key_exists('baddomains',$_POST)) {
-			    $baddomains=$_POST['baddomains'];
-				$baddomains=explode("\n",$baddomains);
-				$tblist=array();
-				foreach($baddomains as $bl) {
-					$bl=trim($bl);
-					if (!empty($bl)) $tblist[]=$bl;
-				}
-				$options['baddomains']=$tblist;				
-				$baddomains=$tblist;
+		if (array_key_exists('baddomains',$_POST)) {
+			$baddomains=$_POST['baddomains'];
+			$baddomains=explode("\n",$baddomains);
+			$tblist=array();
+			foreach($baddomains as $bl) {
+				$bl=trim($bl);
+				if (!empty($bl)) $tblist[]=$bl;
 			}
-			// update the freq and age options
-			if (array_key_exists('sfsfreq',$_POST)) $sfsfreq=trim(stripslashes($_POST['sfsfreq']));
-			if (array_key_exists('hnyage',$_POST)) $hnyage=trim(stripslashes($_POST['hnyage']));
-			if (array_key_exists('botfreq',$_POST)) $botfreq=trim(stripslashes($_POST['botfreq']));
-			if (array_key_exists('sfsage',$_POST)) $sfsage=trim(stripslashes($_POST['sfsage']));
-			if (array_key_exists('hnylevel',$_POST)) $hnylevel=trim(stripslashes($_POST['hnylevel']));
-			if (array_key_exists('botage',$_POST)) $botage=trim(stripslashes($_POST['botage']));
-			if (array_key_exists('muswitch',$_POST)) $muswitch=trim(stripslashes($_POST['muswitch']));
-			if (array_key_exists('rejectmessage',$_POST)) $rejectmessage=trim(stripslashes($_POST['rejectmessage']));
-			if (array_key_exists('redirurl',$_POST)) $redirurl=trim(stripslashes($_POST['redirurl']));
-			
-			if (array_key_exists('kpg_sp_cache',$_POST)) $kpg_sp_cache=trim(stripslashes($_POST['kpg_sp_cache']));
-			if (array_key_exists('kpg_sp_cache_em',$_POST)) $kpg_sp_cache_em=trim(stripslashes($_POST['kpg_sp_cache_em']));
-			// dividing the cache into an email cache, an ip cache, and good cache with different sizes
-			
-			if (array_key_exists('kpg_sp_hist',$_POST)) $kpg_sp_hist=trim(stripslashes($_POST['kpg_sp_hist']));
-			if (array_key_exists('kpg_sp_good',$_POST)) $kpg_sp_good=trim(stripslashes($_POST['kpg_sp_good']));
-			// check for numerics in the fields
-			if (!is_numeric($sfsfreq)) $sfsfreq=0; 
-			if (!is_numeric($hnyage)) $hnyage=0;
-			if (!is_numeric($botfreq)) $botfreq=0; 
-			if (!is_numeric($hnylevel)) $hnylevel=5;
-			if (!is_numeric($botage)) $botage=9999; 
-			if (!is_numeric($sfsage)) $sfsage=9999;	
-			if (!is_numeric($kpg_sp_cache)) $kpg_sp_cache=25;	
-			if (!is_numeric($kpg_sp_cache_em)) $kpg_sp_cache_em=10;	
-			if (!is_numeric($kpg_sp_hist)) $kpg_sp_hist=25;	
-			if (!is_numeric($kpg_sp_good)) $kpg_sp_good=2;	
-			$options['sfsfreq']=$sfsfreq;
-			$options['hnyage']=$hnyage;
-			$options['botfreq']=$botfreq;
-			$options['sfsage']=$sfsage;
-			$options['hnylevel']=$hnylevel;
-			$options['botage']=$botage;
-			$options['kpg_sp_cache']=$kpg_sp_cache;
-			$options['kpg_sp_cache_em']=$kpg_sp_cache_em;
-			$options['kpg_sp_hist']=$kpg_sp_hist;
-			$options['kpg_sp_good']=$kpg_sp_good;
-			$options['redirurl']=$redirurl;
-			if (empty($muswitch)) $muswitch='N';
-			if ($muswitch!='Y') $muswitch='N';
-			$options['muswitch']=$muswitch;
-			$options['rejectmessage']=$rejectmessage;
-			if (function_exists('is_multisite') && is_multisite() && function_exists('kpg_ssp_global_unsetup') && function_exists('kpg_ssp_global_setup')) {
-				if ($muswitch=='N') {
-					kpg_ssp_global_unsetup();
-				    // the $muswitch is N so we have to update blog 1
-					switch_to_blog(1);
-					update_option('kpg_stop_sp_reg_options',$options);
-					restore_current_blog();
-				} else {
-					kpg_ssp_global_setup();
+			$options['baddomains']=$tblist;				
+			$baddomains=$tblist;
+		}
+		// update the freq and age options
+		if (array_key_exists('sfsfreq',$_POST)) $sfsfreq=trim(stripslashes($_POST['sfsfreq']));
+		if (array_key_exists('hnyage',$_POST)) $hnyage=trim(stripslashes($_POST['hnyage']));
+		if (array_key_exists('botfreq',$_POST)) $botfreq=trim(stripslashes($_POST['botfreq']));
+		if (array_key_exists('sfsage',$_POST)) $sfsage=trim(stripslashes($_POST['sfsage']));
+		if (array_key_exists('hnylevel',$_POST)) $hnylevel=trim(stripslashes($_POST['hnylevel']));
+		if (array_key_exists('botage',$_POST)) $botage=trim(stripslashes($_POST['botage']));
+		if (array_key_exists('rejectmessage',$_POST)) $rejectmessage=trim(stripslashes($_POST['rejectmessage']));
+		if (array_key_exists('redirurl',$_POST)) $redirurl=trim(stripslashes($_POST['redirurl']));
+		
+		if (array_key_exists('kpg_sp_cache',$_POST)) $kpg_sp_cache=trim(stripslashes($_POST['kpg_sp_cache']));
+		if (array_key_exists('kpg_sp_cache_em',$_POST)) $kpg_sp_cache_em=trim(stripslashes($_POST['kpg_sp_cache_em']));
+		// dividing the cache into an email cache, an ip cache, and good cache with different sizes
+		
+		if (array_key_exists('kpg_sp_hist',$_POST)) $kpg_sp_hist=trim(stripslashes($_POST['kpg_sp_hist']));
+		if (array_key_exists('kpg_sp_good',$_POST)) $kpg_sp_good=trim(stripslashes($_POST['kpg_sp_good']));
+		// check for numerics in the fields
+		if (!is_numeric($sfsfreq)) $sfsfreq=0; 
+		if (!is_numeric($hnyage)) $hnyage=0;
+		if (!is_numeric($botfreq)) $botfreq=0; 
+		if (!is_numeric($hnylevel)) $hnylevel=5;
+		if (!is_numeric($botage)) $botage=9999; 
+		if (!is_numeric($sfsage)) $sfsage=9999;	
+		if (!is_numeric($kpg_sp_cache)) $kpg_sp_cache=25;	
+		if (!is_numeric($kpg_sp_cache_em)) $kpg_sp_cache_em=10;	
+		if (!is_numeric($kpg_sp_hist)) $kpg_sp_hist=25;	
+		if (!is_numeric($kpg_sp_good)) $kpg_sp_good=2;	
+		$options['sfsfreq']=$sfsfreq;
+		$options['hnyage']=$hnyage;
+		$options['botfreq']=$botfreq;
+		$options['sfsage']=$sfsage;
+		$options['hnylevel']=$hnylevel;
+		$options['botage']=$botage;
+		$options['kpg_sp_cache']=$kpg_sp_cache;
+		$options['kpg_sp_cache_em']=$kpg_sp_cache_em;
+		$options['kpg_sp_hist']=$kpg_sp_hist;
+		$options['kpg_sp_good']=$kpg_sp_good;
+		$options['redirurl']=$redirurl;
+		$options['rejectmessage']=$rejectmessage;
+		$options['test 1']='Y';
+		//echo "<br/>Updating options<br/>";
+		//echo "<br/>Got options 2 size=".count($options).' apikey='.$options['apikey'].'<br/>';
+		if (!update_option('kpg_stop_sp_reg_options',$options)) {
+			delete_option('kpg_stop_sp_reg_options');
+			$options['autoload']='Y';
+			if(!add_option('kpg_stop_sp_reg_options',$options, 0, 'no' )) {
+				if (!update_option('kpg_stop_sp_reg_options',$options)) {
 				}
-			}			
-			update_option('kpg_stop_sp_reg_options',$options);
-			extract($options); // extract again to get the new options
-			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: updated options"."\r\n");
-			echo "<h2>Options Updated</h2>";
+			}
+		}
+		extract($options); // extract again to get the new options
+		if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: updated options"."\r\n");
+		echo "<h2>Options Updated</h2>";
 
-		} else if (array_key_exists('kpg_stop_check_me',$_POST)) {		
-				// validate the current users's spam
-				//echo "Validating Check Your IP<br/>";
-				$ip=kpg_get_ip();
-				kpg_sfs_check_load();
-				if (kpg_sfs_check($sfs_check_activation,'Check IP',$ip)===false) {
-					// break the installation
-					echo "<br/>Your current configuration reports that you will be denied access as a spammer.<br/>
+	} else if (array_key_exists('kpg_stop_check_me',$_POST)) {		
+		// validate the current users's spam
+		//echo "Validating Check Your IP<br/>";
+		$ip=kpg_get_ip();
+		kpg_sfs_check_load();
+		if (kpg_sfs_check($sfs_check_activation,'Check IP',$ip)===false) {
+			// break the installation
+			echo "<br/>Your current configuration reports that you will be denied access as a spammer.<br/>
 					Do not use this plugin until you can resolve this issue.
 					If you are not a spammer, please copy the information above and leave it as a comment at http://www.blogseye.com
 					<br/>
 					This message is from the 'stop-spammer-registrations' plugin<br/>
 					";
-					if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: IP Check Failed"."\r\n");
-				} else {
-					echo "<h2>Your IP address passed all plugin spam checks</h2>";
-					if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Ip Check Passes"."\r\n");
-				}
-		} else if (array_key_exists('kpg_stop_delete_log',$_POST)) {	
-			// delete the log
-			$f=dirname(__FILE__)."/../sfs_debug_output.txt";
-			if (file_exists($f)) {
-			    unlink($f);
-				echo "<h2>Deleted Error Log File</h2>";
-				if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Error Log Deleted"."\r\n");
-			}
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: IP Check Failed"."\r\n");
+		} else {
+			echo "<h2>Your IP address passed all plugin spam checks</h2>";
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Ip Check Passes"."\r\n");
 		}
-
-	} else {
-		// echo "no nonce<br/>";
+	} else if (array_key_exists('kpg_stop_delete_log',$_POST)) {	
+		// delete the log
+		$f=dirname(__FILE__)."/../sfs_debug_output.txt";
+		if (file_exists($f)) {
+			unlink($f);
+			echo "<h2>Deleted Error Log File</h2>";
+			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Error Log Deleted"."\r\n");
+		}
 	}
 
-   $nonce=wp_create_nonce('kpgstopspam_update');
+} else {
+	// echo "no nonce<br/>";
+}
+
+$nonce=wp_create_nonce('kpgstopspam_update');
 ?>
   <p><a href="http://www.blogseye.com/checkspam/" target="_blank">Check an IP address to see if it passes spam checks.</a></p>
   <p><a href="http://www.blogseye.com/beta-test-plugins/" target="_blank">Get Beta Test version of this plugin.</a></p>
   <?PHP	
-	if ($addtowhitelist=='Y'&&in_array($ip,$wlist)) {
-?>
+if ($addtowhitelist=='Y'&&in_array($ip,$wlist)) {
+	?>
   <p><strong>Your current IP is in your white list. This will keep you from being locked out in the future</strong></p>
   <?php
-	}
-	// check to see if you are using the admin login id.
-	$current_user = wp_get_current_user();
-	$current_user_name=$current_user->user_login;
-	if ($current_user_name=='admin') {
-?>
+}
+// check to see if you are using the admin login id.
+$current_user = wp_get_current_user();
+$current_user_name=$current_user->user_login;
+$ip=kpg_get_ip();
+
+if ($current_user_name=='admin') {
+	?>
   <strong style="color:red;">Your current ID is 'admin'. This is very dangerous. You should rename the admin id to something else.<br/>
   There is a very simple admin renamer plugin at a <a href="http://wordpress.org/extend/plugins/admin-username-changer/">Admin username changer</a> (do not use in MU)</strong>
   <?php
-	} else {
-		echo "<p>You are currently logged in as '$current_user_name'</p>";
-	}
-	// check that ip address is the same as in the one web server reports
-	$rip=$_SERVER['REMOTE_ADDR'];
-	if ($ip!=$rip) {
-		echo "<p>Your server reports that your IP address is $rip.<br/>";
-		echo "but XFF reports your actual IP address appears to be $ip.<br/>This may be because you are behind a firewall or proxy server. This can cause some problems checking spammer IP addresses.</p>";
-	}
-	
-	
+} else {
+	echo "<p>You are currently logged in as '$current_user_name'</p>";
+}
+	echo "<p>Your IP address is '$ip'</p>";
+
+// check that ip address is the same as in the one web server reports
+$rip=$_SERVER['REMOTE_ADDR'];
+if ($ip!=$rip) {
+	echo "<p>Your server reports that your IP address is $rip.<br/>";
+	echo "but XFF reports your actual IP address appears to be $ip.<br/>This may be because you are behind a firewall or proxy server. This can cause some problems checking spammer IP addresses.</p>";
+}
+
+
 ?>
   <h4>Self Check</h4>
   <p>In some configurations this plugin will erroneously report that you are a spammer. Please verify your status by clicking the &quot;Check Your IP&quot; button. This will run your IP through the spam checks. If it fails and thinks you might be a spammer then quickly deactivate the plugin so it will not lock you out of your own blog. </p>
@@ -297,84 +299,68 @@ if (!defined('ABSPATH')) exit; // just in case
     </p>
   </form>
   <?php	
-	
-	if ($nobuy!='Y') {
-?>
+
+if ($nobuy!='Y') {
+	?>
   <div style="position:relative;float:right;width:35%;background-color:ivory;border:#333333 medium groove;padding:4px;margin-left:4px;">
     <p>This plugin is free and I expect nothing in return. If you would like to support my programming effforts, please <a target="_blank" href="http://www.blogseye.com/donate/">donate a small amount</a> to help keep me interested in this project.</p>
   </div>
   <?php
-	}
-		$me=admin_url('options-general.php?page=stopspammerstats');
-		if (function_exists('is_multisite') && is_multisite() && $muswitch=='Y') {
-			switch_to_blog(1);
-			$me=get_admin_url( 1,'network/settings.php?page=adminstopspammerstats');
-			restore_current_blog();
-		}
-	
-?>
-  <p><a href="<?php echo $me; ?>">View History and Cache</a> </p>
-  <?php
-	if (function_exists('is_multisite') && is_multisite()) {
-		global $blog_id;
-		if (!isset($blog_id)||$blog_id!=1) {
-			if ($muswitch=='Y') {
-				?>
-  <h3>Stop Spammers is configured so that settings are available only on the Main Blog.</h3>
-  <?php
-				return;
-			}		
-		}
-	}
-	if ($spmcount>0) {
-?>
+}
+if (empty($spmcount))  $spmcount=0;
+if ($spmcount>0) {
+	?>
   <h3>Stop Spammers has stopped <?php echo $spmcount; ?> spammers since installation</h3>
   <?php 
 }
-	if ($spcount>0) {
-?>
+if (empty($spcount))  $spcount=0;
+if ($spcount>0) {
+	?>
   <h3>Stop Spammers has stopped <?php echo $spcount; ?> spammers since last cleared</h3>
   <?php 
 
-	} 
-	$num_comm = wp_count_comments( );
-	$num = number_format_i18n($num_comm->spam);
-	if ($num_comm->spam>0) {	
-?>
+} 
+$num_comm = wp_count_comments( );
+$num = number_format_i18n($num_comm->spam);
+if ($num_comm->spam>0&&$muswitch!='Y') {	
+	?>
   <p>There are <a href='edit-comments.php?comment_status=spam'><?php echo $num; ?></a> spam comments waiting for you to report them</p>
   <?php 
-	}
-		$num_comm = wp_count_comments( );
-	$num = number_format_i18n($num_comm->moderated);
-	if ($num_comm->moderated>0) {	
-?>
+}
+$num_comm = wp_count_comments( );
+$num = number_format_i18n($num_comm->moderated);
+if ($num_comm->moderated>0&&$muswitch!='Y') {	
+	?>
   <p>There are <a href='edit-comments.php?comment_status=moderated'><?php echo $num; ?></a> spam comments waiting to be moderated</p>
   <?php 
-	}
+}
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
-  <p style="font-weight:bold;">Version 4.3</p>
+  <p style="font-weight:bold;">Version 5.0</p>
   <script type="text/javascript" >
-	function kpg_show_hide_how() {
-		id=document.getElementById("kpg_stop_spam_div");
-		if (id.style.display=='none') {
-			id.style.display="block";
-		} else {
-			id.style.display="none";
-		}
-		return false;
+function kpg_show_hide_how() {
+	id=document.getElementById("kpg_stop_spam_div");
+	if (id.style.display=='none') {
+		id.style.display="block";
+	} else {
+		id.style.display="none";
 	}
-  </script>
+	return false;
+}
+</script>
   <a href="#" onclick="return kpg_show_hide_how();">How the plugin works</a>
   <div id="kpg_stop_spam_div" style="display:none;">
-    <p>Eliminates 99% of spam registrations and  comments. Checks all attempts to leave spam against <a href="http://www.stopforumspam.com/">Stop Forum Spam</a>, <a href="http://www.projecthoneypot.org/">Project Honeypot</a>, and <a href="http://www.botscout.com/">BotScout</a>, DNSBL lists such as Spamhaus.org, known spammer hosts such  as Ubiquity Servers, disposable email addresses, very long email address and  names, and HTTP_ACCEPT header. Checks for robots that hit your site too fast,  and puts a fake comment and login screen where only spammers will find them. In  all the plugin uses 15 different strategies to block spammers. </p>
+    <p>Eliminates 99% of spam registrations and  comments. Checks all attempts to leave spam against <a href="http://www.stopforumspam.com/">Stop Forum Spam</a>, <a href="http://www.projecthoneypot.org/">Project Honeypot</a>, and <a href="http://www.botscout.com/">BotScout</a>, DNSBL lists such as Spamhaus.org, known spammer hosts such  as Ubiquity Servers, disposable email addresses, very long email address and  names, and HTTP_ACCEPT header. Checks for robots that hit your site too fast,  and puts a fake comment and login screen where only spammers will find them. In  all the plugin uses 16 different strategies to block spammers. </p>
     <p style="font-weight:bold;">How the plugin works: </p>
     <p>This plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments. 
       The Stop Spammers plugin works by checking the IP address, email and user id of anyone who tries to register, login, or leave a comment. This effectively blocks spammers who try to register on blogs or leave spam. It checks a users credentials against up to three databases: <a href="http://www.stopforumspam.com/">Stop Forum Spam</a>, <a href="http://www.projecthoneypot.org/">Project Honeypot</a>, and <a href="http://www.botscout.com/">BotScout</a>. Optionally checks against Akismet for Logins and Registrations. </p>
     <p>Optionally the plugin will also check for disposable email addresses, check for the lack of a HTTP_ACCEPT header, and check against several DNSBL lists such as Spamhaus.org. It also checks against spammer hosts like Ubiquity-Nobis, XSServer, Balticom, Everhost, FDC, Exetel, Virpus and other servers, which are a major source of Spam Comments. </p>
-    <p>Rejects very long email addresses and very long author names since spammers can't resist putting there message everywhere. It also rejects form POST data where there is no HTTP_REFERER header, because spammers often forget to include the referring site information in their software.</p>
+    <p>Rejects very long email addresses and very long author names since spammers can't resist putting there message everywhere. It also rejects form POST data where the HTTP_REFERER header does not match your domain, because spammers often forget to include the correct referring site information in their software.</p>
     <p>The plugin will install a &quot;Red Herring&quot; comment form that will be invisible to normal users. Spammers will find this form and try to do their dirty deed using it. This results in the IP address being added to the deny list. This feature is turned off by default because the form might screw up your theme. Turn the option on and check your theme. If the form (a one pixel box) changes your theme presentation then turn the feature off. I highly recommend that you try this option. It stops a ton of spam.</p>
-    <p>The plugin can check how long it takes a  spammer to read the comment submit form and then post the comment. If this  takes less than 5 seconds, then the commenter is a spammer. A human cannot fill  out email, comment, and then submit the comment in less than 5 seconds. This is the best way to stop spam. </p>
+    <p>The plugin can check how long it takes a  spammer to read the comment submit form and then post the comment. If this  takes less than 4 seconds, then the commenter is a spammer. A human cannot fill  out email, comment, and then submit the comment in less than 4 seconds. This is the best way to stop spam. </p>
+    <p> The plugin installs a Poison Link that can only be seen by spammers. If they follow it, it adds
+      the spammers IP address to the cache of bad IP addresses so that the user will be denied, even
+      if they pass all tests. </p>
     <p><span style="font-weight:bold;">Limitations: </span></p>
     <p>StopForumSpam.com limits checks to 10,000 per day for each IP so the plugin may stop validating on very busy sites. I have not seen this happen, yet. The plugin will not stop spam that has not been reported to the various databases. You will always get some comments from spammers who are not yet reported. You can help others and yourself by reporting spam. If you do not report spam, the spammer will keep hitting you. This plugin works best with Akismet. Akismet works well, but clutters the database with spam comments that need to be deleted regularly, and Akismet does not work with spammer registrations. </p>
     <p style="font-weight:bold;">API Keys: </p>
@@ -440,27 +426,6 @@ function sfs_ajax_return_check(response) {
         <td align="left" valign="top">Normally the plugin checks for spammers before Wordpress can try to log in a user. If you check this box, every attempt to login will be tested for a valid user. This may allow a hacker to guess your user id and password by making thousands of attempts to login. This is turned on initially to prevent you from being locked out of your own blog, but should be unchecked after you verify that the plugin does not think you are a spammer.</td>
       </tr>
     </table>
-    <?php
-		// it must not only be a multisite install, but the user must be able to manage the network.
-		if (function_exists('is_multisite') && is_multisite() && current_user_can('manage_network_options')) {
-	?>
-    <h4>Network Blog Option:</h4>
-    <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
-      <tr bgcolor="white">
-        <td width="20%" valign="top">Select how you want to control options in a networked blog environment:</td>
-        <td valign="top"> Networked ON:
-          <input name="muswitch" type="radio" value='Y'  <?php if ($muswitch=='Y') echo "checked=\"true\""; ?> />
-          <br/>
-          Networked OFF:
-          <input name="muswitch" type="radio" value='N' <?php if ($muswitch!='Y') echo "checked=\"true\""; ?> />
-        </td>
-        <td valign="top"> If you are running WPMU and want to control all options and logs through the main log admin panel, select on. If you select OFF, each blog will have to configure the plugin separately. </td>
-      </tr>
-    </table>
-    <br/>
-    <?php
-		}
-	?>
     <h4>IP Checking:</h4>
     In some cases it is impossible to check the IP address of incoming spammers. Some hosts do not pass on the the correct IP Address. Some users use proxy servers to protect their site. In these cases the plugin does not work at all. Some protection from Red Herring, User Agent, Session Speed, Referrer and other checks, still allows the plugin to work fairly well, but spammers cannot be cached or banned by IP.
     <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
@@ -533,7 +498,7 @@ function sfs_ajax_return_check(response) {
         <td align="left" valign="top">Blocks users who have incomplete headers.</td>
       </tr>
       <tr bgcolor="white">
-        <td valign="top">Block with missing or invalid HTTP_REFERER:</td>
+        <td valign="top">Block invalid HTTP_REFERER:</td>
         <td align="center" valign="top"><input name="chkreferer" type="checkbox" value="Y" <?php if ($chkreferer=='Y') echo  "checked=\"checked\"";?>/></td>
         <td align="left" valign="top">Blocks users who send form data, but the HTTP_REFERER does not match your domain. </td>
       </tr>
@@ -558,15 +523,15 @@ function sfs_ajax_return_check(response) {
         <td align="left" valign="top">Browsers always include a user agent string when they access a site. A missing user agent is usually a spammer using poorly written software or a leach who is stealing the pages from your site.</td>
       </tr>
       <tr bgcolor="white">
-        <td valign="top">Check session for quick responses (disabled if caching is active):</td>
+        <td valign="top">Check for quick responses (disabled if caching is active):</td>
         <td align="center" valign="top"><input name="chksession" type="checkbox" value="Y" <?php if ($chksession=='Y') echo  "checked=\"checked\"";?>/></td>
-        <td align="left" valign="top">Checks that the spammer is allowed to use a PHP session. If not, it denies the comment. The plugin puts a timer in the session and if the user fills the form in less than 6 seconds it is too quick to be human. (Stops the most spammers of all the methods listed here.)</td>
+        <td align="left" valign="top">The plugin will drop a cookie with the current time in it. When the user enters a comment or tries to log into the system, the time is checked. If the user responds too fast, he is a spammer. Use the timeout value in the next option to limit control this. (Stops the most spammers of all the methods listed here.)</td>
       </tr>
       <tr bgcolor="white">
-        <td valign="top">Session Timeout value:</td>
+        <td valign="top">Response Timeout value:</td>
         <td align="center" valign="top"><input name="sesstime" type="text" value="<?php echo $sesstime;?>" size="2"/>
         </td>
-        <td align="left" valign="top">This is the time used to determine if a spammer has filled out a form too quickly. Humans take more than 10 seconds, at least, to fill out forms. The default is 4 seconds. If a user takes 4 seconds or less to fill out a form they are not human and are denied.</td>
+        <td align="left" valign="top">This is the time used to determine if a spammer has filled out a form too quickly. Humans take more than 10 seconds, at least, to fill out forms. The default is 4 seconds. If a user takes 4 seconds or less to fill out a form they are not human and are denied. Users who use automatic passwords (like FireFox users) may show up as false positives so keep this low. </td>
       </tr>
       <tr bgcolor="white">
         <td valign="top">Use a Red Herring form:</td>
@@ -577,11 +542,6 @@ function sfs_ajax_return_check(response) {
         <td valign="top">Check against DNSBL lists such as Spamhaus.org:</td>
         <td align="center" valign="top"><input name="chkdnsbl" type="checkbox" value="Y" <?php if ($chkdnsbl=='Y') echo  "checked=\"checked\"";?>/></td>
         <td align="left" valign="top">Primarily used for email spam, but might stop comment spam. </td>
-      </tr>
-      <tr bgcolor="white">
-        <td valign="top">Use JavaScript trap:</td>
-        <td align="center" valign="top"><input name="chkjscript" type="checkbox" value="Y" <?php if ($chkjscript=='Y') echo  "checked=\"checked\"";?>/></td>
-        <td align="left" valign="top">Places a Javascript trap on comment forms. If a user has javascript turned off they will be denied access. Only paranoids and delusional users disable javascript.</td>
       </tr>
       <tr bgcolor="white">
         <td valign="top">Blacklist searches for Wordpress PHP files:</td>
@@ -608,25 +568,39 @@ function sfs_ajax_return_check(response) {
         <td align="center" valign="top"><input name="chkakismetcomments" type="checkbox" value="Y" <?php if ($chkakismetcomments=='Y') echo  "checked=\"checked\"";?>/></td>
         <td align="left" valign="top">If the Akismet API key is set, then you may use Akismet to check Comments and other actions (except logins) for spammers. Please note that Akismet does a much better job of managing comment spam. This, however, will extend Akismet checks to all form submissions that deal with IDs, emails and passwords. This does not mark comments as spam - it just blocks them completely.</td>
       </tr>
+      </tr>
+      
+      <tr bgcolor="white">
+        <td valign="top">Check Poison Links:</td>
+        <td align="center" valign="top"><input name="poison" type="checkbox" value="Y" <?php if ($poison=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Places a &quot;poison link&quot; on your web pages. It will be invisible to everyone except robots. If a robot follows this link it will immediately be placed in the cache of bad IPs and prevented from commenting or regisering in the future. </td>
+      </tr>
+      </tr>
+      
+      <tr bgcolor="white">
+        <td valign="top">Send email on White List Request:</td>
+        <td align="center" valign="top"><input name="wlreqmail" type="checkbox" value="Y" <?php if ($wlreqmail=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Sends an email notification to the sysop whenever someone fills out the white list request form.</td>
+      </tr>
     </table>
     <br/>
     <h4>Lists:</h4>
-	<span style="font-size:.8em;font-style:italic;">You can use an '*' as a wild card but only at the end of the ip or email. It is not a true wild card. It really means 'starts with'. So you can say '235.5.*' but you can't say '146.*.23.1' - this will be interpreted as '146.*'.    </span>
-	<table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
+    <span style="font-size:.8em;font-style:italic;">You can use an '*' as a wild card but only at the end of the ip or email. It is not a true wild card. It really means 'starts with'. So you can say '235.5.*' but you can't say '146.*.23.1' - this will be interpreted as '146.*'. </span>
+    <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
       <tr bgcolor="white">
         <td valign="top">White List:</td>
-        <td align="center" valign="top"><textarea name="wlist" cols="40" rows="8"><?php 
-    for ($k=0;$k<count($wlist);$k++) {
-		echo $wlist[$k]."\r\n";
-	}
-	?>
+        <td align="center" valign="top"><textarea name="wlist" cols="32" rows="8"><?php 
+for ($k=0;$k<count($wlist);$k++) {
+	echo $wlist[$k]."\r\n";
+}
+?>
 </textarea></td>
         <td valign="top">put IP addresses or emails here that you don't want blocked. One email or IP to a line.</td>
       </tr>
       <tr bgcolor="white">
         <td valign="top">Black List:</td>
-        <td align="center" valign="top"><textarea name="blist" cols="40" rows="8"><?php
-    for ($k=0;$k<count($blist);$k++) {
+        <td align="center" valign="top"><textarea name="blist" cols="32" rows="8"><?php
+	for ($k=0;$k<count($blist);$k++) {
 		echo $blist[$k]."\r\n";
 	}
 	?>
@@ -635,26 +609,26 @@ function sfs_ajax_return_check(response) {
       </tr>
       <tr bgcolor="white">
         <td valign="top"> Blocked Email Domains:</td>
-        <td align="center" valign="top"><textarea name="baddomains" cols="40" rows="8"><?php
-    for ($k=0;$k<count($baddomains);$k++) {
+        <td align="center" valign="top"><textarea name="baddomains" cols="32" rows="8"><?php
+	for ($k=0;$k<count($baddomains);$k++) {
 		echo $baddomains[$k]."\r\n";
 	}
 	?>
 </textarea></td>
         <td valign="top"><p>Put the domains you want blocked here. e.g. dresssmall.com. This will block all comments and registrations that use this domain for emails.</p>
-        <p>One domain per line.   </p></td>
+          <p>One domain per line. </p></td>
       </tr>
       <tr bgcolor="white">
         <td valign="top"> Blocked TLDs:</td>
-        <td align="center" valign="top"><textarea name="badTLDs" cols="40" rows="8"><?php
-    for ($k=0;$k<count($badTLDs);$k++) {
+        <td align="center" valign="top"><textarea name="badTLDs" cols="32" rows="8"><?php
+	for ($k=0;$k<count($badTLDs);$k++) {
 		echo $badTLDs[$k]."\r\n";
 	}
 	?>
 </textarea></td>
         <td valign="top"><p>Put the TLDs (Top Level Domains) that you want blocked. A TLD is the last part of a domain like .COM or .NET. You can block emails from various countries this way by adding a TLD such as .CN or .RU (these will block Russia and China).<br/>
-          Enter the TLD name including the '.' e.g. .XXX<br/>
-          A list of TLDs can be found at <a href="http://en.wikipedia.org/wiki/List_of_Internet_top-level_domains" target="_blank">Wikipedia List of Internet top-level domains</a>.</p>
+            Enter the TLD name including the '.' e.g. .XXX<br/>
+            A list of TLDs can be found at <a href="http://en.wikipedia.org/wiki/List_of_Internet_top-level_domains" target="_blank">Wikipedia List of Internet top-level domains</a>.</p>
           <p>One TLD per line. </p></td>
       </tr>
       <tr bgcolor="white">
@@ -664,19 +638,20 @@ function sfs_ajax_return_check(response) {
       </tr>
       <tr bgcolor="white">
         <td valign="top">Spam Words List:</td>
-        <td valign="top"><textarea name="spamwords" cols="40" rows="8"><?php
-    for ($k=0;$k<count($spamwords);$k++) {
+        <td valign="top"><textarea name="spamwords" cols="32" rows="8"><?php
+	for ($k=0;$k<count($spamwords);$k++) {
 		echo $spamwords[$k]."\r\n";
 	}
 	?>
 </textarea></td>
         <td valign="top"><p>If a word here shows up in an email address or author field then block the comment. (Wild cards do not work here. </p>
-        <p>One word per line </p></td>
+          <p>One word per line </p></td>
       </tr>
     </table>
     <br/>
     <h4>Events to Check:</h4>
     You can specify which events to check. You may not want to check logins or registrations. You may wish to allow any comment and let Akismet handle things.
+    Uncheck a box if you want to disable the plugin for specific Wordpress functions
     <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
       <tr bgcolor="white">
         <td valign="top">Check IP on wp-comment.php:</td>
@@ -774,18 +749,12 @@ function sfs_ajax_return_check(response) {
     <h4>Access Denied Options:</h4>
     <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
       <!-- thead style="height:0;margin:0;padding:0;">
-	   <tr style="height:0;margin:0;padding:0;" bgcolor="white"><th width="120px"></th><th width="20px"></th><th width="200px"></th><th></th><tr>
-	   </thead -->
+	<tr style="height:0;margin:0;padding:0;" bgcolor="white"><th width="120px"></th><th width="20px"></th><th width="200px"></th><th></th><tr>
+	</thead -->
       <tbody>
         <tr bgcolor="white">
-          <td valign="top" width="120px">Sleep Time:</td>
-          <td align="center" valign="top" width="20px"><input type="text" name ="sleep" size="3" value="<?php echo $sleep; ?>" />
-          </td>
-          <td valign="top" colspan="2">(0-30 seconds) This is how long to pause before actually denying a spammer. Forces the spammer to wait a few seconds to see if their scheme has worked. Slows down spammer attacks. If too long PHP may time out so best time is 10 seconds or less.</td>
-        </tr>
-        <tr bgcolor="white">
           <td valign="top">Spammer Message:</td>
-          <td colspan="2" valign="top"><textarea id="rejectmessage" name="rejectmessage" cols="64" rows="5"><?php echo $rejectmessage; ?></textarea></td>
+          <td colspan="2" valign="top"><textarea id="rejectmessage" name="rejectmessage" cols="32" rows="5"><?php echo $rejectmessage; ?></textarea></td>
           <td valign="top">This message is only visible to spammers. It only shows if spammers are rejected at the time login or comment form is displayed. You can use the shortcode <i>[reason]</i> to include the deny reason code with the message. You can also use <i>[ip]</i> in your message which would be the user's ip address. (You may not want to give spammers hints on how they were denied.)</td>
         </tr>
         <tr bgcolor="white">
@@ -814,14 +783,14 @@ function sfs_ajax_return_check(response) {
       <input type="checkbox" name ="nobuy" value="Y" <?php if ($nobuy=='Y') echo "checked=\"checked\""; ?> />
       <br/>
       <?php 
-		if ($nobuy=='Y')  {
-			echo "Thanks";		
-		} else {
-		?>
+if ($nobuy=='Y')  {
+	echo "Thanks";		
+} else {
+	?>
       Check if you are tired of seeing the <a target="_blank" href="http://www.blogseye.com/donate/">donate</a> link.
       <?php 
-		}
-	?>
+}
+?>
     </p>
     <br/>
     <p class="submit">
@@ -830,9 +799,9 @@ function sfs_ajax_return_check(response) {
   </form>
   <p>&nbsp;</p>
   <?php
-     $f=dirname(__FILE__)."/../sfs_debug_output.txt";
-	 if (file_exists($f)) {
-	    ?>
+$f=dirname(__FILE__)."/../sfs_debug_output.txt";
+if (file_exists($f)) {
+	?>
   <h3>Error Log</h3>
   <p>If debugging is turned on, the plugin will drop a record each time it encounters a PHP error. 
     Most of these errors are not fatal and do not effect the operation of the plugin. Almost all come from the unexpected data that
@@ -849,6 +818,10 @@ function sfs_ajax_return_check(response) {
 <?php readfile($f); ?>
 </pre>
   <?php
-	 }
+	}
 ?>
 </div>
+<?php
+
+	sfs_errorsonoff('off');
+?>

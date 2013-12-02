@@ -1,10 +1,10 @@
 === Stop Spammers ===
-Tags: spam, comment, registration, login, spammers,MU, StopForumSpam, Honeypot, BotScout,DNSBL, Spamhaus.org, Ubiquity Servers, HTTP_ACCEPT, disposable email
+Tags: spam, comment, registration, login, spammers,MU, Ubiquity Servers, HTTP_ACCEPT, disposable email
 Donate link: http://www.blogseye.com/donate/
 Requires at least: 3.0
-Tested up to: 3.5
+Tested up to: 3.8
 Contributors: Keith Graham
-Stable tag: 4.3
+Stable tag: 5.0
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -26,7 +26,7 @@ Rejects very long email addresses and very long author names since spammers can'
 
 The plugin will install a "Red Herring" comment form that will be invisible to normal users. Spammers will find this form and try to do their dirty deed using it. This results in the IP address being added to the deny list. This feature is turned off by default because the form might screw up your theme. Turn the option on and check your theme. If the form (a one pixel box) changes your theme presentation then turn the feature off. I highly recommend that you try this option. It stops a ton of spam. 
 
-The plugin can check how long it takes a spammer to read the comment submit form and then post the comment. If this takes less than 5 seconds, then the commenter is a spammer. A human cannot fill out email, comment, and then submit the comment in less than 5 seconds.
+The plugin can check how long it takes a spammer to read the comment submit form and then post the comment. If this takes less than 4 seconds, then the commenter is a spammer. A human cannot fill out email, comment, and then submit the comment in less than 4 seconds.
 
 Limitations: 
 
@@ -218,6 +218,7 @@ This has some functions partially complete, but I had to release as is to fix th
 * Removed "buy the book" nag messages in widget and settings.
 
 
+
 = 4.3 =
 * Fixed a bug in determining the ip address of pages forwarded by a proxy server.
 * Modified IP code to work correctly with Opera Turbo.
@@ -231,6 +232,26 @@ This has some functions partially complete, but I had to release as is to fix th
 * fixed TLD block list. Many reports that it did not work. I rewrote and tested on different installations.
 * I changed the name of the plugin to Stop Spammers. We'll see if it breaks Wordpress. I think this is the most dangerous thing I've tried.
 * changed how logging works. Now, by default there is no log at all.
+
+= 5.0 =
+* Added poison links.
+* Added email notifications on white list requests.
+* Removed bbpress loading code because of conflicts. Not all checks will work on bbpress. Plugin might not stop bbpress registrations.
+* Moved good cache tests to just before db lookups to prevent false negatives.
+* Use cookies to check session speed so as not to cause problems with sites that can't handle sessions.
+* Changed session so as not to restart the timer on subsequent checks. This prevents some redirections from appearing to be spam robots.
+* Added new header checks for finding real IP. It now works with more proxy servers.
+* Reorganized the way the plugin loads (again) to reduce overhead. Lazy loading works better now. 
+* Fixed bugs in email domain checks. 
+* Relaxed checks for http_referer so as not to fire when switching from https to http and back.
+* Changed the way Red Herring forms are checked, has its own action now.
+* Added IP lookup for CloudFlare.com.
+* Ran code through a formatting program. Pretty code will not last long, though, since my IDE is notepad.
+* Added a function that can be called by other plugins who wish to check for spam. 
+* " if (function_exists('stop_spam_check')) stop_spam_check(); "
+* Added liker.profile checks - if request has liker.profile and poison is checked then the spammer goes to bad ip cache.
+* Might work with Gravity Forms. I made changes, but Gravity Forms is a pay plugin so I don't have access to test it.
+	
 
 
 == Frequently Asked Questions ==
