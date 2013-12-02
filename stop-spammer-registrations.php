@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.blogseye.com/i-make-plugins/stop-spammer-registrations-plugin/
 Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
-Version: 5.0
+Version: 5.1
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -909,7 +909,7 @@ function kpg_verify_nonce($a,$b) {
 	return false;
 }
 
-function get_admin_options($file) {
+function kpg_sfs_get_admin_options($file) {
 	// network path
 	// wp-admin/network/settings.php
 	$ppath=plugin_dir_path( __FILE__ ).'/settings/';

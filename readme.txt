@@ -4,7 +4,7 @@ Donate link: http://www.blogseye.com/donate/
 Requires at least: 3.0
 Tested up to: 3.8
 Contributors: Keith Graham
-Stable tag: 5.0
+Stable tag: 5.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -251,8 +251,9 @@ This has some functions partially complete, but I had to release as is to fix th
 * " if (function_exists('stop_spam_check')) stop_spam_check(); "
 * Added liker.profile checks - if request has liker.profile and poison is checked then the spammer goes to bad ip cache.
 * Might work with Gravity Forms. I made changes, but Gravity Forms is a pay plugin so I don't have access to test it.
-	
 
+=5.1 =
+* Fixed typo on spammer history page. Deleted links. Will add back in next version.
 
 == Frequently Asked Questions ==
 = Help, I'm locked out of my Website =

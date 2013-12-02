@@ -178,8 +178,8 @@ $opfile=str_replace('stop-spam-reg-stats.php','stop-spam-reg-options.php',$thisf
 ?>
 
 <div class="wrap">
-  <h2>Stop Spammers Plugin Stats Version 5.0</h2>
-  <p><a href="<?php echo $hitsfile; ?>">View History</a> - <a href="<?php echo $opfile; ?>">View Options</a> </p>
+  <h2>Stop Spammers Plugin Stats Version 5.1</h2>
+ 
   <?php
 if (count($wlreq)==1) {
 	echo "<p><a style=\"font-style:italic;\" href=\"#wlreq\">".count($wlreq)." user</a> has been denied access and requested that you add them to the white list";
