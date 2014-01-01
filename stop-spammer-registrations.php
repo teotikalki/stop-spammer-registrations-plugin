@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.blogseye.com/i-make-plugins/stop-spammer-registrations-plugin/
 Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
-Version: 5.1
+Version: 5.3
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -102,9 +102,9 @@ function kpg_load_all_checks() {
 			break;
 		}
 	}
+	$grav=false;
 	if (!$is_in_post) {
 		// did not find it. Check more generally
-		$grav=false;
 		foreach($_POST as $key=>$data) {
 			$key=strtolower($key);
 			if (stripos($key,'name')!==false||
@@ -149,6 +149,7 @@ function kpg_load_all_checks() {
 	}else if (array_key_exists('contact_us_enquiry_email',$_POST)) { // gravity contact form here
 		$em=$_POST['contact_us_enquiry_email'];
 	}
+	if (!isset($grav)) $grav=false;
 	if ($grav) {
 		// this is gravity, look for the @ sign to get an email
 		foreach ($_POST as $inp=>$val) {
@@ -199,7 +200,7 @@ function kpg_load_all_checks() {
 	@remove_filter('wp_mail','kpg_sfs_reg_check_send_mail'); // we are going to check - remove the email check
 	$ip=kpg_get_ip();
 	//  this is called once in "init" no need to call it ever again
-	sfs_debug_msg("kpg_load_all_checks");
+	//sfs_debug_msg("kpg_load_all_checks");
 
 	sfs_errorsonoff();
 	kpg_sfs_check_load();
@@ -281,14 +282,13 @@ Stop Spammers Plugin";
 function kpg_chk_poison() {
 	// check to see if anyone showed up from clicking a poison link
 	// added ++liker.profile_URL++ code - seems to be a misguided spam bot
-	$sname=$_SERVER['SCRIPT_URL'];
-	if (empty($sname)) $sname=$_SERVER['SCRIPT_URI'];
-	if (empty($sname)) $sname=$_SERVER['ORIG_PATH_INFO'];
-	if (empty($sname)) $sname=$_SERVER['REDIRECT_SCRIPT_URL'];
-	if (empty($sname)) $sname=$_SERVER['REDIRECT_SCRIPT_URI'];
-	if (empty($sname)) $sname=$_SERVER['QUERY_STRING'];
-	
-	
+	$sname="";
+	if (array_key_exists("SCRIPT_URL",$_SERVER)) $sname=$_SERVER['SCRIPT_URL'];
+	if (empty($sname)&&array_key_exists("SCRIPT_URI",$_SERVER)) $sname=$_SERVER['SCRIPT_URI'];
+	if (empty($sname)&&array_key_exists("ORIG_PATH_INFO",$_SERVER)) $sname=$_SERVER['ORIG_PATH_INFO'];
+	if (empty($sname)&&array_key_exists("REDIRECT_SCRIPT_URL",$_SERVER)) $sname=$_SERVER['REDIRECT_SCRIPT_URL'];
+	if (empty($sname)&&array_key_exists("REDIRECT_SCRIPT_URI",$_SERVER)) $sname=$_SERVER['REDIRECT_SCRIPT_URI'];
+	if (empty($sname)&&array_key_exists("QUERY_STRING",$_SERVER)) $sname=$_SERVER['QUERY_STRING'];
 	$liker=false;
 	if (strpos($sname,'liker.profile')!==false) $liker=true;
    
@@ -346,7 +346,7 @@ function stop_spam_check($ip='',$email='',$author='') {
 	// do not call on every page - only call when there is a new comment, registration or login, otherwise it will slow your site quite a bit.
 	if (empty($ip)) $ip=kpg_get_ip();
 	sfs_errorsonoff();
-	sfs_debug_msg("stop_spam_check");
+	//sfs_debug_msg("stop_spam_check");
 	kpg_sfs_check_load();
 	$ansa=kpg_sfs_check($email,$author,$ip,'');
 	sfs_errorsonoff('off');
@@ -359,7 +359,7 @@ function kpg_load_all_checks_no_post() {
 	add_action('comment_form_before','kpg_sfs_red_herring_comment'); // moved to comment form before
 	add_filter('login_message','kpg_sfs_red_herring_login');	
 	add_filter('before_signup_form','kpg_sfs_red_herring_signup');
-	$options=kpg_sp_get_options();
+	//$options=kpg_sp_get_options();
 	return;
 }
 /************************************************************
@@ -368,6 +368,7 @@ function kpg_load_all_checks_no_post() {
 *
 *************************************************************/
 function kpg_sfs_red_herring_comment($query) {
+	if (function_exists('is_feed') && is_feed()) return $query;
 	@remove_action('comment_form_before','kpg_sfs_red_herring_comment');
 	@remove_filter('before_signup_form','kpg_sfs_red_herring_signup');	 
 	@remove_filter('login_message','kpg_sfs_red_herring_login');	
@@ -390,12 +391,8 @@ function kpg_sfs_red_herring_comment($query) {
 		return $query;
 	}
 	// these checks probably are not useful in this version.
-	$sname=$_SERVER["REQUEST_URI"];	
-	if (empty($sname)) {
-		$sname=$_SERVER["SCRIPT_NAME"];	
-	}
+	$sname=kpg_sfs_get_SCRIPT_URI();
 	if (strpos($sname,'wp-login.php')!==false) return $query; // only add fake comments to comment pages?
-	if (is_feed()) return $query;
 	if (empty($sname)) return $query;
 	if (strpos($sname,'/feed')) return $query;
 	$rhnonce=wp_create_nonce('kpgstopspam_redherring');
@@ -428,7 +425,6 @@ function kpg_sfs_red_herring_comment($query) {
 	<?php
 	return $query;
 }
-
 
 /************************************************************
 *
@@ -558,7 +554,7 @@ function kpg_sfs_reg_check_send_mail($stuff) {
 	// get the ip 
 	$ip=kpg_get_ip();
 	// now call the generic checker
-	sfs_debug_msg("kpg_sfs_reg_check_send_mail");
+	//sfs_debug_msg("kpg_sfs_reg_check_send_mail");
 	sfs_errorsonoff();
 	kpg_sfs_check_load();
 	kpg_sfs_check($from_email,$from_name,$ip); 
@@ -735,18 +731,6 @@ function kpg_sfs_reg_check($actions,$comment) {
 	return $actions;
 }
 
-function kpg_sfs_reg_nofollow($actions,$comment) {
-	// remove the rel="nofollow" from a comment
-	// $comment has the comment we need to call ajax to alter the comment
-	$action="<a $exst title=\"remove re=\"nofollow\"\" $target $href $onclick class='delete:the-comment-list:comment-$ID::delete=1 delete vim-d vim-destructive'>remove rel=nofollow from comment</a>";
-	$actions['remove_rnofolow']=$action;
-	
-	
-	
-	return $actions;
-
-}
-
 function kpg_sfs_reg_report($actions,$comment) {
 	// need to add a new action to the list
 	
@@ -837,9 +821,9 @@ function kpg_sfs_reg_nonet_admin_menus() {
 function kpg_sp_plugin_action_links( $links, $file ) {
 	if (has_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links_mu' ) ) 
 	return $link;
-	if ( basename($file) == basename(__FILE__))  {
-		$ppath=plugin_dir_path( __FILE__ ).'/settings/';
-		$me=get_admin_url( 1,$ppath.'stop-spam-reg-options.php');
+	$options=kpg_sp_get_options();
+	$me=$options['options_link'];
+	if (!empty($me))  {
 		$links[] = "<a href=\"$me\">".__('Settings').'</a>';
 	}
 	return $links;
@@ -866,10 +850,9 @@ function kpg_sp_rightnow() {
 	return;
 	$stats=kpg_sp_get_stats();
 	extract($stats);
-	//options-general.php?page=stop-spammer-registrations-plugin/settings/stop-spam-reg-options.php
-	//$ppath=plugin_dir_path( __FILE__ ).'/settings/';
-	//$me=get_admin_url( 1,$ppath.'stop-spam-reg-stats.php');
-	$me=admin_url('options-general.php').'?page=stop-spammer-registrations-plugin/settings/stop-spam-reg-stats.php';
+	$options=kpg_sp_get_options();
+	$me=$options['history_link'];
+	if (empty($me)) return;
 	if ($spmcount>0) {
 		// steal the akismet stats css format 
 		// get the path to the plugin
@@ -1033,8 +1016,11 @@ function kpg_new_user_ip($user_id) {
 	$ip=kpg_get_ip();
     update_user_meta($user_id, 'signup_ip', $ip);
 }
-function kpg_log_user_ip($user_login, $user) {
+function kpg_log_user_ip($user_login="", $user="") {
+    if (empty($user)) return;
+    if (empty($user_login)) return;
 	// add the users ip to new users
+	if (!isset($user->ID)) return;
 	$user_id=$user->ID;
 	$ip=kpg_get_ip();
 	$oldip=get_user_meta($user_id,  'signup_ip', true );
@@ -1058,8 +1044,26 @@ function kpg_sfs_ip_column($value, $column_name, $user_id) {
 	// get the ip for this column
 	if ($column_name == 'signup_ip' ) {
 		$signup_ip = get_user_meta($user_id, 'signup_ip', true);
+		$signup_ip2=$signup_ip;
+		$ipline="";
 		if (!empty($signup_ip)) {
-			return $signup_ip;
+			$ipline = apply_filters( 'ip2link', $signup_ip2 ); // if the ip2link plugin is installed.
+			// now add the check 
+			$user_info = get_userdata($user_id);
+			$useremail=urlencode($user_info->user_email); // for reporting
+			$userurl=urlencode($user_info->user_url); 
+			$username=$user_info->display_name; 
+			
+			$action=" <a title=\"Check Stop Forum Spam (SFS)\" target=\"_stopspam\" href=\"http://www.stopforumspam.com/search.php?q=$signup_ip\">Check SFS</a>, 
+			<a title=\"Check Project HoneyPot\" target=\"_stopspam\" href=\"http://www.projecthoneypot.org/search_ip.php?ip=$signup_ip\">Check HoneyPot</a>";
+			
+			$options=kpg_sp_get_options();
+			$apikey=$options['apikey'];
+			if (!empty($apikey)) {
+				$action=$action . ", <a title=\"Check Stop Forum Spam (SFS)\" target=\"_stopspam\" href=\"http://www.stopforumspam.com/add.php?username=$username&email=$useremail&ip_addr=$signup_ip&evidence=$userurl&api_key=$apikey\">Report to SFS</a>";
+			
+			}
+			return $ipline.'<span style="font-size:.8em">'.$action.'</span>';
 		}
 		return "_";
 	}

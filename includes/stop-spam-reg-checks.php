@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) exit; // just in case
 *************************************************************/
 function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	// use test@test.com to test if the system is working
-	sfs_debug_msg("starting");
+	//sfs_debug_msg("starting");
 	global $sfs_check_activation;
 	$sname=$_SERVER["REQUEST_URI"];	
 	if (empty($sname)) {
@@ -80,7 +80,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		}
 	}
 	
-	sfs_debug_msg("continue 1");
+	//sfs_debug_msg("continue 1");
 	
 	// clean up cache and history	
 	while (count($badips)>$kpg_sp_cache) array_shift($badips);
@@ -139,8 +139,16 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	// move this down past the white lists after testing is done
 	
 	// first check white lists 
-	sfs_debug_msg("continue 2");
-
+	//sfs_debug_msg("continue 2");
+	// white list vaultpress backups
+	/*
+	from vaultpress site:
+		From Address	To Address
+		207.198.112.1	207.198.112.254
+		207.198.113.1	207.198.113.254	
+	*/
+	if (substr($ip,0,12)=='207.198.112.'||substr($ip,0,12)=='207.198.113.') return $email;
+	
 	// paypal is whitelisted
 	if ($email!=$sfs_check_activation && $email!='test@test.com') {
 		if (!$deny&& $chkip=='Y'&&kpg_sp_checkPayPal($ip)){
@@ -195,7 +203,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		$whodunnit.='test email';
 	}
 
-	sfs_debug_msg("continue 3");
+	//sfs_debug_msg("continue 3");
 	
 	// begin by checking the caches for bad ips. Do this before the regular checks
 	// this way only the first appearance of a bad actor is recorded by type
@@ -237,7 +245,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		// testing that the admin check is working.
 		//$hist[$now][4]=' $chkadminlog '.$_POST['log'];
 	}
-	sfs_debug_msg("continue 4");
+	//sfs_debug_msg("continue 4");
 	
 	// check to see if we are timing out
 	if (!$deny && $chksession!='N' && $sesstime>0) {
@@ -280,7 +288,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			$cntrh++;
 		}
 	}
-	sfs_debug_msg("continue 5");
+	//sfs_debug_msg("continue 5");
 	
 	if (!$deny&&array_key_exists('rememberme',$_POST)) {
 		$nonce=$_POST['rememberme'];
@@ -290,7 +298,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			$cntrh++;
 		}
 	}
-	sfs_debug_msg("continue 6");
+	//sfs_debug_msg("continue 6");
 	if (!$deny&&!empty($_GET)&&array_key_exists('redir',$_GET)) {
 		$nonce=$_GET['redir'];
 		if (!empty($nonce)&&kpg_verify_nonce($nonce,'kpgstopspam_redherring')) { 
@@ -408,7 +416,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			}
 		}
 	}
-	sfs_debug_msg("continue 6");
+	//sfs_debug_msg("continue 6");
 	// check the comment content for spamwords
 	if (!$deny && $chkspamwords=='Y' && !empty($content)) {
 		$ansa=kpg_check_spamwords($content,$spamwords);
@@ -456,7 +464,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	}
 
 	
-	sfs_debug_msg("continue 7");
+	//sfs_debug_msg("continue 7");
 	
 	// try akismet
 	if (!$deny&& $chkip=='Y'&&$chkakismet=='Y'&&(strpos($sname,'login.php')!==false||strpos($sname,'register.php')!==false||strpos($sname,'signup.php')!==false)) { 
@@ -477,7 +485,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		}
 	}
 	// here is the database lookups section. Simple checks did not work. We need to do a lookup
-	sfs_debug_msg("continue 8");
+	//sfs_debug_msg("continue 8");
 	if (!$deny && $chksfs=='Y' && $chkip=='Y' ) { 
 		$query="http://www.stopforumspam.com/api?ip=$ip";
 		// no longer checking email on sfs
@@ -527,7 +535,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		//$whodunnit.="Passed SFS, $query $check";
 	} 
 	
-	sfs_debug_msg("continue 9");
+	//sfs_debug_msg("continue 9");
 
 	if (!$deny&&$chkdnsbl=='Y'&& $chkip=='Y') {
 		$ansa=@kpg_check_all_dnsbl($ip);
@@ -537,7 +545,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			$cntdnsbl++;
 		}
 	}
-	sfs_debug_msg("continue 10");
+	//sfs_debug_msg("continue 10");
 	if (!$deny&&$honeyapi!=''&& $chkip=='Y') {
 		$ansa=kpg_dnsbl_data($ip,'.dnsbl.httpbl.org',$honeyapi);
 		if ($ansa!==false) {
@@ -546,7 +554,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			$cnthp++;
 		}
 	}
-	sfs_debug_msg("continue 11");
+	//sfs_debug_msg("continue 11");
 	if (!$deny&&$botscoutapi!=''&& $chkip=='Y') {
 		// try the ip on botscoutapi
 		$query="http://botscout.com/test/?ip=$ip&key=$botscoutapi";
@@ -569,7 +577,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			}
 		}
 	}
-	sfs_debug_msg("continue 12");
+	//sfs_debug_msg("continue 12");
 	$hist[$now][4].=$whodunnit;
 	if (!$deny) {
 		if ($ip!="127.0.0.1") { // don't cache 127.0.0.1 if passes - for testing.

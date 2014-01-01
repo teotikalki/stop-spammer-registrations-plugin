@@ -21,12 +21,46 @@ global $sfs_check_activation;
 $now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
 $options=kpg_sp_get_options();
 extract($options);
+
+
+
 $muswitch='N';
 if (function_exists('is_multisite') && is_multisite()) {
 	$muswitch=get_option('kpg_muswitch');
 	if (empty($muswitch)) $muswitch='Y';
 	if ($muswitch!='N') $muswitch='Y';
 }
+
+// see if we are here for the first time
+	$sname=$_SERVER["REQUEST_URI"];	
+	if (empty($sname)) {
+		$sname='';
+	}
+	if (empty($sname)) {
+		// doesn't work on this machine
+	} else if (empty($options_link)) { 
+		$options_link=$sname;
+		$options['options_link']=$options_link;
+		update_option('kpg_stop_sp_reg_options',$options);
+		if ($muswitch=='Y') {
+			$net_options_link=$sname;
+			$options['net_options_link']=$net_options_link;
+			update_option('kpg_stop_sp_reg_options',$options);
+		}
+	} else if ($options_link==$sname) {
+		// already done
+	} else if($option_link!=substr($sname,0,strlen($option_link))) {
+		// store the new option - here because the link must have changed
+		$options_link=$sname;
+		$options['options_link']=$options_link;
+		update_option('kpg_stop_sp_reg_options',$options);
+		if ($muswitch=='Y') {
+			$net_options_link=$sname;
+			$options['net_options_link']=$net_options_link;
+			update_option('kpg_stop_sp_reg_options',$options);
+		}
+	}
+
 $ip=kpg_get_ip();
 if ($firsttime=='Y') {
 	// check the IP for the first time
@@ -285,6 +319,21 @@ if ($ip!=$rip) {
 	echo "<p>Your server reports that your IP address is $rip.<br/>";
 	echo "but XFF reports your actual IP address appears to be $ip.<br/>This may be because you are behind a firewall or proxy server. This can cause some problems checking spammer IP addresses.</p>";
 }
+$me=$options['options_link'];
+$sme=$options['history_link'];
+if ($muswitch=="Y") {
+	$me=$options['net_options_link'];
+	$sme=$options['net_history_link'];
+}
+
+if (!empty($me)) {
+	echo "<p><a style=\"font-style:italic;\" href=\"$me\">Stop Spammer Options</a>";
+	echo"</p>";
+}
+if (!empty($sme)) {
+	echo "<p><a style=\"font-style:italic;\" href=\"$sme\">Stop Spammer History</a>";
+	echo"</p>";
+}
 
 
 ?>
@@ -336,7 +385,7 @@ if ($num_comm->moderated>0&&$muswitch!='Y') {
 }
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
-  <p style="font-weight:bold;">Version 5.1</p>
+  <p style="font-weight:bold;">Version 5.3</p>
   <script type="text/javascript" >
 function kpg_show_hide_how() {
 	id=document.getElementById("kpg_stop_spam_div");

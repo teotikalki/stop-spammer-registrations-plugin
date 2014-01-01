@@ -18,6 +18,35 @@ if (function_exists('is_multisite') && is_multisite()) {
 	if (empty($muswitch)) $muswitch='Y';
 	if ($muswitch!='N') $muswitch='Y';
 }
+// see if we are here for the first time
+	$sname=$_SERVER["REQUEST_URI"];	
+	if (empty($sname)) {
+		$sname='';
+	}
+	if (empty($sname)) {
+		// doesn't work on this machine
+	} else if (empty($history_link)) { 
+		$history_link=$sname;
+		$options['history_link']=$history_link;
+		update_option('kpg_stop_sp_reg_options',$options);
+		if ($muswitch=='Y') {
+			$net_history_link=$sname;
+			$options['net_history_link']=$net_history_link;
+			update_option('kpg_stop_sp_reg_options',$options);
+		}
+	} else if ($history_link==$sname) {
+		// already done
+	} else if($option_link!=substr($sname,0,strlen($option_link))) {
+		// store the new option - here because the link must have changed
+		$history_link=$sname;
+		$options['history_link']=$history_link;
+		update_option('kpg_stop_sp_reg_options',$options);
+		if ($muswitch=='Y') {
+			$net_history_link=$sname;
+			$options['net_history_link']=$net_history_link;
+			update_option('kpg_stop_sp_reg_options',$options);
+		}
+	}
 
 $nonce='';
 $trash = plugins_url( 'includes/trashcan.png', dirname(__FILE__) );
@@ -161,15 +190,14 @@ if (wp_verify_nonce($nonce,'kpgstopspam_update')) {
 		if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: Deleted History Log File.\r\n");
 	}
 }
-// http://localhost/wp/wp-admin/options-general.php?page=stop-spammer-registrations-plugin/settings/stop-spam-reg-options.php
-$ppath=plugin_dir_url( dirname(__FILE__));
-$ppath=basename(str_replace('/settings','',$ppath));
-$poptions=get_admin_url( 1,'options-general.php');
-$me=$poptions.'?page='.$ppath.'/settings/stop-spam-reg-options.php';
-$sme=$poptions.'?page='.$ppath.'/settings/stop-spam-reg-stats.php';
-
+$me=$options['options_link'];
+$sme=$options['history_link'];
+if ($muswitch=="Y") {
+	$me=$options['net_options_link'];
+	$sme=$options['net_history_link'];
+}
 $nonce=wp_create_nonce('kpgstopspam_update');
-//http://www.gthread.com/wp-admin/network/settings.php?page=stop-spammer-registrations-plugin/settings/stop-spam-reg-stats.php
+
 $thisfile=$_SERVER['REQUEST_URI'];
 $histfile=$thisfile;
 $opfile=str_replace('stop-spam-reg-stats.php','stop-spam-reg-options.php',$thisfile);
@@ -178,7 +206,7 @@ $opfile=str_replace('stop-spam-reg-stats.php','stop-spam-reg-options.php',$thisf
 ?>
 
 <div class="wrap">
-  <h2>Stop Spammers Plugin Stats Version 5.1</h2>
+  <h2>Stop Spammers Plugin Stats Version 5.3</h2>
  
   <?php
 if (count($wlreq)==1) {
@@ -188,7 +216,14 @@ if (count($wlreq)==1) {
 	echo "<p><a style=\"font-style:italic;\" href=\"#wlreq\">".count($wlreq)." users</a> have been denied access and requested that you add them to the white list";
 	echo"</p>";
 }
-
+if (!empty($me)) {
+	echo "<p><a style=\"font-style:italic;\" href=\"$me\">Stop Spammer Options</a>";
+	echo"</p>";
+}
+if (!empty($sme)) {
+	echo "<p><a style=\"font-style:italic;\" href=\"$sme\">Stop Spammer History</a>";
+	echo"</p>";
+}
 ?>
   <hr/>
   <?php

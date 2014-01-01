@@ -25,12 +25,9 @@ require_once('stop-spam-reg-get-options.php');
 function kpg_sp_rightnow_mu() {
 	$stats=kpg_sp_get_stats();
 	extract($stats);
-	switch_to_blog(1);
-	//options-general.php?page=stop-spammer-registrations-plugin/settings/stop-spam-reg-options.php
-	//$ppath=plugin_dir_path( __FILE__ ).'/settings/';
-	//$me=get_admin_url( 1,$ppath.'stop-spam-reg-stats.php');
-	$me=get_admin_url(1,'network/settings.php').'?page=stop-spammer-registrations-plugin/settings/stop-spam-reg-stats.php';
-	restore_current_blog();
+	$options=kpg_sp_get_options();
+	$me=$options['net_history_link']; // set the first time we hit options
+	if (empty($me)) return;
 	if ($spmcount>0) {
 		// steal the akismet stats css format 
 		// get the path to the plugin
@@ -57,11 +54,9 @@ if (has_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links' ) )
 remove_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links', 10, 2 );
 add_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links_mu', 10, 2 );
 function kpg_sp_plugin_action_links_mu( $links, $file ) {
-	if ( basename($file) == basename(__FILE__))  {
-		switch_to_blog(1);
-		$ppath=plugin_dir_path( __FILE__ ).'/network/settings/';
-		$me=get_admin_url( 1,$ppath.'stop-spam-reg-stats.php');
-		restore_current_blog();
+	$options=kpg_sp_get_options();
+	$me=$options['net_options_link'];
+	if(!empty($me)) {
 		$links[] = "<a href=\"$me\">".__('Settings').'</a>';
 	}
 	return $links;
