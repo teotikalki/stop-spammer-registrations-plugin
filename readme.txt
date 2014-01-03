@@ -4,7 +4,7 @@ Donate link: http://www.blogseye.com/donate/
 Requires at least: 3.0
 Tested up to: 3.9
 Contributors: Keith Graham
-Stable tag: 5.3
+Stable tag: 5.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -255,6 +255,10 @@ This has some functions partially complete, but I had to release as is to fix th
 * Restored Right Now and Plugins settings links. I only create the link if you have actually reached the settings or history pages so as not to be burned by things like WP 3.8 changing the way they find a page.
 * made a check spam for user registrations. I have been saving IP addresses since 5.0 version.
 * White listed Vaultpress so the plugin will not deny access.
+
+=5.4=
+*  Fixed an issue with action links on the plugins page
+
 
 == Frequently Asked Questions ==
 = Help, I'm locked out of my Website =

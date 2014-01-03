@@ -385,7 +385,7 @@ if ($num_comm->moderated>0&&$muswitch!='Y') {
 }
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
-  <p style="font-weight:bold;">Version 5.3</p>
+  <p style="font-weight:bold;">Version 5.4</p>
   <script type="text/javascript" >
 function kpg_show_hide_how() {
 	id=document.getElementById("kpg_stop_spam_div");

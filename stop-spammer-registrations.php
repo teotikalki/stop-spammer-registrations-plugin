@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://www.blogseye.com/i-make-plugins/stop-spammer-registrations-plugin/
 Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
-Version: 5.3
+Version: 5.4
 Author: Keith P. Graham
 Author URI: http://www.BlogsEye.com/
 
@@ -791,7 +791,7 @@ function kpg_sfs_reg_admin_menus() {
 	add_options_page('Stop Spammers', 'Stop Spammers','manage_options',$ppath.'stop-spam-reg-options.php');
 	add_options_page('Stop Spammers History', 'Spammer History', 'manage_options',$ppath.'stop-spam-reg-stats.php');
 	add_action('rightnow_end', 'kpg_sp_rightnow');
-	add_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links', 10, 2 );
+	add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'kpg_sp_plugin_action_links' );
 	add_filter('comment_row_actions','kpg_sfs_reg_check',1,2);	
 	add_filter('comment_row_actions','kpg_sfs_reg_report',1,2);	
 }
@@ -803,7 +803,7 @@ function kpg_sfs_reg_net_admin_menus() {
 	add_submenu_page('settings.php', 'Stop Spammers History', 'Spammer History', 'manage_options',$ppath.'stop-spam-reg-stats.php');
 	add_submenu_page('settings.php', 'Stop Spammers MU', 'Spammer Multisite', 'manage_options',$ppath.'stop-spammers-mu-settings.php');
 	add_action('mu_rightnow_end','kpg_sp_rightnow');
-	add_filter('plugin_action_links', 'kpg_sp_plugin_action_links', 10, 2 );
+	add_filter('plugin_action_links_' . plugin_basename( __FILE__ ), 'kpg_sp_plugin_action_links' );
 	add_filter('comment_row_actions','kpg_sfs_reg_check',1,2);	
 	add_filter('comment_row_actions','kpg_sfs_reg_report',1,2);	
 }
@@ -818,14 +818,12 @@ function kpg_sfs_reg_nonet_admin_menus() {
 
 
 
-function kpg_sp_plugin_action_links( $links, $file ) {
-	if (has_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links_mu' ) ) 
-	return $link;
+function kpg_sp_plugin_action_links( $links ) {
 	$options=kpg_sp_get_options();
 	$me=$options['options_link'];
 	if (!empty($me))  {
 		$links[] = "<a href=\"$me\">".__('Settings').'</a>';
-	}
+	} 
 	return $links;
 }
 
