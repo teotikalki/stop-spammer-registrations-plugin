@@ -206,7 +206,7 @@ $opfile=str_replace('stop-spam-reg-stats.php','stop-spam-reg-options.php',$thisf
 ?>
 
 <div class="wrap">
-  <h2>Stop Spammers Plugin Stats Version 5.4</h2>
+  <h2>Stop Spammers Plugin Stats Version 5.5</h2>
  
   <?php
 if (count($wlreq)==1) {

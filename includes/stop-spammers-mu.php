@@ -49,11 +49,7 @@ function kpg_sp_rightnow_mu() {
 
 // mu admin stuff
 
-// add an admin menu item to the plugin screen
-if (has_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links' ) ) 
-remove_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links', 10, 2 );
-add_filter( 'plugin_action_links', 'kpg_sp_plugin_action_links_mu', 10, 2 );
-function kpg_sp_plugin_action_links_mu( $links, $file ) {
+function kpg_sp_plugin_action_links_mu( $links ) {
 	$options=kpg_sp_get_options();
 	$me=$options['net_options_link'];
 	if(!empty($me)) {

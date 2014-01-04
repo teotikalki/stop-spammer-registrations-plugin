@@ -4,7 +4,7 @@ Donate link: http://www.blogseye.com/donate/
 Requires at least: 3.0
 Tested up to: 3.9
 Contributors: Keith Graham
-Stable tag: 5.4
+Stable tag: 5.5
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -258,6 +258,9 @@ This has some functions partially complete, but I had to release as is to fix th
 
 =5.4=
 *  Fixed an issue with action links on the plugins page
+
+=5.5=
+*  Fixed an the same issue in 5.4 for multisite. Wordpress changed the way the add actions on the plugin line work.
 
 
 == Frequently Asked Questions ==
