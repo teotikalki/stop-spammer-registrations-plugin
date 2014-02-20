@@ -4,7 +4,7 @@ Donate link: http://www.blogseye.com/donate/
 Requires at least: 3.0
 Tested up to: 3.9
 Contributors: Keith Graham
-Stable tag: 5.5
+Stable tag: 5.6
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -261,6 +261,16 @@ This has some functions partially complete, but I had to release as is to fix th
 
 =5.5=
 *  Fixed an the same issue in 5.4 for multisite. Wordpress changed the way the add actions on the plugin line work.
+
+=5.6=
+* fix problem with emails not working. By default wp_mail checks for spammers, the spammer could not send spam notifications to the admin. Removed hooks when logging white list requests.
+* added a link to new user notifications so that admins could click the link to the user maintenance page directly. This looks like it should be a standard WordPress feature.
+* Added a time out to the caches. Good ips time out in 1 hour. Bad ips time out in 4 hours. This forces a second check on ips after an hour so that a new spammer can't keep spamming. It also forces rechecks on bad spammers so that the reason code might be more reasonable and not just "cached bad ip". Admins will not have to log in to clear the cache as often.
+* added a fix so there will be no conflicts with Google Authenticator plugin.
+* Added automatic whitelist for vaultpress access.
+* Removed Poison links from RSS feeds. 
+* Added code to block Tor, by default turned off. 
+* Disabled Akismet checks. I am getting numerous complaints that something has changed and Akismet is reporting users as spammers.
 
 
 == Frequently Asked Questions ==

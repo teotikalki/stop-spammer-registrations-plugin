@@ -94,6 +94,7 @@ function kpg_load_all_checks() {
 		}
 		return;
 	}
+
 	// I am using a plugin with your-email, your-name fields - might as well test them, too.
 	$postfields=array('akismet_comment_nonce','bbp_anonymous_email','email','user_email','user_login',
 	'author','your-name','your-email','log','psw','pass1','your_username','post_password',
@@ -217,6 +218,7 @@ function kpg_load_all_checks() {
 function kpg_chk_whitelist() {
 	// this could be a white list request.
 	//sfs_debug_msg("checking white list request");
+	@remove_filter('wp_mail','kpg_sfs_reg_check_send_mail'); 
 	if(isset($_POST)&&!empty($_POST)&&array_key_exists('knotify_key',$_POST)) {
 		// we have arrived at a whitelist request 
 		//sfs_debug_msg("found white list request");
@@ -233,18 +235,18 @@ function kpg_chk_whitelist() {
 			if (!empty($kinf)) { // ignore if user did not give a reason
 				// got it, update the white list request queue
 				// grab the stats and add it to the wlreq array
+				$options=kpg_sp_get_options();
+				$wlreqmail=$options['wlreqmail'];
+				$to=get_option('admin_email');
 				$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
 				$stats=kpg_sp_get_stats();
 				$wlreq=$stats['wlreq'];
-				$wlreq[]=array($now,$_POST['kip'],$_POST['kem'],$_POST['kau'],$_POST['knot'],$_POST['kinf']);
+				$wlreq[]=array($now,$_POST['kip'],$_POST['kem'],$_POST['kau'],$_POST['knot'].", Mail sent=$wlreqmail to $to",$_POST['kinf']);
 				$stats['wlreq']=$wlreq;
 				update_option('kpg_stop_sp_reg_stats',$stats);
 				// check here to see if we should send email
-				$options=kpg_sp_get_options();
-				$wlreqmail=$options['wlreqmail'];
 				if ($wlreqmail=='Y') {
 					//send email to the admin
-					$to=get_bloginfo('admin_email');
 					// send the admin an email
 					$sturl=admin_url("options-general.php?page=stop-spammer-registrations-plugin/settings/stop-spam-reg-stats.php");
 					if ($muswitch=="Y") $sturl=admin_url("network/settings.php?page=stop-spammer-registrations-plugin/settings/stop-spam-reg-stats.php");
@@ -272,7 +274,7 @@ Stop Spammers Plugin";
 
 
 					
-					wp_mail( $to, $subject, $message );
+					@wp_mail( $to, $subject, $message );
 					
 				}
 				wp_die(__("A white list request has been recorded"),__("Access Pending"),array('response' => 403));
@@ -365,6 +367,7 @@ function kpg_load_all_checks_no_post() {
 	add_filter('login_message','kpg_sfs_red_herring_login');	
 	add_filter('before_signup_form','kpg_sfs_red_herring_signup');
 	//$options=kpg_sp_get_options();
+
 	return;
 }
 /************************************************************
@@ -439,7 +442,7 @@ function kpg_sfs_red_herring_comment($query) {
 function kpg_sfs_red_herring_signup() {
 	@remove_action('comment_form_before','kpg_sfs_red_herring_comment');
 	@remove_filter('before_signup_form','kpg_sfs_red_herring_signup');	 
-	@remove_filter('login_message','kpg_sfs_red_herring_login');	
+	@remove_filter('login_message','kpg_sfs_red_herring_login');
 	// here we don't check options until it is actually time to do the red herring
 	$options=kpg_sp_get_options();
 	if (array_key_exists('redherring',$options)&&$options['redherring']=='Y') {
@@ -1072,7 +1075,38 @@ function kpg_sfs_ip_column($value, $column_name, $user_id) {
 	}
 	return $value;
 
-}		
+}	
+
+function kpg_hook_user_notification() {
+	// trying to replace the new user notifications function. If it does not exist, then it must
+	// be here. I think it loads on pluggable, so I might try in init before pluggable loads.
+	if ( !function_exists('wp_new_user_notification') ) {
+		function wp_new_user_notification($user_id, $plaintext_pass = '') {
+			$user = get_userdata( $user_id );
+			// The blogname option is escaped with esc_html on the way into the database in sanitize_option
+			// we want to reverse this for the plain text arena of emails.
+			$blogname = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
+			$message  = sprintf(__('New user registration on your site %s:'), $blogname) . "\r\n\r\n";
+			$message .= sprintf(__('Username: %s'), $user->user_login) . "\r\n\r\n";
+			$message .= sprintf(__('E-mail: %s'), $user->user_email) . "\r\n";
+			// additional line to link back to moderation page
+			$message.="\r\n Check users ".admin_url("users.php")." \r\n";
+			// done
+			@wp_mail(get_option('admin_email'), sprintf(__('[%s] New User Registration'), $blogname), $message);
+			if ( empty($plaintext_pass) )
+				return;
+			$message  = sprintf(__('Username: %s'), $user->user_login) . "\r\n";
+			$message .= sprintf(__('Password: %s'), $plaintext_pass) . "\r\n";
+			$message .= wp_login_url() . "\r\n";
+			wp_mail($user->user_email, sprintf(__('[%s] Your username and password'), $blogname), $message);
+		}
+	}
+}
+	kpg_hook_user_notification(); // hook user notification if user is in post. Might be preempted by pluggable. We'll see
+
+
+
+
 
 
 

@@ -46,7 +46,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		$chkip='N'; // don't check yourself. - just check the non ip stuff.
 	}
 	// if the check for admin
-	if ($chkadmin=='Y'&&strpos($sname,'wp-login.php')!==false&&function_exists('wp_authenticate')) {
+	if (!class_exists('GoogleAuthenticator')&&$chkadmin=='Y'&&strpos($sname,'wp-login.php')!==false&&function_exists('wp_authenticate')) {
 		if (array_key_exists('log',$_POST)&&array_key_exists('pwd',$_POST)) {
 			$log=$_POST['log'];
 			$pwd=$_POST['pwd'];
@@ -85,6 +85,21 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	// clean up cache and history	
 	while (count($badips)>$kpg_sp_cache) array_shift($badips);
 	while (count($goodips)>$kpg_sp_good) array_shift($goodips);
+	// timeout goodips - don't keep for more than an hour
+	$nowtimeout=date('Y/m/d H:i:s',time()-3600 + ( get_option( 'gmt_offset' ) * 3600 ));
+	// goodips last an hour.
+	foreach($goodips as $key=>$data) {
+		if ($data<$nowtimeout) {
+			unset($goodips[$key]);
+		}
+	}
+	// bad ips last 4 hours
+	$nowtimeout=date('Y/m/d H:i:s',time()-(4*3600) + ( get_option( 'gmt_offset' ) * 3600 ));
+	foreach($badips as $key=>$data) {
+		if ($data<$nowtimeout) {
+			unset($badips[$key]);
+		}
+	}
 	//$goodips=array(); // limiting good ips to just a few
 	while (count($hist)>$kpg_sp_hist) array_shift($hist);
 	$stats['badips']=$badips;
@@ -230,12 +245,12 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		}
 	}
 	// check to see if the user is admin
-	if (!$deny && $chkadminlog=='Y' && array_key_exists('log',$_POST) && $_POST['log']=='admin') {
+	$log=$_POST['log'];
+	if (!$deny && $chkadminlog=='Y' && array_key_exists('log',$_POST) && strtolower($log)=='admin') {
 		//hit on the admin login
-		$log=$_POST['log'];
-		if (get_user_by( 'login','admin')===false) {
+		if (get_user_by( 'login',$log)===false) {
 			// hit on admin but no admin
-			$whodunnit.="Attack on userid 'admin'";
+			$whodunnit.="Attack on userid '$log'";
 			$deny=true;
 			$cntadminlog++;
 		} else {
@@ -467,6 +482,8 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	//sfs_debug_msg("continue 7");
 	
 	// try akismet
+	/*
+	// turn off akismet for the nonce
 	if (!$deny&& $chkip=='Y'&&$chkakismet=='Y'&&(strpos($sname,'login.php')!==false||strpos($sname,'register.php')!==false||strpos($sname,'signup.php')!==false)) { 
 		$ansa=kpg_akismet_check($ip);
 		if ($ansa!==false) {
@@ -484,6 +501,8 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			$cntakismet++;
 		}
 	}
+		*/
+
 	// here is the database lookups section. Simple checks did not work. We need to do a lookup
 	//sfs_debug_msg("continue 8");
 	if (!$deny && $chksfs=='Y' && $chkip=='Y' ) { 
@@ -577,6 +596,15 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			}
 		}
 	}
+	if (!$deny&&$chktor=='Y'&& $chkip=='Y') {
+		$ansa=@kpg_check_tor($ip);
+		if ($ansa!==false) {
+			$deny=true;
+			$whodunnit.=$ansa;
+			$cnttor++;
+		}
+	}
+
 	//sfs_debug_msg("continue 12");
 	$hist[$now][4].=$whodunnit;
 	if (!$deny) {
@@ -990,6 +1018,22 @@ function kpg_dnsbl_data($ip,$data,$apikey='') {
 	} 
 	return false;
 }
+// from irongeek.com
+function kpg_check_tor($ip){
+	$sp=$_SERVER['SERVER_PORT'];
+	if (empty($sp)) $sp=80;
+	$sa=$_SERVER['SERVER_ADDR'];
+	if ($sa=='127.0.0.1') return false;
+	$sa=implode('.', array_reverse(explode ('.', $sa )));
+	$sip=implode('.', array_reverse(explode ('.', $sip )));
+	$lookup=$sip.'.'.$sp.'.'.$sa.'.ip-port.exitlist.torproject.org';
+	$ret=gethostbyname($lookup);
+	if (ret=="127.0.0.2") {
+		return true;
+	}
+	return false;
+}
+
 
 function kpg_check_all_dnsbl($ip) {
 	if (empty($ip)) return false; // disable while I think about this.

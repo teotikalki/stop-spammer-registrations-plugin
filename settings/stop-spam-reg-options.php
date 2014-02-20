@@ -103,7 +103,7 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 		'chkcomments','chklogin','chksignup','chklong',
 		'chkagent','chkxmlrpc','addtowhitelist','chkadmin','chkadminlog',
 		'chkspamwords','chkwpmail','redherring',
-		'chkdnsbl','chkemail','chkip','chkreferer',
+		'chkdnsbl','chkemail','chkip','chkreferer','chktor',
 		'nobuy','redir','accept','notify','poison','wlreqmail');
 		foreach ($ynfields as $yn) {
 			$tyn='N';
@@ -385,7 +385,7 @@ if ($num_comm->moderated>0&&$muswitch!='Y') {
 }
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
-  <p style="font-weight:bold;">Version 5.5</p>
+  <p style="font-weight:bold;">Version 5.6</p>
   <script type="text/javascript" >
 function kpg_show_hide_how() {
 	id=document.getElementById("kpg_stop_spam_div");
@@ -608,14 +608,19 @@ function sfs_ajax_return_check(response) {
         <td align="left" valign="top">Hosting companies who tolerate spammers are the source of much Comment Spam</td>
       </tr>
       <tr bgcolor="white">
+        <td valign="top">Check for TOR:</td>
+        <td align="center" valign="top"><input name="chktor" type="checkbox" value="Y" <?php if ($chktor=='Y') echo  "checked=\"checked\"";?>/></td>
+        <td align="left" valign="top">Block comments from users coming from a know TOR node.</td>
+      </tr>
+      <tr bgcolor="white">
         <td valign="top">Check IP against the Akismet db on logins:</td>
         <td align="center" valign="top"><input name="chkakismet" type="checkbox" value="Y" <?php if ($chkakismet=='Y') echo  "checked=\"checked\"";?>/></td>
-        <td align="left" valign="top">If the Akismet API key is set, then you may use Akismet to check logins or registrations, logins and signups.</td>
+        <td align="left" valign="top">(Temporarily disabled) If the Akismet API key is set, then you may use Akismet to check logins or registrations, logins and signups.</td>
       </tr>
       <tr bgcolor="white">
         <td valign="top">Check IP against the Akismet db on comments:</td>
         <td align="center" valign="top"><input name="chkakismetcomments" type="checkbox" value="Y" <?php if ($chkakismetcomments=='Y') echo  "checked=\"checked\"";?>/></td>
-        <td align="left" valign="top">If the Akismet API key is set, then you may use Akismet to check Comments and other actions (except logins) for spammers. Please note that Akismet does a much better job of managing comment spam. This, however, will extend Akismet checks to all form submissions that deal with IDs, emails and passwords. This does not mark comments as spam - it just blocks them completely.</td>
+        <td align="left" valign="top">(Temporarily disabled) If the Akismet API key is set, then you may use Akismet to check Comments and other actions (except logins) for spammers. Please note that Akismet does a much better job of managing comment spam. This, however, will extend Akismet checks to all form submissions that deal with IDs, emails and passwords. This does not mark comments as spam - it just blocks them completely.</td>
       </tr>
       </tr>
       

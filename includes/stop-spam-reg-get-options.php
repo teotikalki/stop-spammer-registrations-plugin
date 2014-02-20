@@ -109,7 +109,8 @@ function kpg_sp_get_options_l() {
 	'chkdnsbl'=>'Y',
 	'chkubiquity'=>'Y',
 	'noplugins'=>'N',
-	'chkakismet'=>'Y',
+	'chktor'=>'N',
+	'chkakismet'=>'N',
 	'chkakismetcomments'=>'N',
 	'chkcomments'=>'Y',
 	'chkspamwords'=>'N',
@@ -162,7 +163,7 @@ This site is protected by the Stop Spammer Registrations Plugin.<br/>",
 	'chkwplogin','chkakismet','chkakismetcomments','noplugins',
 	'chkcomments','chklogin','chksignup','chklong',
 	'chkagent','chkxmlrpc','addtowhitelist','chkadmin',
-	'chkspamwords','chkwpmail','redherring',
+	'chkspamwords','chkwpmail','redherring','chktor',
 	'chkdnsbl','chkemail','chkip','chkreferer',
 	'nobuy','redir','accept','poison','wlreqmail');
 	foreach ($ynfields as $yn) {
