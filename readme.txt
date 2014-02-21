@@ -1,16 +1,15 @@
 === Stop Spammers ===
 Tags: spam, comment, registration, login
-Donate link: http://www.blogseye.com/donate/
 Requires at least: 3.0
 Tested up to: 3.9
 Contributors: Keith Graham
-Stable tag: 5.6
+Stable tag: 5.7
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 The Stop Spammers Plugin checks comments and logins using many methods to stop spammers.
 
-== Description ==
+== Description == 
 Stop Spammers is an aggressive spam plugin that stops spam registrations, logins and comments using multiple checks. It checks several spammer databases such as StopForumSpam.com and Project Honeypot. It looks for typical spammer bad behaviors and blocks those. It extends Akismet checks to logins. It blocks access to users who anonymize their browsers, and it checks how long it takes to fill in a comment or login form and blocks users who are too fast.
 The plugin is extremely aggressive and makes no apologies for occasionally blocking users who do not behave well. It will block users who install anonymizing plugins or turn off headers and cookies. Normal users will never know the plugin has been installed.
 The plugin installs "honeypots" to fool spammers into leaving spam with a hidden form, where they will be marked as a spammer and blocked. 
@@ -48,6 +47,7 @@ The plugin uses the WP_Http class to query the spam databases. Normally, if Word
 There is a button that allows you check access to the StopForumSpam database from the plugin Options page. This will tell you if the host allows opening of remote URL addresses.
 
 
+
 == Installation ==
 1. Install the plugin using "add new" from the plugins menu item on the Wordpress control panel. Search for Stop Spammers and install.
 OR
@@ -59,168 +59,6 @@ THEN
 
 == Changelog ==
 
-= 1.0 =
-* initial release 
-
-= 1.2 =
- * renumber releases due to typo
- 
-= 1.3 =
- * Check the IP address whenever email is checked.
- 
-= 1.4 =
- * Checks the user name. Cache failed attempts with option to clear cache. Cleans up after itself when uninstalled. 
-
-= 1.5 =
-* fixed a bug where the the admin user was cached in error.
-
-= 1.6 =
-* Improved caching to help stop false rejections.
- 
-= 1.7 =
-* Included signup form, that I forgot to add before. Cached data is automatically expired after 24 hours.
- 
-= 1.8 =
-* fixed the cache cleanup (again). Changed the name in the titles and menus of the plugin to reflect that it does more than stop registrations.
-
-= 1.9 =
-* Added link to report spam to StopForumSpam.com database.
-
-= 1.10 =
-* Improved the access to StopForumSpam.com database. Fixed white space at end of plugin.
- 
-= 1.11 =
-* Stored the StopForumSpam API Key. Fixed a possible security hole on the settings page.
- 
-= 1.12 =
-* Fixed typo error.
- 
-= 1.13 =
-* Changed Evidence field to spam URL or content
-
-= 1.14 =
-* Changes suggested by Paul at StopForumSpam. Fix bug in zero history data. There has been much interest in the plugin so there has been lots of feedback. I am sorry for all the updates, but they are all good stuff.
-
-= 1.15 =
-* Options added. 1) Reject if Accept header not found. Spammers use some kind of lazy approach that does not send the HTTP_ACCEPT header. All real browsers have this header. 2) Check on BL Blacklist. If for some reason the IP and email pass on the StopForumSpam db you can have a second check on Project Honeypot. 3) Added a white list in case there are IPs or emails that have problems. 4) Stopped checking for Usernames because of too many false positives. 4) Made checking for emails optional. Most spammers use bogus or random emails anyway. 5) Ability to recheck comments against the HoneyPot db from the comments admin form.
-
-= 1.16 =
-* Added RoboScout.com spam check to IP address. Added limits to checking to allow know spammers who are not recent spammers or do not have many spam reported. Added a complete list of passed and rejected login attempts. Fixed a bug introduced in 1.15. Fixed check on accept headers that prevented it from working.
-
-= 1.17 =
-* Fixed another bad bug. Added a warning if the host does not allow URL fopens. Reduced memory requirements. Cache less information.
-This has some functions partially complete, but I had to release as is to fix the bugs that appear on new install. It's my own fault, because last time I did not test from a clean WP install.
-
-= 2.0 =
-* Made the plugin WPMU aware. Streamlined some of the code. Limited the cached spam sizes to reduce memory overhead. Changed the way that the plugin decides when to check an IP and email. This will help it when working with other plugins. It also checks in multiple places in case the is_email() function is not called. It allows admins to change the minimum requirements for spam, forgiving spammers who have few incidents or have not spammed for a period of time.
-
-= 2.10 =
-* Fixed the way the cache is sorted. Added DNSBL support for spamhaus, dsbl, sorbs, spamcop, ordb, and njabl. These are email spam databases and they get only a small portion of the comment spam, but some is better than none. Added a list of common disposable email sites so that users who use disposable sites can be blocked. The list is only popular sites and is not exhaustive. Real commentators probably won't use the disposable sites, but some bloggers may be nervous about blocking them, so it is optional. Divided the options into a stats and a parameters wp_option array. Something in spam, probably a foreign language character, has been breaking the options causing the blog to "forget" when the stored array is broken. Now, when the stats array breaks, the configuration items will still be available. Rewrote the MU options, although it is not tested on subdomain installations.
-
-= 2.20 =
-* Fixed several networked blog issues. Added a dummy email address so that pingbacks can be reported. Added Multisite Maintenance. Fixed a few minor bugs. Testing use of X-Forwarded-For HTTP IP address when the blog is behind a proxy. I cannot test this because I don't have access to a site behind a proxy. Please report if the X-forwarded-for header handling is broken.
-
-= 3.0 =
-* Restructured the Plugin completely, changing many of the ways it works. Changed the points and places where spam is checked. Spam is now being checked for much earlier. Added an Access denied screen. Optionally block Ubiquity Servers. Use AJAX to report Spam so that there is no need to open a new window.
-
-= 3.1 =
-* Changed access to SFS db to stop false positives
-
-= 3.2 =
-* Added automatic addition of admins to IP white list. Added ability to specify where plugin actions work. Added WP API key update for those who don't use Akismet. Added checks for long names and emails. Added HTTP_REFERER checks. Added a check so users can see if they have access to the StopForumSpam database. Added a long list of known Spam Hosting company IP addresses. 
-
-= 3.3 =
-* Changed way arrays are searched. It was possible that IP addresses were not found in lists. Added a "Red Herring" bogus comments form that stops a huge amount of spam. Repaired delete option.
-
-= 3.4 =
-* Fixed an issue with Red Herring inserting invalid data into feeds. Added a list of spam robot user agents. Added a timeout to the comment submission forms to ban spammers who take less than 5 seconds to fill out and submit a form. Changed the way the plugin loads, speeding up WordPress. Most functions do not load unless the plugin is processing a form. There is no need to check for spammers unless they are actually in the process of leaving a comment or logging in. Mail and XMLRPC checks load all the time. Akismet may get the spammer before this plugin does resulting in more spam in the Akismet spam queue, but it doesn't matter as long as the spammer is stopped. Added an optional JavaScript trap to the comment form. Users who do not have JavaScript enabled will be marked as spammers. Disable this if you have a blog for paranoids.
-
-= 3.5 =
-* Fixed typo. Although I tested for a week in 5 different sites, this bug didn't come up.
-
-= 3.6 =
-* Fixed issue with some web servers that did not set server variables such as SCRIPT_URI and REQUEST_URI. These were troubling to those with hosting software that ignored these variables. Fixed an issue on saving of parameters. Added a hook to 404 errors so that missed hits on wp-login can be considered malicious. Removed default doubleclick link that was causing problems.
-
-= 3.7 =
-* fixed several bugs in Options page. Reformatted Options page to make it easier to view.
-
-= 3.8 =
-* fixed options page bug with the Check SFS checkbox. 
-* Fixed blacklist options issue. 
-* White listed PayPal IPs to stop interference with PayPal callbacks (not optional).
-* added ability to reject by TLD in email (users can stop .ru or .cn if they want).
-* made options and history options non-autoload to preserve memory usage.
-* changed the way the network checkbox works. Users must be able to manage the network to set the feature and see the network options when set. When the network box is checked the only way to admin the network is through the network admin dashboard.
-* compensates for a bug in Apple Safari that does not sent HTTP_REFERER from the iPhone and iPad. Disables the HTTP_REFERER check if the user agent appears to be from an iphone or ipad.
-* corrected link to options from admin panel (again). I hope I have it right at last.
-
-= 4.0 =
-* Removed functions that caused issues with Buddy Press
-* Reorganized and simplified the plugin. It is a more streamlined now. It checks for spam only on form submission (POST) as soon as WP is initialized. It no longer does any checks in the register and login functions so it should be more compatible with other plugins. It only does checks when a form is submitted so it should have less impact on WordPress resources.
-* Removed email validation hooks. 
-* Added a spam event type summary to the history page.
-* changed the order of spam checks. Cache check first, then most likely or simple checks, database access last.
-* fixed a bug in cache checking.
-* added an activation check to see if the current user is reported as a spammer. Plugin will not install unless the user passes all spam tests. 
-* added a button to the options screen to test if current user appears to be a spammer.
-* fixed bug in log file cleanup.
-* fixed autoload options issue. Change to autoload=false only happens once.
-* added ability to add reason and IP to deny message.
-* Removed the "loop_start" hook and replaced it with a before comment form hook. This will mean that some themes will not use the red herring forms if they do not comply with WP standards.
-
-= 4.1 =
-* Made changes to help with bbPress. Use the bbPress fix spam plugin to force this plugin to load before bbPress.
-* Fixed bug in the 404 processor.
-* Added separate sizes for the email and ip caches.
-* Added option for sleep time. That is the time plugin waits after denying a spammer. Default 10 seconds.
-* Added option for session timing seconds - default 4.
-* Added option for the Good ip cache size - default 2.
-* Checking for HTTP-X-FORWARDED-FOR in all cases. Aggressively looks for forwarding headers to resolve real IP.
-* Checks for any POST field with EMAIL, USER or LOGIN in field name. This accommodates plugins that use non-standard comment and login/register field names.
-* Show password used in spammer login attempts - helps identify dictionary attacks.
-* Does not log attacks by DUKANG2004. This idiot was filling up my logs with failed attempts. If total spam appears larger then logs would indicate then blame him. This must be a default value in some badly written root kit.
-* Option to disable IP checking - this cripples the plugin, but allows it to continue checking for many types of spam. Not recommended.
-* added option check credentials on logins before the plugin does its check. This opens Wordpress to dictionary attacks so it should be unchecked as soon as possible.
-* added ability to remove individual IP or email addresses from the cache.
-* added warning to options page if user name is admin.
-* removed main hook to prevent recursion after executing once.
-* added routine to log passes. Commented in production. Use to check why some spam still gets through.
-* Added checks for accept headers LANGUAGE and ENCODING to monitor if these are good for checking spam.
-* Fixed bugs in the stats summary and summary clear.
-* Plugin writes to a permanent log file all actions (such as update) and denied spammers. Size can be set in options and viewed and cleared on the history page.
-* Fixed Ubiquity Server check.
-* Removed activation hook to check IP. Now, after activation, it checks to see if your IP address is valid the first time the options page is visited. The plugin reloads the IP address into the white list on every activation.
-* Fixed bad bugs in Project Honeypot and DNSBL lookup. Removed slow DNSBL databases.
-* Created a test page where users can check to see if an IP address results in spam detection. I does a few of the database lookups and checks headers. URL: http://www.blogseye.com/checkspam/
-* Every upgrade or re-activation forces IP into the white list.
-
-= 4.2 =
-* fixed bug in network version deleting log file. 
-* Changed the default actions log file behavior to not write a log. Must be selected.
-* Moved location of actions log to plugin home directory.
-* Removed checks on wp-cron.php. There is too much chance of a user being blacklisted by accident.
-* Added the ability to use Akismet to check non-login or non-registration events. Akismet is better for comments because it marks comments as spam. This option allows you to prevent comments by blocking them with Stop Spammers, but you lose the spam queue (unless the akismet plugin fires first).
-* Added option to disable checks on plugin forms. This looks for the plugins folder in the URL. This could potentially prevent blocking of eCommerce functions that use a custom php file to process orders. It may help those with ecommerce solutions, but most plugins work by hooking init or other events rather than posting directly to a custom PHP file.
-* changed names of written files to have a "dot" in the beginning to hide them and prevent apache from serving them. Also added a chmod to the log file to add an extra layer of security since the file contains login ID information.
-* Fixed issue with options not saving.
-* Added an option to disable the plugin when executing forms in the wp_content/plugins folder to prevent interfering with some ecommerce systems.
-* Changed formatting of Red Herring forms to try to prevent threading failure on bbpress and some themes. This may reduce the effectiveness of red herring forms, but will prevent threading from breaking.
-* fixed issue with non-admins logging in. No longer throws an error.
-* Removed "buy the book" nag messages in widget and settings.
-
-= 4.3 =
-* Fixed a bug in determining the ip address of pages forwarded by a proxy server.
-* Modified IP code to work correctly with Opera Turbo.
-* added a check for dictionary attacks against admin.
-* broke out common code to a separate include file.
-* fixed a bug on the settings page.
-* rewrote the MU detection and loading code.
-* added a white list request form to the deny message. White list request will be shown on the statistics page and the "Right Now" section of the main admin page.
-* added a check for email "test@test.com" that allows users to check if the spam detection is working without black listing themselves. Try to leave a message using "test@test.com" and you'll be able to see what spammers see.
-* rewrote list lookups so that the wild card '*' can be used. Now 238.3.* ip address can be white listed or black listed. The wild card only works for the end of emails and ips. '*.dn' will not work.
-* fixed TLD block list. Many reports that it did not work. I rewrote and tested on different installations.
-* I changed the name of the plugin to Stop Spammers. We'll see if it breaks Wordpress. I think this is the most dangerous thing I've tried.
-* changed how logging works. Now, by default there is no log at all.
 
 = 5.0 =
 * Added poison links.
@@ -241,8 +79,10 @@ This has some functions partially complete, but I had to release as is to fix th
 * Added liker.profile checks - if request has liker.profile and poison is checked then the spammer goes to bad ip cache.
 * Might work with Gravity Forms. I made changes, but Gravity Forms is a pay plugin so I don't have access to test it.
 
+
 =5.1=
 * Fixed typo on spammer history page. Deleted links. Will add back in next version.
+
 
 =5.2=
 * removed bad links in plugin until I have time to rewrite the code.
@@ -251,16 +91,20 @@ This has some functions partially complete, but I had to release as is to fix th
 * fixed problem with login ip address recording that conflicts with some plugins.
 * Nothing new here. I am taking out stuff that doesn't work. I will not be able to work on the plugin for the next few months, except to kill bugs.
 
+
 =5.3=
 * Restored Right Now and Plugins settings links. I only create the link if you have actually reached the settings or history pages so as not to be burned by things like WP 3.8 changing the way they find a page.
 * made a check spam for user registrations. I have been saving IP addresses since 5.0 version.
 * White listed Vaultpress so the plugin will not deny access.
 
+
 =5.4=
 *  Fixed an issue with action links on the plugins page
 
+
 =5.5=
 *  Fixed an the same issue in 5.4 for multisite. Wordpress changed the way the add actions on the plugin line work.
+
 
 =5.6=
 * fix problem with emails not working. By default wp_mail checks for spammers, the spammer could not send spam notifications to the admin. Removed hooks when logging white list requests.
@@ -271,6 +115,9 @@ This has some functions partially complete, but I had to release as is to fix th
 * Removed Poison links from RSS feeds. 
 * Added code to block Tor, by default turned off. 
 * Disabled Akismet checks. I am getting numerous complaints that something has changed and Akismet is reporting users as spammers.
+
+=5.7=
+* Change version on widget.
 
 
 == Frequently Asked Questions ==
@@ -307,9 +154,8 @@ Try these links: http://www.blogseye.com/donate and http://www.blogseye.com/buy-
 1. A shot of the Spammer History settings page.
 
 == Support ==
-= Rate the Plugin =
-This plugin is free and I expect nothing in return. Please rate the plugin at: http://wordpress.org/extend/plugins/stop-spammer-registrations-plugin/
-If you find it useful, you may consider supporting my efforts.
-http://www.blogseye.com/donate/ or http://www.blogseye.com/buy-the-book
+
+2/21/2014: I am ending support of this plugin. I will be asking WordPress to remove it from the Repository as it causes too many problems.
+
 
 

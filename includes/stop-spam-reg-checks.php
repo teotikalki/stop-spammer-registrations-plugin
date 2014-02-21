@@ -245,7 +245,8 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		}
 	}
 	// check to see if the user is admin
-	$log=$_POST['log'];
+	$log="";
+	if (array_key_exists('log',$_POST)) $log=$_POST['log'];
 	if (!$deny && $chkadminlog=='Y' && array_key_exists('log',$_POST) && strtolower($log)=='admin') {
 		//hit on the admin login
 		if (get_user_by( 'login',$log)===false) {
