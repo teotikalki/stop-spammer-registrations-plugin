@@ -59,13 +59,13 @@ THEN
 
 == Changelog ==
 
-=5.8=
+= 5.8 =
 * Fixed security issue in white list requests.
 
-=5.7=
+= 5.7 =
 * Change version on widget.
 
-=5.6=
+= 5.6 =
 * fix problem with emails not working. By default wp_mail checks for spammers, the spammer could not send spam notifications to the admin. Removed hooks when logging white list requests.
 * added a link to new user notifications so that admins could click the link to the user maintenance page directly. This looks like it should be a standard WordPress feature.
 * Added a time out to the caches. Good ips time out in 1 hour. Bad ips time out in 4 hours. This forces a second check on ips after an hour so that a new spammer can't keep spamming. It also forces rechecks on bad spammers so that the reason code might be more reasonable and not just "cached bad ip". Admins will not have to log in to clear the cache as often.
@@ -75,25 +75,25 @@ THEN
 * Added code to block Tor, by default turned off. 
 * Disabled Akismet checks. I am getting numerous complaints that something has changed and Akismet is reporting users as spammers.
 
-=5.5=
+= 5.5 =
 *  Fixed an the same issue in 5.4 for multisite. Wordpress changed the way the add actions on the plugin line work.
 
-=5.4=
+= 5.4 =
 *  Fixed an issue with action links on the plugins page
 
-=5.3=
+= 5.3 =
 * Restored Right Now and Plugins settings links. I only create the link if you have actually reached the settings or history pages so as not to be burned by things like WP 3.8 changing the way they find a page.
 * made a check spam for user registrations. I have been saving IP addresses since 5.0 version.
 * White listed Vaultpress so the plugin will not deny access.
 
-=5.2=
+= 5.2 =
 * removed bad links in plugin until I have time to rewrite the code.
 * fixed warning messages in $_SERVER checks.
 * fixed undefined variable in Gravity Forms checking.
 * fixed problem with login ip address recording that conflicts with some plugins.
 * Nothing new here. I am taking out stuff that doesn't work. I will not be able to work on the plugin for the next few months, except to kill bugs.
 
-=5.1=
+= 5.1 =
 * Fixed typo on spammer history page. Deleted links. Will add back in next version.
 
 = 5.0 =
