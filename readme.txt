@@ -3,7 +3,7 @@ Tags: spam, comment, registration, login
 Requires at least: 3.0
 Tested up to: 3.9
 Contributors: Keith Graham
-Stable tag: 5.7
+Stable tag: 5.8
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -59,6 +59,42 @@ THEN
 
 == Changelog ==
 
+=5.8=
+* Fixed security issue in white list requests.
+
+=5.7=
+* Change version on widget.
+
+=5.6=
+* fix problem with emails not working. By default wp_mail checks for spammers, the spammer could not send spam notifications to the admin. Removed hooks when logging white list requests.
+* added a link to new user notifications so that admins could click the link to the user maintenance page directly. This looks like it should be a standard WordPress feature.
+* Added a time out to the caches. Good ips time out in 1 hour. Bad ips time out in 4 hours. This forces a second check on ips after an hour so that a new spammer can't keep spamming. It also forces rechecks on bad spammers so that the reason code might be more reasonable and not just "cached bad ip". Admins will not have to log in to clear the cache as often.
+* added a fix so there will be no conflicts with Google Authenticator plugin.
+* Added automatic whitelist for vaultpress access.
+* Removed Poison links from RSS feeds. 
+* Added code to block Tor, by default turned off. 
+* Disabled Akismet checks. I am getting numerous complaints that something has changed and Akismet is reporting users as spammers.
+
+=5.5=
+*  Fixed an the same issue in 5.4 for multisite. Wordpress changed the way the add actions on the plugin line work.
+
+=5.4=
+*  Fixed an issue with action links on the plugins page
+
+=5.3=
+* Restored Right Now and Plugins settings links. I only create the link if you have actually reached the settings or history pages so as not to be burned by things like WP 3.8 changing the way they find a page.
+* made a check spam for user registrations. I have been saving IP addresses since 5.0 version.
+* White listed Vaultpress so the plugin will not deny access.
+
+=5.2=
+* removed bad links in plugin until I have time to rewrite the code.
+* fixed warning messages in $_SERVER checks.
+* fixed undefined variable in Gravity Forms checking.
+* fixed problem with login ip address recording that conflicts with some plugins.
+* Nothing new here. I am taking out stuff that doesn't work. I will not be able to work on the plugin for the next few months, except to kill bugs.
+
+=5.1=
+* Fixed typo on spammer history page. Deleted links. Will add back in next version.
 
 = 5.0 =
 * Added poison links.
@@ -80,46 +116,6 @@ THEN
 * Might work with Gravity Forms. I made changes, but Gravity Forms is a pay plugin so I don't have access to test it.
 
 
-=5.1=
-* Fixed typo on spammer history page. Deleted links. Will add back in next version.
-
-
-=5.2=
-* removed bad links in plugin until I have time to rewrite the code.
-* fixed warning messages in $_SERVER checks.
-* fixed undefined variable in Gravity Forms checking.
-* fixed problem with login ip address recording that conflicts with some plugins.
-* Nothing new here. I am taking out stuff that doesn't work. I will not be able to work on the plugin for the next few months, except to kill bugs.
-
-
-=5.3=
-* Restored Right Now and Plugins settings links. I only create the link if you have actually reached the settings or history pages so as not to be burned by things like WP 3.8 changing the way they find a page.
-* made a check spam for user registrations. I have been saving IP addresses since 5.0 version.
-* White listed Vaultpress so the plugin will not deny access.
-
-
-=5.4=
-*  Fixed an issue with action links on the plugins page
-
-
-=5.5=
-*  Fixed an the same issue in 5.4 for multisite. Wordpress changed the way the add actions on the plugin line work.
-
-
-=5.6=
-* fix problem with emails not working. By default wp_mail checks for spammers, the spammer could not send spam notifications to the admin. Removed hooks when logging white list requests.
-* added a link to new user notifications so that admins could click the link to the user maintenance page directly. This looks like it should be a standard WordPress feature.
-* Added a time out to the caches. Good ips time out in 1 hour. Bad ips time out in 4 hours. This forces a second check on ips after an hour so that a new spammer can't keep spamming. It also forces rechecks on bad spammers so that the reason code might be more reasonable and not just "cached bad ip". Admins will not have to log in to clear the cache as often.
-* added a fix so there will be no conflicts with Google Authenticator plugin.
-* Added automatic whitelist for vaultpress access.
-* Removed Poison links from RSS feeds. 
-* Added code to block Tor, by default turned off. 
-* Disabled Akismet checks. I am getting numerous complaints that something has changed and Akismet is reporting users as spammers.
-
-=5.7=
-* Change version on widget.
-
-
 == Frequently Asked Questions ==
 = Help, I'm locked out of my Website =
 Not everyone who is marked as a spammer is actually a spammer. It is quite possible that you have been marked as a spammer on one of the spammer databases. There is no "back door", because spammers could use it.
@@ -128,11 +124,11 @@ Check off the box, "Automatically add admins to white list" in the spammer optio
 Use the button on the Stop Spammer settings page to see if you pass. You may have to uncheck some options in order to pass. 
 Unprofessional webmasters sometimes report IP address to Stop Forum Spam unnecessarily. If you are listed on SFS, there is a from at www.StopForumSpam.com. They can delete your entry.
 = I have found a bug =
-Please report it NOW. I fill try to fix it and incorporate the fix into the next release. I try to respond quickly to bugs that are possible to fix (all others take a few days). I keep a bleeding edge BETA test of the plugin (sometimes its very ALPHA) at my website: http://www.blogseye.com/beta-test-plugins/
+Please report it NOW. I fill try to fix it and incorporate the fix into the next release. I try to respond quickly to bugs that are possible to fix (all others take a few days). 
 If you are adventurous you can download the latest versions of some of my plugins before I release them.
 = I used an older version of the plugin and it worked, but the latest version breaks my site =
 You can download previous versions of the plugin at: http://wordpress.org/extend/plugins/stop-spammer-registrations-plugin/developers/
-You can also download the latest testing version from my site at http://www.blogseye.com/beta-test-plugins/ I put stable versions of the plugin with all the latest bug fixes there. Often I have already fixed a bug, but have not yet added the code to the Wordpress repository. You can download the zip and install it by hand from this site.
+
 Don't forget to report to me what the problem is so I can try to fix it.
 = All spammers have the same IP =
 I am finding more and more plugin users on hosts that do some kind of Network Address Translation (NAT) or are behind a firewall, router, or proxy that does not pass the original IP address to the web server. If the proxy does not support X-FORWARDED-FOR (XFF) type headers then there is little that you can do. You must uncheck the "Check IP" box and rely on the plugin to use the passive methods to eliminate spammers. These are good methods and will stop most spammers, but you cannot report spam without reporting yourself, and you cannot cache bad IP addresses.
@@ -146,7 +142,7 @@ You might try listing the emails of all registered users, and then deleting them
 = I have a cool idea for a feature for Stop-Spammer-Registrations-Plugin. =
 Most of the features in the plugin have come from the users of the plugin. By all means stop by my website and leave a comment. I read all of them, and if they are feasible, I try to include them.
 = I would like to support your programming efforts =
-Try these links: http://www.blogseye.com/donate and http://www.blogseye.com/buy-the-book. Thanks for asking. I write Science Fiction and since I make very little money from this plugin, my ego is more satisfied by your buying a book than making a donation.
+I am slowing down maintenance on this plugin. I don't have time to work on it. Don't send me money.
 
 
 == Screenshots ==

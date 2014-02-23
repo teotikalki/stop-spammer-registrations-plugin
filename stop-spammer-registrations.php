@@ -1,11 +1,10 @@
 <?PHP
 /*
 Plugin Name: Stop Spammer Registrations Plugin
-Plugin URI: http://www.blogseye.com/i-make-plugins/stop-spammer-registrations-plugin/
+Plugin URI: http://wordpress.org/plugins/stop-spammer-registrations-plugin/
 Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
-Version: 5.7
+Version: 5.8
 Author: Keith P. Graham
-Author URI: http://www.BlogsEye.com/
 
 This software is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -228,6 +227,31 @@ function kpg_chk_whitelist() {
 			//sfs_debug_msg("good nonce on white list request");
 			$kinf=$_POST['kinf'];
 			$kinf=trim($kinf);
+			$kinf=sanitize_text_field($kinf);
+			$kinf=remove_accents($kinf);
+			$kinf=utf8_decode($kinf);
+			$kinf=really_clean($kinf);
+			$kip=$_POST['kip'];
+			$kip=sanitize_text_field($kip);
+			$kip=remove_accents($kip);
+			$kip=utf8_decode($kip);
+			$kip=really_clean($kip);
+			$kem=$_POST['kem'];
+			$kem=sanitize_text_field($kem);
+			$kem=remove_accents($kem);
+			$kem=utf8_decode($kem);
+			$kem=really_clean($kem);
+			$kau=$_POST['kau'];
+			$kau=sanitize_text_field($kau);
+			$kau=remove_accents($kau);
+			$kau=utf8_decode($kau);
+			$kau=really_clean($kau);
+			$knot=$_POST['knot'];
+			$knot=sanitize_text_field($knot);
+			$knot=remove_accents($knot);
+			$knot=utf8_decode($knot);
+			$knot=really_clean($knot);
+			
 			if (empty($kinf)) {
 				wp_die(__("Empty response. Request not recorded"),__("Access Denied"),array('response' => 403));
 				
@@ -242,7 +266,7 @@ function kpg_chk_whitelist() {
 				$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
 				$stats=kpg_sp_get_stats();
 				$wlreq=$stats['wlreq'];
-				$wlreq[]=array($now,$_POST['kip'],$_POST['kem'],$_POST['kau'],$_POST['knot'].", Mail sent=$wlreqmail to $to",$_POST['kinf']);
+				$wlreq[]=array($now,$kip,$kem,$kau,$knot.", Mail sent=$wlreqmail to $to",$kinf);
 				$stats['wlreq']=$wlreq;
 				update_option('kpg_stop_sp_reg_stats',$stats);
 				// check here to see if we should send email
@@ -259,11 +283,11 @@ A request has been received from someone who has been marked as a spammer by the
 You have are being notified because you have checked off the box on the settings page indicating that you wanted this email.
 The information from the request is:
 Time: $now
-User IP: ". $_POST['kip'] ."
-User email: ". $_POST['kem'] ."
-Author Name: ". $_POST['kau'] ."
-Spam Reason: ". $_POST['knot'] ."
-Users Message: ". $_POST['kinf'] ."
+User IP: ". $kip ."
+User email: ". $kem ."
+Author Name: ". $kau ."
+Spam Reason: ". $knot ."
+Users Message: ". $kinf ."
 
 Please be aware that the user has been recognized as a potential spammer. Some spam robots are already filling out the request form with a bogus explanation. If the user is from Ubiquity servers, or is found on dnsbl, Stop Forum Spam, or Akismet, don't let the person into your system unless you are sure the plugin is in error.
 

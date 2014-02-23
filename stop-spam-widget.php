@@ -1,11 +1,10 @@
 <?php
 /*
 Plugin Name: Stop Spammer Widget
-Plugin URI: http://www.blogseye.com/i-make-plugins/stop-spammer-registrations-plugin/
+Plugin URI: http://wordpress.org/plugins/stop-spammer-registrations-plugin/
 Description: Widget to display Stop Spammer stats in sidebar.
-Version: 5.7
+Version: 5.8
 Author: Keith P. Graham
-Author URI: http://www.BlogsEye.com/
 
 This software is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of

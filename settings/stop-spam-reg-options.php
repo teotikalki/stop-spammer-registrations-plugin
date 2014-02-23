@@ -68,11 +68,7 @@ if ($firsttime=='Y') {
 	if (kpg_sfs_check($sfs_check_activation,'Check IP',$ip)===false) {
 		// break the installation
 		echo "<br/>Your current configuration reports that you will be denied access as a spammer.<br/>
-			Do not use this plugin until you can resolve this issue.
-			If you are not a spammer, please copy the information above and leave it as a comment at http://www.blogseye.com
-			<br/>
-			This message is from the 'stop-spammer-registrations' plugin<br/>
-			";
+			Do not use this plugin until you can resolve this issue.";
 		if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: IP Check Failed"."\r\n");
 	} else {
 		echo "<h2>Your IP address passed all plugin spam checks</h2>";
@@ -264,11 +260,7 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 		if (kpg_sfs_check($sfs_check_activation,'Check IP',$ip)===false) {
 			// break the installation
 			echo "<br/>Your current configuration reports that you will be denied access as a spammer.<br/>
-					Do not use this plugin until you can resolve this issue.
-					If you are not a spammer, please copy the information above and leave it as a comment at http://www.blogseye.com
-					<br/>
-					This message is from the 'stop-spammer-registrations' plugin<br/>
-					";
+					Do not use this plugin until you can resolve this issue.";
 			if ($logfilesize>0) kpg_append_file('.history_log.txt',"$now: IP Check Failed"."\r\n");
 		} else {
 			echo "<h2>Your IP address passed all plugin spam checks</h2>";
@@ -291,7 +283,6 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 $nonce=wp_create_nonce('kpgstopspam_update');
 ?>
   <p><a href="http://www.blogseye.com/checkspam/" target="_blank">Check an IP address to see if it passes spam checks.</a></p>
-  <p><a href="http://www.blogseye.com/beta-test-plugins/" target="_blank">Get Beta Test version of this plugin.</a></p>
   <?PHP	
 if ($addtowhitelist=='Y'&&in_array($ip,$wlist)) {
 	?>
@@ -348,14 +339,6 @@ if (!empty($sme)) {
     </p>
   </form>
   <?php	
-
-if ($nobuy!='Y') {
-	?>
-  <div style="position:relative;float:right;width:35%;background-color:ivory;border:#333333 medium groove;padding:4px;margin-left:4px;">
-    <p>This plugin is free and I expect nothing in return. If you would like to support my programming effforts, please <a target="_blank" href="http://www.blogseye.com/donate/">donate a small amount</a> to help keep me interested in this project.</p>
-  </div>
-  <?php
-}
 if (empty($spmcount))  $spmcount=0;
 if ($spmcount>0) {
 	?>
@@ -385,7 +368,7 @@ if ($num_comm->moderated>0&&$muswitch!='Y') {
 }
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
-  <p style="font-weight:bold;">Version 5.7</p>
+  <p style="font-weight:bold;">Version 5.8</p>
   <p>Please note that support for this plugin will be ending soon</p>
   <script type="text/javascript" >
 function kpg_show_hide_how() {
@@ -433,7 +416,6 @@ function kpg_show_hide_how() {
     <p>You may see your own email in the cache as spammers try to use it to leave comments. You may have to white list your own email if that is the case, to keep the plugin from locking you out.</p>
     <p>There is a button that allows you check access to the StopForumSpam database from the plugin Options page. This will tell you if the host allows opening of remote URL addresses. Please check your network access to the StopForumSpam database before reporting that the plugin doesn't work. The problem may be your host configuration. </p>
     <hr/>
-    <h4>For questions and support please check my website <a href="http://www.blogseye.com/i-make-plugins/stop-spammer-registrations-plugin/">BlogsEye.com</a>.</h4>
     <p>&nbsp;</p>
   </div>
   <script type="text/javascript" >
@@ -834,18 +816,6 @@ for ($k=0;$k<count($wlist);$k++) {
       </tbody>
     </table>
     <br/>
-    <p><strong>Remove Donate message:</strong>
-      <input type="checkbox" name ="nobuy" value="Y" <?php if ($nobuy=='Y') echo "checked=\"checked\""; ?> />
-      <br/>
-      <?php 
-if ($nobuy=='Y')  {
-	echo "Thanks";		
-} else {
-	?>
-      Check if you are tired of seeing the <a target="_blank" href="http://www.blogseye.com/donate/">donate</a> link.
-      <?php 
-}
-?>
     </p>
     <br/>
     <p class="submit">
@@ -861,7 +831,7 @@ if (file_exists($f)) {
   <p>If debugging is turned on, the plugin will drop a record each time it encounters a PHP error. 
     Most of these errors are not fatal and do not effect the operation of the plugin. Almost all come from the unexpected data that
     spammers include in their effort to fool us. The author's goal is to eliminate any and
-    all errors. These errors should be corrected. Fatal errors should be reported to the author at www.blogseye.com.</p>
+    all errors. </p>
   <form method="post" action="">
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <input type="hidden" name="kpg_stop_delete_log" value="true" />

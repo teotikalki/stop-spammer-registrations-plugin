@@ -206,7 +206,7 @@ $opfile=str_replace('stop-spam-reg-stats.php','stop-spam-reg-options.php',$thisf
 ?>
 
 <div class="wrap">
-  <h2>Stop Spammers Plugin Stats Version 5.7</h2>
+  <h2>Stop Spammers Plugin Stats Version 5.8</h2>
   <p>Please note that support for this plugin will be ending soon.</p>
  
   <?php
@@ -430,12 +430,12 @@ if (!empty($_GET) && array_key_exists('v',$_GET) && wp_verify_nonce($_GET['v'],'
 			if (count($wl)<6) $wl[5]='';
 			?>
     <tr style="background-color:white;">
-      <td><?php echo $wl[0];?></td>
-      <td><?php echo $wl[1];?></td>
-      <td><?php echo $wl[2];?></td>
-      <td><?php echo $wl[3];?></td>
-      <td><?php echo $wl[4];?></td>
-      <td><?php echo $wl[5];?></td>
+      <td><?php echo sanitize_text_field($wl[0]);?></td>
+      <td><?php echo sanitize_text_field($wl[1]);?></td>
+      <td><?php echo sanitize_text_field($wl[2]);?></td>
+      <td><?php echo sanitize_text_field($wl[3]);?></td>
+      <td><?php echo sanitize_text_field($wl[4]);?></td>
+      <td><?php echo sanitize_text_field($wl[5]);?></td>
       <td><a href='' onclick="return addwhite('<?php echo $wl[1]; ?>');" title="Add to White List" alt="Add to White List">Add</a>, <a title="Check Stop Forum Spam (SFS)" target="_stopspam" href="http://www.stopforumspam.com/search.php?q=<?php echo $wl[1]; ?>">Check SFS</a>, <a href='' onclick="return delreq('<?php echo $wl[1]; ?>');" title="Delete Request" alt="Delete Request">Delete</a></td>
     </tr>
     <?php		
@@ -622,8 +622,7 @@ if (!empty($_GET) && array_key_exists('v',$_GET) && wp_verify_nonce($_GET['v'],'
   <h3>Error Log</h3>
   <p>If debugging is turned on, the plugin will drop a record each time it encounters a PHP error. 
     Most of these errors are not fatal and do not effect the operation of the plugin. Almost all come from the unexpected data that
-    spammers include in their effort to fool us. The author's goal is to eliminate any and
-    all errors. These errors should be corrected. Fatal errors should be reported to the author at www.blogseye.com.</p>
+    spammers include in their effort to fool us. </p>
   <form method="post" action="">
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
     <input type="hidden" name="kpg_stop_delete_log" value="true" />
