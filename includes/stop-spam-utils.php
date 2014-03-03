@@ -363,7 +363,8 @@ function kpg_sfs_reg_add_user_to_blacklist_l($options) {
 	$options=kpg_sp_get_options();
 	$wlist=$options['wlist'];
 	$blist=$options['blist'];
-	$ip=kpg_get_ip();
+	//$ip=kpg_get_ip();
+	$ip=$_SERVER['REMOTE_ADDR'];
 	if (in_array($ip,$wlist)) { // remove it
 		$k=array_search($ip,$wlist);
 		$wlist=array_splice($wlist,$k,1);
@@ -383,7 +384,8 @@ function kpg_sfs_reg_add_user_to_badip_l() {
 	$stats=kpg_sp_get_stats();
 	$badips=$stats['badips'];
 	$goodips=$stats['goodips'];
-	$ip=kpg_get_ip();
+	//$ip=kpg_get_ip();
+	$ip=$_SERVER['REMOTE_ADDR'];
 	$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
 	if (array_key_exists($ip,$goodips)) {
 		unset($goodips[$ip]);
@@ -403,7 +405,8 @@ function kpg_sfs_reg_add_user_to_badip_l() {
 function kpg_sfs_reg_add_user_to_whitelist_l($options) {
 	$addtowhitelist=$options['addtowhitelist'];
 	$wlist=$options['wlist'];
-	$ip=kpg_get_ip();
+	//$ip=kpg_get_ip();
+	$ip=$_SERVER['REMOTE_ADDR'];
 	if ($addtowhitelist=='Y'&&!in_array($ip,$wlist)) {
 		// add this ip to your white list
 		$wlist[count($wlist)]=$ip;

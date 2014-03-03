@@ -15,7 +15,8 @@ if(!current_user_can('manage_options')) {
   <h2>Stop Spammers Multisite Options</h2>
   <?php
 $now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
-$ip=kpg_get_ip();
+//$ip=kpg_get_ip();
+$ip=$_SERVER['REMOTE_ADDR'];
 $nonce='';
 $muswitch=get_option('kpg_muswitch');
 if (empty($muswitch)) $muswitch='N';

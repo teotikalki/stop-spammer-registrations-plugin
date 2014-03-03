@@ -1,8 +1,13 @@
 <?php
 // this module has all the code for rejecting a user.
 // I added this to make it easy to incorporate the Really-Simple-Captcha plugin to give rejected users a second chance.
+if (!defined('ABSPATH')) exit; // just in case
 function kpg_reject_spam_l($rejectmessage,$notify,$chkcaptcha,$whodunnit) {
     // check to see if really simple captcha is loaded.
+	
+	if (!extension_loaded('gd') || !function_exists('gd_info')) {
+		$chkcaptcha!='N';
+	}
 	if ($notify=='Y'&&$chkcaptcha!='Y' ) {
 		// need to offer blocked user the chance to whitelisted
 		// reason is in $whodunnit.
@@ -103,7 +108,7 @@ function kpg_reject_spam_l($rejectmessage,$notify,$chkcaptcha,$whodunnit) {
 		$url=admin_url('admin-ajax.php')."?action=sfs_captcha";
 
 
-		set_transient( "KPG_SECRET_WORD",$rand,60 );
+		set_transient( "KPG_SECRET_WORD".$_SERVER['REMOTE_ADDR'],$rand,60 );
 	$cnonce=wp_create_nonce('kpgstopspam_captcha_key');
 		$sform="
 		<p>You need to prove you are not a robot before you can continue.</p>
@@ -119,7 +124,7 @@ function kpg_reject_spam_l($rejectmessage,$notify,$chkcaptcha,$whodunnit) {
 	<p>(If you cannot see the image clearly, then just refresh the page)</p>
 		";
 	// save the post info in a transient
-	set_transient("KPG_CAPTCHA",$_POST,60);
+	set_transient("KPG_CAPTCHA".$_SERVER['REMOTE_ADDR'],$_POST,60);
 
 		wp_die($rh.$sform,"Login Access Denied - second chance",array('response' => 403));
 	exit();
@@ -216,17 +221,24 @@ Stop Spammers Plugin";
 
 }
 function sfs_handle_ajax_captcha_l() {
+	if (!extension_loaded('gd') || !function_exists('gd_info')) {
+		// show the image without letters perhaps. Maybe make an error png2wbmp
+		header("Content-type: image/png");
+		readfile('base.png'); // replace this with the error png
+		return;
+	}
 	// displays the captcha image
-    $word=get_transient( "KPG_SECRET_WORD" );
+	// if there are errors then copy the url from the img tag and see what is going on.
+    $word=get_transient( "KPG_SECRET_WORD".$_SERVER['REMOTE_ADDR'] );
 	// Keith's how to create a captcha image in just a few lines of code	 
-	header("Content-type: image/png");
 	$im    = imagecreatefrompng(realpath(dirname(__FILE__)).'/base.png');
     imagefilter($im, IMG_FILTER_BRIGHTNESS,rand(0,90));
 	$font=realpath(dirname(__FILE__)).'/headache.ttf';
 	for($j=0;$j<strlen($word);$j++) {
 	   kpg_cpatcha_printletter($im,substr($word,$j,1),5+($j*28),60,$font);
 	}
-    imagefilter($im, IMG_FILTER_SMOOTH,2);
+    imagefilter($im, IMG_FILTER_SMOOTH,2); // blurs the image just slightly - take out if you need a clearer image.
+	header("Content-type: image/png");
  	imagepng($im);
 	imagedestroy($im);
 	exit(0);
@@ -255,7 +267,8 @@ function kpg_chk_captcha_l() {
 	@remove_action('init','kpg_load_all_checks'); 
 	@remove_action('init','kpg_sf_mu_load'); 	
     $captcha=$_POST['captcha_value'];
-    $word=get_transient( "KPG_SECRET_WORD" );
+    $word=get_transient( "KPG_SECRET_WORD".$_SERVER['REMOTE_ADDR'] );
+	delete_transient( "KPG_SECRET_WORD".$_SERVER['REMOTE_ADDR'] );
 	if (strtoupper($captcha)==strtoupper($word)) {
 		// made it exit with $_POST items all set
 		// increment the count
@@ -266,8 +279,8 @@ function kpg_chk_captcha_l() {
 		// save the stats
 		update_option('kpg_stop_sp_reg_stats',$stats);
 		// restore post
-		$pp=get_transient("KPG_CAPTCHA",$_POST);
-		
+		$pp=get_transient("KPG_CAPTCHA".$_SERVER['REMOTE_ADDR']);
+		delete_transient("KPG_CAPTCHA".$_SERVER['REMOTE_ADDR']);
 		// copy to the post
 		$_POST=$pp;
 		return;

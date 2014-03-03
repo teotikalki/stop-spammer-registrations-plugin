@@ -3,14 +3,14 @@ Tags: spam, comment, registration, login
 Requires at least: 3.0
 Tested up to: 3.9
 Contributors: Keith Graham
-Stable tag: 5.9
+Stable tag: 5.9.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 The Stop Spammers Plugin checks comments and logins using many methods to stop spammers.
 
 == Description == 
-Stop Spammers is an aggressive spam plugin that stops spam registrations, logins and comments using multiple checks.  It looks for typical spammer bad behaviors and blocks those. It extends Akismet checks to logins. It blocks access to users who anonymize their browsers, and it checks how long it takes to fill in a comment or login form and blocks users who are too fast.
+Stop Spammers is an aggressive spam plugin that stops spam registrations, logins and comments using multiple checks.  It looks for typical spammer bad behaviors and blocks those. It blocks access to users who anonymize their browsers, and it checks how long it takes to fill in a comment or login form and blocks users who are too fast.
 The plugin is extremely aggressive and makes no apologies for occasionally blocking users who do not behave well. It will block users who install anonymizing plugins or turn off headers and cookies. Normal users will never know the plugin has been installed.
 The plugin installs "honeypots" to fool spammers into leaving spam with a hidden form, where they will be marked as a spammer and blocked. 
 The plugin is not active as long as your site is being browsed so that it does not block content, but only kicks in if a form is submitted.
@@ -45,6 +45,10 @@ THEN
 4. Under the settings, review options that are enabled. Update the white list. 
 
 == Changelog ==
+
+= 5.9.1 =
+* Fixed mistake in using transients.
+* added a check that GD is loaded to make sure that the captcha will work.
 
 = 5.9 =
 * Removed all IP address reporting of when an ip addresses is found in header information. IP address is actively being spoofed by adding headers for a proxy server. This allows IPs to be pass lookup tests at SFS and Akismet. It also allows the reporting of good addresses as spam. Spammers may have been using whitelisted IP numbers to bypass checks, which is no longer possible.  

@@ -372,7 +372,7 @@ if ($num_comm->moderated>0&&$muswitch!='Y') {
 }
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
-  <p style="font-weight:bold;">Version 5.9</p>
+  <p style="font-weight:bold;">Version 5.9.1</p>
   <p>Please note that support for this plugin will be ending soon</p>
   <script type="text/javascript" >
 function kpg_show_hide_how() {
@@ -803,7 +803,7 @@ for ($k=0;$k<count($wlist);$k++) {
           <td valign="top" colspan="2">The plugin is extremely aggressive and will probably block some small number of legitimate users. You can give users a second chance by displaying a CAPTCHA image and asking them to type in the letters that they see. This prevents lockouts, so do not uncheck this box unless you are very sure that people will not be locked out of your system.<br>If you can see this image with the word TEST then you can use captcha.
 		  <?php
 		  $url=admin_url('admin-ajax.php')."?action=sfs_captcha";
-		  set_transient( "KPG_SECRET_WORD","TEST",10 );
+		  set_transient( "KPG_SECRET_WORD".$_SERVER['REMOTE_ADDR'],"TEST",10 );
 		  ?>
 		  <img src="<?php echo $url; ?>" /></td>
         </tr>
