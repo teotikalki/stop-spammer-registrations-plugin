@@ -1,25 +1,21 @@
 <?php
 /*
-Plugin Name: Stop Spammer Widget
-Plugin URI: http://wordpress.org/plugins/stop-spammer-registrations-plugin/
-Description: Widget to display Stop Spammer stats in sidebar.
-Version: 5.8
-Author: Keith P. Graham
+This is not a plugin
 
-This software is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+loaded from main program
+
+
 */
 if (!defined('ABSPATH')) exit; // just in case
 
 // this is the sidebar widget that can display the # of spam stopped.
-class Stop_spam_Widget extends WP_Widget {
+class Stop_Spam_Widget extends WP_Widget {
 
 	public function __construct() {
 		// widget actual processes
 		parent::__construct(
 		'stop_spam_widget', // Base ID
-		'Stop_spam_Widget', // Name
+		'Stop Spam Widget', // Name
 		array( 'description' => __( 'Show Spam Stats', 'text_domain' ), ) // Args
 		);
 	}
@@ -76,7 +72,5 @@ class Stop_spam_Widget extends WP_Widget {
 	}
 
 }
-add_action('widgets_init', create_function('', 'return register_widget("stop_spam_widget");'));
-
 
 ?>

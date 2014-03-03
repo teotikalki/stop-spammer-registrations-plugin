@@ -61,7 +61,8 @@ if (function_exists('is_multisite') && is_multisite()) {
 		}
 	}
 
-$ip=kpg_get_ip();
+//$ip=kpg_get_ip();
+$ip=$_SERVER['REMOTE_ADDR'];
 if ($firsttime=='Y') {
 	// check the IP for the first time
 	kpg_sfs_check_load();
@@ -99,8 +100,9 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 		'chkcomments','chklogin','chksignup','chklong',
 		'chkagent','chkxmlrpc','addtowhitelist','chkadmin','chkadminlog',
 		'chkspamwords','chkwpmail','redherring',
-		'chkdnsbl','chkemail','chkip','chkreferer','chktor',
-		'nobuy','redir','accept','notify','poison','wlreqmail');
+		'chkdnsbl','chkemail','chkip','chkreferer','chktor','chkcaptcha',
+		'nobuy','redir','accept','notify','poison','wlreqmail'
+);
 		foreach ($ynfields as $yn) {
 			$tyn='N';
 			if (array_key_exists($yn,$_POST)) {
@@ -255,7 +257,8 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 	} else if (array_key_exists('kpg_stop_check_me',$_POST)) {		
 		// validate the current users's spam
 		//echo "Validating Check Your IP<br/>";
-		$ip=kpg_get_ip();
+		//$ip=kpg_get_ip();
+		$ip=$_SERVER['REMOTE_ADDR'];
 		kpg_sfs_check_load();
 		if (kpg_sfs_check($sfs_check_activation,'Check IP',$ip)===false) {
 			// break the installation
@@ -292,7 +295,8 @@ if ($addtowhitelist=='Y'&&in_array($ip,$wlist)) {
 // check to see if you are using the admin login id.
 $current_user = wp_get_current_user();
 $current_user_name=$current_user->user_login;
-$ip=kpg_get_ip();
+//$ip=kpg_get_ip();
+$ip=$_SERVER['REMOTE_ADDR'];
 
 if ($current_user_name=='admin') {
 	?>
@@ -368,7 +372,7 @@ if ($num_comm->moderated>0&&$muswitch!='Y') {
 }
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
-  <p style="font-weight:bold;">Version 5.8</p>
+  <p style="font-weight:bold;">Version 5.9</p>
   <p>Please note that support for this plugin will be ending soon</p>
   <script type="text/javascript" >
 function kpg_show_hide_how() {
@@ -383,10 +387,10 @@ function kpg_show_hide_how() {
 </script>
   <a href="#" onclick="return kpg_show_hide_how();">How the plugin works</a>
   <div id="kpg_stop_spam_div" style="display:none;">
-    <p>Eliminates 99% of spam registrations and  comments. Checks all attempts to leave spam against <a href="http://www.stopforumspam.com/">Stop Forum Spam</a>, <a href="http://www.projecthoneypot.org/">Project Honeypot</a>, and <a href="http://www.botscout.com/">BotScout</a>, DNSBL lists such as Spamhaus.org, known spammer hosts such  as Ubiquity Servers, disposable email addresses, very long email address and  names, and HTTP_ACCEPT header. Checks for robots that hit your site too fast,  and puts a fake comment and login screen where only spammers will find them. In  all the plugin uses 16 different strategies to block spammers. </p>
+    <p>Checks known spammer hosts such  as Ubiquity Servers, disposable email addresses, very long email address and  names, and HTTP_ACCEPT header. Checks for robots that hit your site too fast,  and puts a fake comment and login screen where only spammers will find them. In  all the plugin uses a dozen different strategies to block spammers. </p>
     <p style="font-weight:bold;">How the plugin works: </p>
-    <p>This plugin checks against StopForumSpam.com, Project Honeypot and BotScout to to prevent spammers from registering or making comments. 
-      The Stop Spammers plugin works by checking the IP address, email and user id of anyone who tries to register, login, or leave a comment. This effectively blocks spammers who try to register on blogs or leave spam. It checks a users credentials against up to three databases: <a href="http://www.stopforumspam.com/">Stop Forum Spam</a>, <a href="http://www.projecthoneypot.org/">Project Honeypot</a>, and <a href="http://www.botscout.com/">BotScout</a>. Optionally checks against Akismet for Logins and Registrations. </p>
+    <p>
+      The Stop Spammers plugin works by checking anyone who tries to register, login, or leave a comment. This effectively blocks spammers who try to register on blogs or leave spam. </p>
     <p>Optionally the plugin will also check for disposable email addresses, check for the lack of a HTTP_ACCEPT header, and check against several DNSBL lists such as Spamhaus.org. It also checks against spammer hosts like Ubiquity-Nobis, XSServer, Balticom, Everhost, FDC, Exetel, Virpus and other servers, which are a major source of Spam Comments. </p>
     <p>Rejects very long email addresses and very long author names since spammers can't resist putting there message everywhere. It also rejects form POST data where the HTTP_REFERER header does not match your domain, because spammers often forget to include the correct referring site information in their software.</p>
     <p>The plugin will install a &quot;Red Herring&quot; comment form that will be invisible to normal users. Spammers will find this form and try to do their dirty deed using it. This results in the IP address being added to the deny list. This feature is turned off by default because the form might screw up your theme. Turn the option on and check your theme. If the form (a one pixel box) changes your theme presentation then turn the feature off. I highly recommend that you try this option. It stops a ton of spam.</p>
@@ -394,52 +398,21 @@ function kpg_show_hide_how() {
     <p> The plugin installs a Poison Link that can only be seen by spammers. If they follow it, it adds
       the spammers IP address to the cache of bad IP addresses so that the user will be denied, even
       if they pass all tests. </p>
-    <p><span style="font-weight:bold;">Limitations: </span></p>
-    <p>StopForumSpam.com limits checks to 10,000 per day for each IP so the plugin may stop validating on very busy sites. I have not seen this happen, yet. The plugin will not stop spam that has not been reported to the various databases. You will always get some comments from spammers who are not yet reported. You can help others and yourself by reporting spam. If you do not report spam, the spammer will keep hitting you. This plugin works best with Akismet. Akismet works well, but clutters the database with spam comments that need to be deleted regularly, and Akismet does not work with spammer registrations. </p>
-    <p style="font-weight:bold;">API Keys: </p>
-    <p> API Keys are NOT required for the plugin to work. Stop Forum Spam does not require a key so this plugin will work immediately without a key. The API key for<a href="http://www.stopforumspam.com/"> Stop Forum Spam</a> is only used for reporting spam. In order to use the <a href="http://www.projecthoneypot.org/">Project HoneyPot</a> or <a href="http://www.botscout.com/">BotScout</a> spam databases you will need to register at those sites and get a free API key. </p>
-    <p><span style="font-weight:bold;">History: </span></p>
-    <p>The Stop Spammers plugin keeps a count of the spammers that it has blocked and displays this on the WordPress dashboard. It also displays the last hits on email or IP and it also shows a history of the times it has made a check, showing rejections, passing emails and errors. When there is data to display there will also be a button to clear out the data. You can control the size of the list and clear the history. </p>
-    <p><span style="font-weight:bold;">Cache: </span></p>
+     <p><span style="font-weight:bold;">Cache: </span></p>
     <p>The Stop Spammers plugin keeps track of a number of spammer emails and IP addresses in a cache to avoid pinging databases more often than necessary. The results are saved and displayed. You can control the length of the cache list and clear it at any time. </p>
     <p><span style="font-weight:bold;">Reporting Spam : </span></p>
     <p>On the comments moderation page, the plugin adds extra options to check comments against the various databases and to report to the Stop Forum Spam database. You will need a Stop Forum Spam API key in order to report spam/ </p>
     <p><span style="font-weight:bold;">Network MU Installation Option : </span></p>
-    <p> If you are running a networked WPMU system of blogs, you can optionally control this plugin from the control panel of the main blog. By checking the 'Networked ON' radio button, the individual blogs will not see the options page. The API keys will only have to entered in one place and the history will only appear in one place, making the plugin easier to use for administrating many blogs. The comments, however, still must be maintained from each blog. The Network buttons only appear if you have a Networked installation.</p>
+    <p> If you are running a networked WPMU system of blogs, you can optionally control this plugin from the control panel of the main blog. By checking the 'Networked ON' radio button, the individual blogs will not see the options page. The Network buttons only appear if you have a Networked installation.</p>
     <p><strong>Debugging:</strong></p>
     <p>If the plugin is having trouble it drops a file in the plugin&rsquo;s directory named sfs_debug_output.txt. If the file is produced it will appear at the bottom of this page along with a button to delete it. Common errors include many which are not really an issue. From time to time you will see an error that reports that PHP could not redirect a page. This happens on some systems where the spammer is rejected, but the access denied screen does not appear correctly. I believe this is caused by data in the spam comment.</p>
     <p>If you do not want to see any errors you can search in the plugin code for the line that contains &quot;debug=true;&quot; and change the true to false, so the line is &quot;debug=false;&quot; (a semicolon at the end is required by PHP). I have set the plugin to report problems by default (debug=true;). </p>
     <p>Please report any errors that you see. </p>
-    <p><span style="font-weight:bold;">Requirements : </span></p>
-    <p>The plugin uses the WP_Http class to query the spam databases. Normally, if WordPress is working, then this class can access the databases. If, however, the system administrator has turned off the ability to open a url, then the plugin will not work. Sometimes placing a php.ini file in the blog's root directory with the line 'allow_url_fopen=On' will solve this.</p>
-    <p>The Stop Spammers plugin is ON when it is installed and enabled. To turn it off just disable the plugin from the plugin menu.. </p>
-    <p>You may see your own email in the cache as spammers try to use it to leave comments. You may have to white list your own email if that is the case, to keep the plugin from locking you out.</p>
-    <p>There is a button that allows you check access to the StopForumSpam database from the plugin Options page. This will tell you if the host allows opening of remote URL addresses. Please check your network access to the StopForumSpam database before reporting that the plugin doesn't work. The problem may be your host configuration. </p>
-    <hr/>
+     <p>The Stop Spammers plugin is ON when it is installed and enabled. To turn it off just disable the plugin from the plugin menu.. </p>
+    <p>You may see your own email or IP in the cache as spammers try to use it to leave comments. You may have to white list your own email if that is the case, to keep the plugin from locking you out.</p>
+     <hr/>
     <p>&nbsp;</p>
   </div>
-  <script type="text/javascript" >
-function kpg_api_test(url) {
-	var data= {
-		action: 'sfs_check',
-		ajax_url: url
-	}
-	jQuery.get(ajaxurl, data, sfs_ajax_return_check);
-}
-function sfs_ajax_return_check(response) {
-	response=response.substring(0,response.length-1);
-	alert(response);
-	return false;
-}
-</script>
-  <h4>Test Network Access:</h4>
-  Use this button to test if this plugin has network access to the StopForumSpam.com database<br/>
-  <form method="get" action="">
-    <p class="submit">
-      <input class="button-primary" value="Test Network Access" type="submit" onclick="kpg_api_test();return false;" />
-    </p>
-  </form>
-  <br/>
   <form method="post" action="">
     <input type="hidden" name="action" value="update" />
     <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
@@ -467,6 +440,9 @@ function sfs_ajax_return_check(response) {
         <td align="left" valign="top">Unchecking this cripples the plugin and should only be done if the user is behind some kind of router or firewall that cannot see the incoming IP address. If it looks like everyone has the same IP then uncheck this box.</td>
       </tr>
     </table>
+	<?PHP
+	if (ipChkk()) {
+	?>
     <h4>API Keys:</h4>
     <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
       <tr bgcolor="white">
@@ -496,7 +472,6 @@ function sfs_ajax_return_check(response) {
         <td valign="top">(For use with Akismet DB. This will work without the Akismet plugin if you put enter your Wordpress API Key here.)</td>
       </tr>
     </table>
-    <br/>
     <h4>Spam Limits:</h4>
     You can set the minimum settings to allow possible spammers to use your site. <br/>
     You may wish to forgive spammers with few incidents or no recent activity. I would recommend that to be on the safe side you should block users who appear on the spam database unless they specifically ask to be white listed. Allowed values are 0 to 9999. Only numbers are accepted.
@@ -522,6 +497,9 @@ function sfs_ajax_return_check(response) {
       </tr>
     </table>
     <br/>
+	<?PHP
+	 }
+	?>
     <h4>Other Checks:</h4>
     <table align="center" cellspacing="1" style="background-color:#CCCCCC;font-size:.9em;">
       <tr bgcolor="white">
@@ -595,7 +573,10 @@ function sfs_ajax_return_check(response) {
         <td align="center" valign="top"><input name="chktor" type="checkbox" value="Y" <?php if ($chktor=='Y') echo  "checked=\"checked\"";?>/></td>
         <td align="left" valign="top">Block comments from users coming from a know TOR node.</td>
       </tr>
-      <tr bgcolor="white">
+ 	<?PHP
+	if (ipChkk()) {
+	?>
+     <tr bgcolor="white">
         <td valign="top">Check IP against the Akismet db on logins:</td>
         <td align="center" valign="top"><input name="chkakismet" type="checkbox" value="Y" <?php if ($chkakismet=='Y') echo  "checked=\"checked\"";?>/></td>
         <td align="left" valign="top">(Temporarily disabled) If the Akismet API key is set, then you may use Akismet to check logins or registrations, logins and signups.</td>
@@ -605,8 +586,10 @@ function sfs_ajax_return_check(response) {
         <td align="center" valign="top"><input name="chkakismetcomments" type="checkbox" value="Y" <?php if ($chkakismetcomments=='Y') echo  "checked=\"checked\"";?>/></td>
         <td align="left" valign="top">(Temporarily disabled) If the Akismet API key is set, then you may use Akismet to check Comments and other actions (except logins) for spammers. Please note that Akismet does a much better job of managing comment spam. This, however, will extend Akismet checks to all form submissions that deal with IDs, emails and passwords. This does not mark comments as spam - it just blocks them completely.</td>
       </tr>
-      </tr>
-      
+ 	<?PHP
+	}
+	?>
+     
       <tr bgcolor="white">
         <td valign="top">Check Poison Links:</td>
         <td align="center" valign="top"><input name="poison" type="checkbox" value="Y" <?php if ($poison=='Y') echo  "checked=\"checked\"";?>/></td>
@@ -802,7 +785,7 @@ for ($k=0;$k<count($wlist);$k++) {
         </tr>
         <tr bgcolor="white">
           <td valign="top">Redirect URL:</td>
-          <td valign="top" colspan="3"><input size="112" name="redirurl" type="text" value="<?php echo $redirurl; ?>"/></td>
+          <td valign="top" colspan="3"><input size="77" name="redirurl" type="text" value="<?php echo $redirurl; ?>"/></td>
         </tr>
         <tr bgcolor="white">
           <td valign="top" colspan="4">If you want you can send the spammer to a web page. This can be a custom page explaining terms of service, or a nasty message </td>
@@ -812,6 +795,17 @@ for ($k=0;$k<count($wlist);$k++) {
           <td align="center" valign="top"><input type="checkbox" name ="notify" value="Y" <?php if ($notify=='Y') echo "checked=\"checked\""; ?> />
           </td>
           <td valign="top" colspan="2">In the case where a user is blocked, but the user feels that it is a mistake, you can display a link at the end of the block notification so that a user can request to be white-listed. The list of whitelist requests shows up in the statistics screen with the reason codes and an admin can decide if the user should be white listed. </td>
+        </tr>
+       <tr bgcolor="white">
+          <td valign="top">Give blocked users a second chance with a CAPTCHA Form: </td>
+          <td align="center" valign="top"><input type="checkbox" name ="chkcaptcha" value="Y" <?php if ($chkcaptcha=='Y') echo "checked=\"checked\""; ?> />
+          </td>
+          <td valign="top" colspan="2">The plugin is extremely aggressive and will probably block some small number of legitimate users. You can give users a second chance by displaying a CAPTCHA image and asking them to type in the letters that they see. This prevents lockouts, so do not uncheck this box unless you are very sure that people will not be locked out of your system.<br>If you can see this image with the word TEST then you can use captcha.
+		  <?php
+		  $url=admin_url('admin-ajax.php')."?action=sfs_captcha";
+		  set_transient( "KPG_SECRET_WORD","TEST",10 );
+		  ?>
+		  <img src="<?php echo $url; ?>" /></td>
         </tr>
       </tbody>
     </table>

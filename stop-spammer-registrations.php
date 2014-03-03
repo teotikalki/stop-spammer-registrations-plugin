@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://wordpress.org/plugins/stop-spammer-registrations-plugin/
 Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
-Version: 5.8
+Version: 5.9
 Author: Keith P. Graham
 
 This software is distributed in the hope that it will be useful,
@@ -67,6 +67,7 @@ if ($muswitch=='Y') {
 }
 add_action('init','kpg_chk_poison'); // check to see if we are here through a poison link
 add_action('init','kpg_chk_whitelist'); // check to see if we are here through a white list request
+add_action('init','kpg_chk_captcha'); // check to see if we are here through a white list request
 
 // premium
 // I eventually want to offer premium features, so these functions will eventually be included 
@@ -204,7 +205,9 @@ function kpg_load_all_checks() {
 	//echo "\r\n<!--\r\n step 4 \r\n-->\r\n";
 	// get the ip 
 	@remove_filter('wp_mail','kpg_sfs_reg_check_send_mail'); // we are going to check - remove the email check
-	$ip=kpg_get_ip();
+	//$ip=kpg_get_ip();
+	// now we are only using the actual ip sent to us by the host
+	$ip=$_SERVER['REMOTE_ADDR'];
 	//  this is called once in "init" no need to call it ever again
 	//sfs_debug_msg("kpg_load_all_checks");
 
@@ -214,102 +217,6 @@ function kpg_load_all_checks() {
 	sfs_errorsonoff('off');
 	
 	return;
-}
-function kpg_chk_whitelist() {
-	// this could be a white list request.
-	//sfs_debug_msg("checking white list request");
-	@remove_filter('wp_mail','kpg_sfs_reg_check_send_mail'); 
-	if(isset($_POST)&&!empty($_POST)&&array_key_exists('knotify_key',$_POST)) {
-		// we have arrived at a whitelist request 
-		//sfs_debug_msg("found white list request");
-		$knonce=$_POST['knotify_key'];
-		if (kpg_verify_nonce($knonce,'kpgstopspam_wlrequest')) {
-			//sfs_debug_msg("good nonce on white list request");
-			$kinf=$_POST['kinf'];
-			$kinf=trim($kinf);
-			$kinf=sanitize_text_field($kinf);
-			$kinf=remove_accents($kinf);
-			$kinf=utf8_decode($kinf);
-			$kinf=really_clean($kinf);
-			$kip=$_POST['kip'];
-			$kip=sanitize_text_field($kip);
-			$kip=remove_accents($kip);
-			$kip=utf8_decode($kip);
-			$kip=really_clean($kip);
-			$kem=$_POST['kem'];
-			$kem=sanitize_text_field($kem);
-			$kem=remove_accents($kem);
-			$kem=utf8_decode($kem);
-			$kem=really_clean($kem);
-			$kau=$_POST['kau'];
-			$kau=sanitize_text_field($kau);
-			$kau=remove_accents($kau);
-			$kau=utf8_decode($kau);
-			$kau=really_clean($kau);
-			$knot=$_POST['knot'];
-			$knot=sanitize_text_field($knot);
-			$knot=remove_accents($knot);
-			$knot=utf8_decode($knot);
-			$knot=really_clean($knot);
-			
-			if (empty($kinf)) {
-				wp_die(__("Empty response. Request not recorded"),__("Access Denied"),array('response' => 403));
-				
-				exit();
-			}
-			if (!empty($kinf)) { // ignore if user did not give a reason
-				// got it, update the white list request queue
-				// grab the stats and add it to the wlreq array
-				$options=kpg_sp_get_options();
-				$wlreqmail=$options['wlreqmail'];
-				$to=get_option('admin_email');
-				$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
-				$stats=kpg_sp_get_stats();
-				$wlreq=$stats['wlreq'];
-				$wlreq[]=array($now,$kip,$kem,$kau,$knot.", Mail sent=$wlreqmail to $to",$kinf);
-				$stats['wlreq']=$wlreq;
-				update_option('kpg_stop_sp_reg_stats',$stats);
-				// check here to see if we should send email
-				if ($wlreqmail=='Y') {
-					//send email to the admin
-					// send the admin an email
-					$sturl=admin_url("options-general.php?page=stop-spammer-registrations-plugin/settings/stop-spam-reg-stats.php");
-					if ($muswitch=="Y") $sturl=admin_url("network/settings.php?page=stop-spammer-registrations-plugin/settings/stop-spam-reg-stats.php");
-					$subject='White list request from blog '.get_bloginfo('name');
-					
-					$message="
-Sysop,
-A request has been received from someone who has been marked as a spammer by the STOP SPAMMER plugin.
-You have are being notified because you have checked off the box on the settings page indicating that you wanted this email.
-The information from the request is:
-Time: $now
-User IP: ". $kip ."
-User email: ". $kem ."
-Author Name: ". $kau ."
-Spam Reason: ". $knot ."
-Users Message: ". $kinf ."
-
-Please be aware that the user has been recognized as a potential spammer. Some spam robots are already filling out the request form with a bogus explanation. If the user is from Ubiquity servers, or is found on dnsbl, Stop Forum Spam, or Akismet, don't let the person into your system unless you are sure the plugin is in error.
-
-You can add this user to your whitelist from the Stop Spammers statistics page. You may wish to clear the cache to make sure the user can get into the system.
-
-$sturl
-
-Stop Spammers Plugin";
-
-
-					
-					@wp_mail( $to, $subject, $message );
-					
-				}
-				wp_die(__("A white list request has been recorded"),__("Access Pending"),array('response' => 403));
-				
-				exit();
-			}
-		} // if !empty kinf
-		
-	}
-
 }
 function kpg_chk_poison() {
 	// check to see if anyone showed up from clicking a poison link
@@ -348,7 +255,8 @@ function kpg_chk_poison() {
 							$blog=$blog_id;
 						}
 					}
-					$ip=kpg_get_ip();
+					//$ip=kpg_get_ip();
+					$ip=$_SERVER['REMOTE_ADDR'];
 					$ref="/";
 					if (array_key_exists('HTTP_REFERER',$_SERVER)) {
 						$ref=$_SERVER['HTTP_REFERER'];
@@ -376,7 +284,7 @@ function stop_spam_check($ip='',$email='',$author='') {
 	// add that line to plugins or themes when you need to check a login or comment.
 	// if you know the email, author, you can check those also. If you have a better way of getting ip you can use it.
 	// do not call on every page - only call when there is a new comment, registration or login, otherwise it will slow your site quite a bit.
-	if (empty($ip)) $ip=kpg_get_ip();
+	if (empty($ip)) $ip=$_SERVER['REMOTE_ADDR']; // $ip=kpg_get_ip();
 	sfs_errorsonoff();
 	//sfs_debug_msg("stop_spam_check");
 	kpg_sfs_check_load();
@@ -585,7 +493,8 @@ function kpg_sfs_reg_check_send_mail($stuff) {
 		$from_email = trim( $from_email );
 	}
 	// get the ip 
-	$ip=kpg_get_ip();
+	//$ip=kpg_get_ip();
+	$ip=$_SERVER['REMOTE_ADDR'];
 	// now call the generic checker
 	//sfs_debug_msg("kpg_sfs_reg_check_send_mail");
 	sfs_errorsonoff();
@@ -648,7 +557,8 @@ function kpg_sfs_check_404() {
 	// check to see if we should even be here
 	if (!array_key_exists('chkwplogin',$options) || $options['chkwplogin']!='Y') return;	
 	
-	$ip=kpg_get_ip();
+	//$ip=kpg_get_ip();
+	$ip=$_SERVER['REMOTE_ADDR'];
 	// check the white lists to prevent accidental blockage
 	$wlist=$options['wlist'];
 	if ((kpg_sp_searchi($ip,$wlist))) {
@@ -756,6 +666,7 @@ function really_clean($s) {
 }
 
 function kpg_sfs_reg_check($actions,$comment) {
+    if (!ipChkk()) return $actions;
 	$email=urlencode($comment->comment_author_email);
 	$ip=$comment->comment_author_IP;
 	$action="<a title=\"Check Stop Forum Spam (SFS)\" target=\"_stopspam\" href=\"http://www.stopforumspam.com/search.php?q=$ip\">Check SFS</a> |
@@ -765,6 +676,8 @@ function kpg_sfs_reg_check($actions,$comment) {
 }
 
 function kpg_sfs_reg_report($actions,$comment) {
+    if (!ipChkk()) return $actions;
+
 	// need to add a new action to the list
 	
 	$email=urlencode($comment->comment_author_email);
@@ -779,7 +692,6 @@ function kpg_sfs_reg_report($actions,$comment) {
 	$exst='';
 	$uname=urlencode($comment->comment_author);
 	$ip=$comment->comment_author_IP;
-	// code added as per Paul at sto Forum Spam
 	$content=$comment->comment_content;
 	
 	$evidence=$comment->comment_author_url;
@@ -902,17 +814,21 @@ function kpg_sp_rightnow() {
 	}
 	
 }
-
+if (ipChkk()) {
 add_action('wp_ajax_nopriv_sfs_sub', 'sfs_handle_ajax_sub');	
 add_action('wp_ajax_sfs_sub', 'sfs_handle_ajax_sub');	
 add_action('wp_ajax_sfs_check', 'sfs_handle_ajax_check');	// used to check if ajax reporting works
+}
+add_action('wp_ajax_nopriv_sfs_captcha', 'sfs_handle_ajax_captcha');	// displays the image
+add_action('wp_ajax_sfs_captcha', 'sfs_handle_ajax_captcha');	// displays the image
+
 /******************************************
 * try ajax version of reporting
 * right out of the api playbook
 ******************************************/
-add_action('admin_head', 'sfs_handle_ajax_new');
-
-
+if (ipChkk()) {
+	add_action('admin_head', 'sfs_handle_ajax_new');
+}
 function kpg_verify_nonce($a,$b) {
 	if (function_exists('wp_verify_nonce')) {
 		return wp_verify_nonce($a, $b);
@@ -973,6 +889,10 @@ function sfs_handle_ajax_new() {
 	if (!function_exists('sfs_handle_ajax_new_l')) kpg_sp_require('includes/stop-spam-utils.php');
 	return sfs_handle_ajax_new_l();
 }
+function sfs_handle_ajax_captcha() {
+	if (!function_exists('sfs_handle_ajax_captcha_l')) kpg_sp_require('includes/stop-spam-deny.php');
+	return sfs_handle_ajax_captcha_l();
+}
 // search functions
 function kpg_sp_searchi($needle,$haystack) {
 	if (!function_exists('kpg_sp_searchi_l')) kpg_sp_require('includes/stop-spam-utils.php');
@@ -1025,6 +945,43 @@ function sfs_debug_msg($msg) {
 	if (!function_exists('sfs_debug_msg_l')) kpg_sp_require('includes/stop-spam-utils.php');
 	return sfs_debug_msg_l($msg);
 }
+function kpg_reject_spam($rejectmessage,$notify,$chkcaptcha,$whodunnit) {
+ 	if (!function_exists('kpg_reject_spam_l')) kpg_sp_require('includes/stop-spam-deny.php');
+	return kpg_reject_spam_l($rejectmessage,$notify,$chkcaptcha,$whodunnit);
+}
+
+
+function stop_spam_widget_register() {
+    if (!class_exists('Stop_Spam_Widget')) {
+		kpg_sp_require('includes/stop-spam-widget.php');
+	}
+	register_widget( 'Stop_Spam_Widget' );
+}
+add_action( 'widgets_init', 'stop_spam_widget_register' );
+
+function kpg_chk_captcha() {
+// check to see if we are in a post from the captcha
+	if(isset($_POST)&&!empty($_POST)&&array_key_exists('captcha_key',$_POST)) {
+		$knonce=$_POST['captcha_key'];
+		if (kpg_verify_nonce($knonce,'kpgstopspam_captcha_key')) {
+			if (!function_exists('kpg_chk_captcha_l')) kpg_sp_require('includes/stop-spam-deny.php');
+			return kpg_chk_captcha_l();
+		}
+    }
+ 
+}
+
+
+function kpg_chk_whitelist() {
+	if(isset($_POST)&&!empty($_POST)&&array_key_exists('knotify_key',$_POST)) {
+		$knonce=$_POST['knotify_key'];
+		if (kpg_verify_nonce($knonce,'kpgstopspam_wlrequest')) {
+			if (!function_exists('kpg_chk_whitelist_l')) kpg_sp_require('includes/stop-spam-deny.php');
+    echo "kpg_chk_whitelist";
+			return kpg_chk_whitelist_l();
+		}
+	}
+}
 
 
 function kpg_sp_require($file) {
@@ -1044,8 +1001,9 @@ function kpg_sfs_premium() {
 }
 function kpg_new_user_ip($user_id) {
 	// add the users ip to new users
-	$ip=kpg_get_ip();
-    update_user_meta($user_id, 'signup_ip', $ip);
+	//$ip=kpg_get_ip();
+	 $ip=$_SERVER['REMOTE_ADDR'];
+	 update_user_meta($user_id, 'signup_ip', $ip);
 }
 function kpg_log_user_ip($user_login="", $user="") {
     if (empty($user)) return;
@@ -1053,7 +1011,8 @@ function kpg_log_user_ip($user_login="", $user="") {
 	// add the users ip to new users
 	if (!isset($user->ID)) return;
 	$user_id=$user->ID;
-	$ip=kpg_get_ip();
+	//$ip=kpg_get_ip();
+	$ip=$_SERVER['REMOTE_ADDR'];
 	$oldip=get_user_meta($user_id,  'signup_ip', true );
 	if (empty($oldip) || $ip!=$oldip) {
 		update_user_meta($user_id, 'signup_ip', $ip);
@@ -1072,6 +1031,7 @@ function kpg_sfs_ip_column_head($column_headers) {
 
 }
 function kpg_sfs_ip_column($value, $column_name, $user_id) {
+    if (!ipChkk()) return $value;
 	// get the ip for this column
 	if ($column_name == 'signup_ip' ) {
 		$signup_ip = get_user_meta($user_id, 'signup_ip', true);
@@ -1128,7 +1088,10 @@ function kpg_hook_user_notification() {
 	}
 }
 	kpg_hook_user_notification(); // hook user notification if user is in post. Might be preempted by pluggable. We'll see
-
+// turns external site (like sfs) on and off. Return false to disable lookups.
+function ipChkk() {
+	return true;
+}
 
 
 

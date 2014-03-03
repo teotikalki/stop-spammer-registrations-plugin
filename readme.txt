@@ -3,25 +3,22 @@ Tags: spam, comment, registration, login
 Requires at least: 3.0
 Tested up to: 3.9
 Contributors: Keith Graham
-Stable tag: 5.8
+Stable tag: 5.9
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
 The Stop Spammers Plugin checks comments and logins using many methods to stop spammers.
 
 == Description == 
-Stop Spammers is an aggressive spam plugin that stops spam registrations, logins and comments using multiple checks. It checks several spammer databases such as StopForumSpam.com and Project Honeypot. It looks for typical spammer bad behaviors and blocks those. It extends Akismet checks to logins. It blocks access to users who anonymize their browsers, and it checks how long it takes to fill in a comment or login form and blocks users who are too fast.
+Stop Spammers is an aggressive spam plugin that stops spam registrations, logins and comments using multiple checks.  It looks for typical spammer bad behaviors and blocks those. It extends Akismet checks to logins. It blocks access to users who anonymize their browsers, and it checks how long it takes to fill in a comment or login form and blocks users who are too fast.
 The plugin is extremely aggressive and makes no apologies for occasionally blocking users who do not behave well. It will block users who install anonymizing plugins or turn off headers and cookies. Normal users will never know the plugin has been installed.
 The plugin installs "honeypots" to fool spammers into leaving spam with a hidden form, where they will be marked as a spammer and blocked. 
 The plugin is not active as long as your site is being browsed so that it does not block content, but only kicks in if a form is submitted.
 When a spammer is detected, their address is added to a temporary cache so  that future attempts are immediately blocked without having to recheck the spammer all over again.
-The plugin checks all attempts to leave a comment, register or login against StopForumSpam.com, Project Honeypot, BotScout, DNSBL lists such as Spamhaus.org, known spammer hosts such as Ubiquity Servers, disposable email addresses, very long email address and names, and HTTP_ACCEPT header.
+The plugin checks known spammer hosts such as Ubiquity Servers, disposable email addresses, very long email address and names, and HTTP_ACCEPT header.
 White List Requests:
 When a user is denied access to login, registration or comments, they are presented with a form which allows them to notify the Admin user that they wish to be allowed into the site. Spammers usually do not fill out the form, or if they do, it will be filled in with spam. 
 When the user presses the submit button, the admin will get an email and can then white list the user so that the person will have access to the site. The admin should also clear the cache (on the stop spammer history settings page) and then the user will have access to the site.
-API Keys: 
-
-API Keys are NOT required for the plugin to work. StopForumSpam.com does not require a key so this plugin will work immediately without a key. The API key for Stop Forum Spam is only used for reporting spam. In order to use the Project HoneyPot or BotScout spam databases you will need to register at those sites and get a free API key. 
 
 History: 
 
@@ -32,20 +29,10 @@ Cache:
 
 The Stop Spammers plugin keeps track of a number of spammer emails and IP addresses in a cache to avoid pinging databases more often than necessary. The results are saved and displayed. You can control the length of the cache list and clear it at any time. The plugin caches IP addresses that do not fail, assuming that they may be valid users. In order to prevent re-checking these IP addresses, the plugin stores the last two IP addresses that passed all tests. Persistent spammers, who pass once, may be placed in the good cache allowing them access to comments for a short while. If this happens then the cache should be cleared to force a recheck on the spammer.
 
-Reporting Spam: 
-
-On the comments moderation page, the plugin adds extra options to check comments against the various databases and to report to the Stop Forum Spam database. You will need a Stop Forum Spam API key in order to report spam.
-Spam users who manage to register will appear on the Wordpress users listing. There is a new column added by the plugin that shows the IP address of the user. There are links there to check the user against two spam databases and to report the user to StopForumSpam.com, if needed. Not all users will show an IP address as this is a new feature of this plugin and Wordpress does not store the last IP address of a user login.
 
 Network MU Multisite Installation Option: 
 
 If you are running a networked WPMU system of blogs, you control this plugin from the network admin dashboard. The Spammer Multisite option appears on the Network Admin dashboard under settings. You can turn on the networked settings and the plugin will work as a global plugin protecting all websites and keeping the statistics for the websites in one location.
-
-Requirements: 
-
-The plugin uses the WP_Http class to query the spam databases. Normally, if WordPress is working, then this class can access the databases. If, however, the system administrator has turned off the ability to open a URL, then the plugin will not work. Sometimes placing a php.ini file in the blog's root directory with the line "allow_url_fopen=On" will solve this. 
-There is a button that allows you check access to the StopForumSpam database from the plugin Options page. This will tell you if the host allows opening of remote URL addresses.
-
 
 
 == Installation ==
@@ -55,9 +42,19 @@ OR
 2. Upload the plugin to your wp-content/plugins directory.
 THEN
 3. Activate the plugin.
-4. Under the settings, add the appropriate API keys (optional). Update the white list. Set any of the optional items and limits.
+4. Under the settings, review options that are enabled. Update the white list. 
 
 == Changelog ==
+
+= 5.9 =
+* Removed all IP address reporting of when an ip addresses is found in header information. IP address is actively being spoofed by adding headers for a proxy server. This allows IPs to be pass lookup tests at SFS and Akismet. It also allows the reporting of good addresses as spam. Spammers may have been using whitelisted IP numbers to bypass checks, which is no longer possible.  
+* Stopped trusting proxy server addresses - when a header from a proxy server is detected, I assume that it is an attempt to spoof IP address. This makes it difficult for Cloudflare, Proxy users and VPN users to use the site as they may be marked as spammers when they are not. I had to add a fix - see next point.
+* Added a second chance CAPTCHA on failed events. A sysop can turn it off. This will prevent blocking good users who use proxy servers.  
+* Added a switch to quickly turn off all database lookups. The plugin is only about 50% effective when this is done.
+* fixed some bugs in TOR lookup and data sanitizing. 
+* Made changes to data display to prevent cross browser or JavaScript attacks.
+* Akismet is still turned off for now. I have yet to figure out why Akismet does not work.
+* Deleted widget. Moved it into the main plugin for those who need it, but it is no longer a separate plugin. It will still show up on the widgets menu, but may have to be dragged to the sidebar again.
 
 = 5.8 =
 * Fixed security issue in white list requests.
@@ -122,7 +119,7 @@ Not everyone who is marked as a spammer is actually a spammer. It is quite possi
 Rename stop-spammer-registrations.php to stop-spammer-registrations.xxx and then login. Rename it back and check the history logs for the reason why your were denied access. Was your email or IP address marked as spam in one of the databases? If so, contact the website that maintains the database and ask them to remove you. 
 Check off the box, "Automatically add admins to white list" in the spammer options settings. Then save your settings. This puts your IP address into the white list. You should be able to logout and then log back in.
 Use the button on the Stop Spammer settings page to see if you pass. You may have to uncheck some options in order to pass. 
-Unprofessional webmasters sometimes report IP address to Stop Forum Spam unnecessarily. If you are listed on SFS, there is a from at www.StopForumSpam.com. They can delete your entry.
+
 = I have found a bug =
 Please report it NOW. I fill try to fix it and incorporate the fix into the next release. I try to respond quickly to bugs that are possible to fix (all others take a few days). 
 If you are adventurous you can download the latest versions of some of my plugins before I release them.

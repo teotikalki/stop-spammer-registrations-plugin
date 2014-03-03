@@ -105,6 +105,10 @@ function sfs_ErrorHandler_l($errno, $errmsg, $filename, $linenum, $vars) {
 	return false;
 }
 function sfs_handle_ajax_sub_l($data) {
+	if (!ipChkk()) {
+		return;
+	}
+
 	// get the stuff from the $_GET and call stop forum spam
 	// this tages the stuff from the get and uses it to do the get from sfs
 	// get the configuration items
@@ -175,6 +179,10 @@ function sfs_handle_ajax_sub_l($data) {
 
 
 function sfs_handle_ajax_check_l($data) {
+	if (!ipChkk()) {
+		echo "not enabled";
+		exit();
+	}
 	// this does a call to the sfs site to check a known spammer
 	// returns success or not
 	$query="http://www.stopforumspam.com/api?ip=91.186.18.61";
@@ -203,6 +211,10 @@ function sfs_handle_ajax_check_l($data) {
 
 
 function sfs_handle_ajax_new_l() {
+	if (!ipChkk()) {
+		echo "not enabled";
+		exit();
+	}
 	// this is the call that handles the call to ajax
 	// step 1: Create the script that handles the action
 	?>

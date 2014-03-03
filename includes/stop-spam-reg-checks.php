@@ -146,7 +146,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	if (strlen($pwd)>32) $pwd=substr($pwd,0,30).'...';
 	if (strlen($em)>80) $em=substr($em,0,80).'...';
 	// set up hist channel
-	$hist[$now]=array($ip,mysql_real_escape_string($em),mysql_real_escape_string($author),$sname,'',$blog);
+	$hist[$now]=array($ip,$em,$author,$sname,'',$blog);
 	
 	// check all of the ones that do not require file access
 	$deny=false;
@@ -483,9 +483,9 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	//sfs_debug_msg("continue 7");
 	
 	// try akismet
-	/*
 	// turn off akismet for the nonce
-	if (!$deny&& $chkip=='Y'&&$chkakismet=='Y'&&(strpos($sname,'login.php')!==false||strpos($sname,'register.php')!==false||strpos($sname,'signup.php')!==false)) { 
+	$chkakismet='N';
+	if (!$deny&& $chkip=='Y'&&$chkakismet=='Y' && ipChkk() &&(strpos($sname,'login.php')!==false||strpos($sname,'register.php')!==false||strpos($sname,'signup.php')!==false)) { 
 		$ansa=kpg_akismet_check($ip);
 		if ($ansa!==false) {
 			$deny=true;
@@ -493,7 +493,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			$cntakismet++;
 		}
 	}
-
+    $chkakismetcomments='N';
 	if (!$deny&& $chkip=='Y'&&$chkakismetcomments=='Y'&&(strpos($sname,'login.php')===false&&strpos($sname,'register.php')===false&&strpos($sname,'signup.php')===false)) { 
 		$ansa=kpg_akismet_check($ip);
 		if ($ansa!==false) {
@@ -502,11 +502,10 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			$cntakismet++;
 		}
 	}
-		*/
 
 	// here is the database lookups section. Simple checks did not work. We need to do a lookup
 	//sfs_debug_msg("continue 8");
-	if (!$deny && $chksfs=='Y' && $chkip=='Y' ) { 
+	if (!$deny && $chksfs=='Y' && $chkip=='Y' && ipChkk() ) { 
 		$query="http://www.stopforumspam.com/api?ip=$ip";
 		// no longer checking email on sfs
 		/*
@@ -557,7 +556,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	
 	//sfs_debug_msg("continue 9");
 
-	if (!$deny&&$chkdnsbl=='Y'&& $chkip=='Y') {
+	if (!$deny&&$chkdnsbl=='Y'&& $chkip=='Y' && ipChkk() ) {
 		$ansa=@kpg_check_all_dnsbl($ip);
 		if ($ansa!==false) {
 			$deny=true;
@@ -566,7 +565,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		}
 	}
 	//sfs_debug_msg("continue 10");
-	if (!$deny&&$honeyapi!=''&& $chkip=='Y') {
+	if (!$deny&&$honeyapi!=''&& $chkip=='Y' && ipChkk() ) {
 		$ansa=kpg_dnsbl_data($ip,'.dnsbl.httpbl.org',$honeyapi);
 		if ($ansa!==false) {
 			$deny=true;
@@ -575,7 +574,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		}
 	}
 	//sfs_debug_msg("continue 11");
-	if (!$deny&&$botscoutapi!=''&& $chkip=='Y') {
+	if (!$deny&&$botscoutapi!=''&& $chkip=='Y' && ipChkk() ) {
 		// try the ip on botscoutapi
 		$query="http://botscout.com/test/?ip=$ip&key=$botscoutapi";
 		$check='';
@@ -597,15 +596,25 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			}
 		}
 	}
-	if (!$deny&&$chktor=='Y'&& $chkip=='Y') {
+	if (!$deny&&$chktor=='Y'&& $chkip=='Y' ) {
 		$ansa=@kpg_check_tor($ip);
 		if ($ansa!==false) {
 			$deny=true;
-			$whodunnit.=$ansa;
+			$whodunnit.="Tor";
 			$cnttor++;
 		}
 	}
-
+    // one last check
+	$xip=kpg_get_ip();
+	if ($xip!=$ip) {
+			$deny=true;
+			$whodunnit.="Spoofed IP";
+			$cntspoof++;
+	}
+	
+	
+	
+	
 	//sfs_debug_msg("continue 12");
 	$hist[$now][4].=$whodunnit;
 	if (!$deny) {
@@ -689,6 +698,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 		$stats['cntgood']=$cntgood;
 
 		$stats['cntadminlog']=$cntadminlog;
+		$stats['cntspoof']=$cntspoof;
 		
 		//
 		update_option('kpg_stop_sp_reg_stats',$stats);
@@ -711,33 +721,10 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	// add the reason code to the login message
 	$rejectmessage=str_replace('[reason]',$whodunnit,$rejectmessage);
 	$rejectmessage=str_replace('[ip]',$ip,$rejectmessage);
-	if ($notify=='Y') {
-		// need to offer blocked user the chance to whitelisted
-		// reason is in $whodunnit.
-		$knonce=wp_create_nonce('kpgstopspam_wlrequest');
-
-		$r2="
-		<p>
-		If you feel that you have been blocked in error, you may notify the Admin and ask to placed on the
-		system white list. This site's admin will be notified and can review the reason why you were blocked.<br/>
-			<form name=\"DOIT2\" method=\"POST\" action=\"\">
-			<input type=\"hidden\" name=\"kip\" value=\"$ip\" />
-			<input type=\"hidden\" name=\"kem\" value=\"$em\" />
-			<input type=\"hidden\" name=\"kau\" value=\"$author\" />
-			<input type=\"hidden\" name=\"knot\" value=\"$whodunnit\" />
-			<input type=\"hidden\" name=\"knotify_key\" value=\"$knonce\" />
-			Please ask nicely to be admitted here.<br/>
-			<textarea cols=\"80\" rows=\"5\" name=\"kinf\" value\"\"></textarea>
-			<input type=\"submit\" value=\"Request to be added to the White List\" />
-			</form>
-		</p>
-		
-		";
-		$rejectmessage=$rejectmessage.$r2;
-		
-	}
-	wp_die("$rejectmessage","Login Access Denied",array('response' => 403));
-	exit();
+	//$captcha='Y';
+	//if ($chkcaptcha!='N') $chkcaptcha='Y'; // what is happening here?
+	kpg_reject_spam($rejectmessage,$notify,$chkcaptcha,$whodunnit);
+	
 }
 /*************************************************
 *  Utility checks
@@ -1026,10 +1013,10 @@ function kpg_check_tor($ip){
 	$sa=$_SERVER['SERVER_ADDR'];
 	if ($sa=='127.0.0.1') return false;
 	$sa=implode('.', array_reverse(explode ('.', $sa )));
-	$sip=implode('.', array_reverse(explode ('.', $sip )));
+	$sip=implode('.', array_reverse(explode ('.', $ip )));
 	$lookup=$sip.'.'.$sp.'.'.$sa.'.ip-port.exitlist.torproject.org';
 	$ret=gethostbyname($lookup);
-	if (ret=="127.0.0.2") {
+	if ($ret=="127.0.0.2") {
 		return true;
 	}
 	return false;

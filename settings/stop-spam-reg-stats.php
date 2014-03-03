@@ -116,6 +116,9 @@ if (wp_verify_nonce($nonce,'kpgstopspam_update')) {
 		$stats['cntwhite']=0;
 		$stats['cntgood']=0;
 		$stats['poisoncnt']=0;
+		$stats['cntspoof']=0;
+		$stats['cntcap']=0;
+		$stats['cntncap']=0;
 		
 		update_option('kpg_stop_sp_reg_stats',$stats);
 		extract($stats);
@@ -206,7 +209,7 @@ $opfile=str_replace('stop-spam-reg-stats.php','stop-spam-reg-options.php',$thisf
 ?>
 
 <div class="wrap">
-  <h2>Stop Spammers Plugin Stats Version 5.8</h2>
+  <h2>Stop Spammers Plugin Stats Version 5.9</h2>
   <p>Please note that support for this plugin will be ending soon.</p>
  
   <?php
@@ -356,7 +359,7 @@ if (!empty($_GET) && array_key_exists('v',$_GET) && wp_verify_nonce($_GET['v'],'
     <tr>
       <td>DSNBL database</td>
       <td><?php echo $cntdnsbl; ?></td>
-      <td>Ubiquity Servers</td>
+      <td>Known Spam Servers</td>
       <td><?php echo $cntubiquity; ?></td>
       <td>Akismet</td>
       <td><?php echo $cntakismet; ?></td>
@@ -401,6 +404,18 @@ if (!empty($_GET) && array_key_exists('v',$_GET) && wp_verify_nonce($_GET['v'],'
       <td>In Good Cache</td>
       <td><?php echo $cntgood; ?></td>
     </tr>
+    <tr>
+      <td>Spoofed IP</td>
+      <td><?php echo $cntspoof; ?></td>
+      <td>TOR</td>
+      <td><?php echo $cnttor; ?></td>
+      <td>CAPTCHA Success</td>
+      <td><?php echo $cntcap; ?></td>
+      <td>CAPTCHA Fail</td>
+      <td><?php echo $cntncap; ?></td>
+      <td>&nbsp;</td>
+      <td>&nbsp;</td>
+    </tr>
   </table>
   <?php
 	if (count($wlreq)==0) {
@@ -436,7 +451,15 @@ if (!empty($_GET) && array_key_exists('v',$_GET) && wp_verify_nonce($_GET['v'],'
       <td><?php echo sanitize_text_field($wl[3]);?></td>
       <td><?php echo sanitize_text_field($wl[4]);?></td>
       <td><?php echo sanitize_text_field($wl[5]);?></td>
-      <td><a href='' onclick="return addwhite('<?php echo $wl[1]; ?>');" title="Add to White List" alt="Add to White List">Add</a>, <a title="Check Stop Forum Spam (SFS)" target="_stopspam" href="http://www.stopforumspam.com/search.php?q=<?php echo $wl[1]; ?>">Check SFS</a>, <a href='' onclick="return delreq('<?php echo $wl[1]; ?>');" title="Delete Request" alt="Delete Request">Delete</a></td>
+      <td><a href='' onclick="return addwhite('<?php echo $wl[1]; ?>');" title="Add to White List" alt="Add to White List">Add</a>, 
+	  	<?PHP
+	if (ipChkk()) {
+	?>
+<a title="Check Stop Forum Spam (SFS)" target="_stopspam" href="http://www.stopforumspam.com/search.php?q=<?php echo $wl[1]; ?>">Check SFS</a>, 
+	<?PHP
+	}
+	?>
+<a href='' onclick="return delreq('<?php echo $wl[1]; ?>');" title="Delete Request" alt="Delete Request">Delete</a></td>
     </tr>
     <?php		
 		}
@@ -578,7 +601,12 @@ if (!empty($_GET) && array_key_exists('v',$_GET) && wp_verify_nonce($_GET['v'],'
       <td  style="border:1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 			foreach ($badips as $key => $value) {
 				//echo "$key; Date: $value<br/>\r\n";
+	if (ipChkk()) {
+
 				echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a> ";
+	} else {
+		echo "$key: $value";
+	}
 				echo " <a href=\"\" onclick=\"return delblack('$key');\" title=\"Delete $key from Bad Cache\" alt=\"Delete from $key Bad Cache\" ><img src=\"$trash\" width=\"12px\" /></a> ";			
 				echo " <a href=\"\" onclick=\"return addblack('$key');\" title=\"Add to $key Black List\" alt=\"Add to Black List\" ><img src=\"$skull\" width=\"12px\" />.</a> ";
 				echo "<br/>";
@@ -593,7 +621,13 @@ if (!empty($_GET) && array_key_exists('v',$_GET) && wp_verify_nonce($_GET['v'],'
       <td  style="border:1px solid black;font-size:.75em;padding:3px;" valign="top"><?php
 			foreach ($goodips as $key => $value) {
 				//echo "$key; Date: $value<br/>\r\n";
+	if (ipChkk()) {
+
 				echo "<a href=\"http://www.stopforumspam.com/search?q=$key\" target=\"_stopspam\">$key: $value</a>";
+	} else {
+		echo "$key: $value";
+	}
+
 				echo " <a href=\"\" onclick=\"return delwhite('$key');\" title=\"Delete $key from Good Cache\" alt=\"Delete $key from Good Cache\" ><img src=\"$trash\" width=\"12px\" /></a> ";
 				echo " <a href=\"\" onclick=\"return addblack('$key');\" title=\"Add to $key Black List\" alt=\"Add to $key Black List\" ><img src=\"$skull\" width=\"12px\" /></a> ";
 				echo "<br/>";
@@ -609,7 +643,8 @@ if (!empty($_GET) && array_key_exists('v',$_GET) && wp_verify_nonce($_GET['v'],'
 	$options=kpg_sp_get_options();
 	extract($options);
 
-	$ip=kpg_get_ip();
+	//$ip=kpg_get_ip();
+	$ip=$_SERVER['REMOTE_ADDR'];
 
 	if ($addtowhitelist=='Y'&&in_array($ip,$wlist)) {
 		echo "<h3>Your current IP is in your white list. This will keep you from being locked out in the future</h3>";

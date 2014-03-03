@@ -51,7 +51,11 @@ function kpg_sp_get_stats_l() {
 
 	'spdate'=>'last cleared',
 	'cntadminlog'=>0,
-	'poisoncnt'=>0
+	'poisoncnt'=>0,
+	'cntspoof'=>0,
+	'cnttor'=>0,
+	'cntcap'=>0,
+	'cntncap'=>0
 	
 	
 	);
@@ -143,6 +147,7 @@ function kpg_sp_get_options_l() {
 	'firsttime'=>'Y',
 	'wlreqmail'=>'Y',
 	'poison'=>'Y',
+	'chkcaptcha'=>'Y',
 	'rejectmessage'=>"Access Denied<br/>
 This site is protected by the Stop Spammer Registrations Plugin.<br/>",
 	'spamwords'=>array("-online","4u","4-u","adipex","advicer","baccarrat","blackjack","bllogspot","booker","byob","car-rental-e-site","car-rentals-e-site","carisoprodol","casino","chatroom","cialis","coolhu","credit-card-debt","credit-report","cwas","cyclen","cyclobenzaprine","dating-e-site","day-trading","debt-consolidation","debt-consolidation","discreetordering","duty-free","dutyfree","equityloans","fioricet","flowers-leading-site","freenet-shopping","freenet","gambling-","hair-loss","health-insurancedeals","homeequityloans","homefinance","holdem","hotel-dealse-site","hotele-site","hotelse-site","incest","insurance-quotes","insurancedeals","jrcreations","levitra","macinstruct","mortgagequotes","online-gambling","onlinegambling","ottawavalleyag","ownsthis","paxil","penis","pharmacy","phentermine","poker-chip","poze","pussy","rental-car-e-site","ringtones","roulette ","shemale","slot-machine","thorcarlson","top-site","top-e-site","tramadol","trim-spa","ultram","valeofglamorganconservatives","viagra","vioxx","xanax","zolus","ambien","poker","bingo","allstate","insurnce","work-at-home","workathome","home-based","homebased","weight-loss","weightloss","additional-income","extra-income","email-marketing","sibutramine","seo-","fast-cash"),
@@ -164,8 +169,9 @@ This site is protected by the Stop Spammer Registrations Plugin.<br/>",
 	'chkcomments','chklogin','chksignup','chklong',
 	'chkagent','chkxmlrpc','addtowhitelist','chkadmin',
 	'chkspamwords','chkwpmail','redherring','chktor',
-	'chkdnsbl','chkemail','chkip','chkreferer',
-	'nobuy','redir','accept','poison','wlreqmail');
+	'chkdnsbl','chkemail','chkip','chkreferer','chkcaptcha',
+	'nobuy','redir','accept','poison','wlreqmail'
+);
 	foreach ($ynfields as $yn) {
 		if ($ansa[$yn]!='Y') $ansa[$yn]='N';
 	}
