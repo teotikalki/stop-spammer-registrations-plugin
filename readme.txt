@@ -3,7 +3,7 @@ Tags: spam, comment, registration, login
 Requires at least: 3.0
 Tested up to: 3.9
 Contributors: Keith Graham
-Stable tag: 5.9.1
+Stable tag: 5.9.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -45,6 +45,9 @@ THEN
 4. Under the settings, review options that are enabled. Update the white list. 
 
 == Changelog ==
+
+= 5.9.2 =
+* fixed a captcha bug. 
 
 = 5.9.1 =
 * Fixed mistake in using transients.

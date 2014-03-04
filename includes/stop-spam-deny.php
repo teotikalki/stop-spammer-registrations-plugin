@@ -269,7 +269,7 @@ function kpg_chk_captcha_l() {
     $captcha=$_POST['captcha_value'];
     $word=get_transient( "KPG_SECRET_WORD".$_SERVER['REMOTE_ADDR'] );
 	delete_transient( "KPG_SECRET_WORD".$_SERVER['REMOTE_ADDR'] );
-	if (strtoupper($captcha)==strtoupper($word)) {
+	if (!empty($word)&&strlen($word)==5&&strtoupper($captcha)==strtoupper($word)) {
 		// made it exit with $_POST items all set
 		// increment the count
 		$stats=kpg_sp_get_stats();

@@ -63,14 +63,14 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			}
 		}
 	}
-
+    // always check wp-login.php?action=register
 	if ($email!=$sfs_check_activation && $email!='test@test.com' ) {
 		// from a user who wanted to exclude some of the checking.	
 		if ($chkcomments!='Y') {
 			if (strpos($sname,'wp-comments-post.php')!==false) return $email;
 		}
 		if ($chklogin!='Y') {
-			if (strpos($sname,'wp-login.php')!==false) return $email;
+			if (strpos($sname,'wp-login.php')!==false && !strpos($sname,'action=register')!==false) return $email;
 		}
 		if ($chksignup!='Y') {
 			if (strpos($sname,'wp-signup.php')!==false) return $email;

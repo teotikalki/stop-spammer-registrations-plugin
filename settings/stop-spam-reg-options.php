@@ -372,7 +372,7 @@ if ($num_comm->moderated>0&&$muswitch!='Y') {
 }
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
-  <p style="font-weight:bold;">Version 5.9.1</p>
+  <p style="font-weight:bold;">Version 5.9.2</p>
   <p>Please note that support for this plugin will be ending soon</p>
   <script type="text/javascript" >
 function kpg_show_hide_how() {
@@ -681,7 +681,9 @@ for ($k=0;$k<count($wlist);$k++) {
       <tr bgcolor="white">
         <td valign="top">Check IP on wp-login.php:</td>
         <td valign="top"><input name="chklogin" type="checkbox" value="Y" <?php if ($chklogin=='Y') echo  "checked=\"checked\"";?>/></td>
-        <td valign="top">Check IP and email every time the wp-login.php file is loaded.</td>
+        <td valign="top">Check IP and email every time the wp-login.php file is loaded. 
+		If you un-check this, the plugin will still check for action=register, which uses wp-login.php.
+		So you can un-check this to allow logins, but still check registrations.</td>
       </tr>
       <tr bgcolor="white">
         <td valign="top">Check IP on wp-signup.php:</td>

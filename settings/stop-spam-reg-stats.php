@@ -209,7 +209,7 @@ $opfile=str_replace('stop-spam-reg-stats.php','stop-spam-reg-options.php',$thisf
 ?>
 
 <div class="wrap">
-  <h2>Stop Spammers Plugin Stats Version 5.9.1</h2>
+  <h2>Stop Spammers Plugin Stats Version 5.9.2</h2>
   <p>Please note that support for this plugin will be ending soon.</p>
  
   <?php
