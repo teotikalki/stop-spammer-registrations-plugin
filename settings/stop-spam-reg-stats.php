@@ -209,10 +209,18 @@ $opfile=str_replace('stop-spam-reg-stats.php','stop-spam-reg-options.php',$thisf
 ?>
 
 <div class="wrap">
-  <h2>Stop Spammers Plugin Stats Version 5.9.2</h2>
+  <h2>Stop Spammers Plugin Stats Version 5.9.3</h2>
   <p>Please note that support for this plugin will be ending soon.</p>
  
   <?php
+ 	if (array_key_exists('HTTP_CF_CONNECTING_IP',$_SERVER)&& !function_exists( 'cloudflare_init' )) {
+		echo "<p style=\"color:red;font-style::italic;\">
+	   CloudFlare Remote IP address detected. Please install the <a href=\"http://wordpress.org/plugins/cloudflare/\">CloudFlare Plugin</a>.
+	   This plugin requires CloudFlare plugin when using CloudFlare.
+	</p>";
+	}
+ 
+  
 if (count($wlreq)==1) {
 	echo "<p><a style=\"font-style:italic;\" href=\"#wlreq\">".count($wlreq)." user</a> has been denied access and requested that you add them to the white list";
 	echo"</p>";

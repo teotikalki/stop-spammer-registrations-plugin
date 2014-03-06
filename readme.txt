@@ -3,7 +3,7 @@ Tags: spam, comment, registration, login
 Requires at least: 3.0
 Tested up to: 3.9
 Contributors: Keith Graham
-Stable tag: 5.9.2
+Stable tag: 5.9.3
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -45,6 +45,10 @@ THEN
 4. Under the settings, review options that are enabled. Update the white list. 
 
 == Changelog ==
+
+= 5.9.3 =
+* addd a warning that plgin will not work without cloudflare plugin when using cloudflare.
+* fixed a captcha bug. 
 
 = 5.9.2 =
 * fixed a captcha bug. 

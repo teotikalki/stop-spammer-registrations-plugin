@@ -16,6 +16,8 @@ if (!defined('ABSPATH')) exit; // just in case
 function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	// use test@test.com to test if the system is working
 	//sfs_debug_msg("starting");
+	global $kpg_check_sempahore;
+	if ($kpg_check_sempahore);
 	global $sfs_check_activation;
 	$sname=$_SERVER["REQUEST_URI"];	
 	if (empty($sname)) {
@@ -70,7 +72,7 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 			if (strpos($sname,'wp-comments-post.php')!==false) return $email;
 		}
 		if ($chklogin!='Y') {
-			if (strpos($sname,'wp-login.php')!==false && !strpos($sname,'action=register')!==false) return $email;
+			if (strpos($sname,'wp-login.php')!==false && strpos($sname,'action=register')===false) return $email;
 		}
 		if ($chksignup!='Y') {
 			if (strpos($sname,'wp-signup.php')!==false) return $email;
@@ -606,9 +608,9 @@ function kpg_sfs_check($email='',$author='',$ip,$pwd='') {
 	}
     // one last check
 	$xip=kpg_get_ip();
-	if ($xip!=$ip) {
+	if (!$deny&&$xip!=$ip) {
 			$deny=true;
-			$whodunnit.="Spoofed IP";
+			$whodunnit.=" Spoofed IP";
 			$cntspoof++;
 	}
 	

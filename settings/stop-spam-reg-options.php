@@ -284,7 +284,19 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 }
 
 $nonce=wp_create_nonce('kpgstopspam_update');
+
+	if (array_key_exists('HTTP_CF_CONNECTING_IP',$_SERVER)&& !function_exists( 'cloudflare_init' )) {
+		echo "<p style=\"color:red;font-style::italic;\">
+	   CloudFlare Remote IP address detected. Please install the <a href=\"http://wordpress.org/plugins/cloudflare/\">CloudFlare Plugin</a>.
+	   This plugin requires CloudFlare plugin when using CloudFlare.
+	</p>";
+	}
+
 ?>
+
+
+
+
   <p><a href="http://www.blogseye.com/checkspam/" target="_blank">Check an IP address to see if it passes spam checks.</a></p>
   <?PHP	
 if ($addtowhitelist=='Y'&&in_array($ip,$wlist)) {
@@ -372,7 +384,7 @@ if ($num_comm->moderated>0&&$muswitch!='Y') {
 }
 ?>
   <p style="font-weight:bold;">The Stop Spammers Plugin is installed and working correctly.</p>
-  <p style="font-weight:bold;">Version 5.9.2</p>
+  <p style="font-weight:bold;">Version 5.9.3</p>
   <p>Please note that support for this plugin will be ending soon</p>
   <script type="text/javascript" >
 function kpg_show_hide_how() {

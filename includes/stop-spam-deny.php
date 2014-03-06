@@ -113,13 +113,13 @@ function kpg_reject_spam_l($rejectmessage,$notify,$chkcaptcha,$whodunnit) {
 		$sform="
 		<p>You need to prove you are not a robot before you can continue.</p>
 			<img src=\"$url\" />
-	<form name=\"captchaform\" id=\"captchaform\" action=\"\" method=\"post\">
+	<form action=\"\" method=\"post\">
 	<p>Enter the five letters shown above and press enter</p>
 	<input type=\"text\" name=\"captcha_value\"  value=\"\" size=\"6\"  />
 	</p>
 	<input type=\"submit\"  value=\"\" style=\"display:none;visibility:hidden;\" />
 	</p>
-	<input id=\"captcha_key\" name=\"captcha_key\" value=\"$cnonce\" type=\"hidden\">
+	<input  name=\"captcha_key\" value=\"$cnonce\" type=\"hidden\">
 	</form>
 	<p>(If you cannot see the image clearly, then just refresh the page)</p>
 		";
@@ -268,23 +268,38 @@ function kpg_chk_captcha_l() {
 	@remove_action('init','kpg_sf_mu_load'); 	
     $captcha=$_POST['captcha_value'];
     $word=get_transient( "KPG_SECRET_WORD".$_SERVER['REMOTE_ADDR'] );
+	$word=strtoupper($word);
+	$captcha=strtoupper($captcha);
 	delete_transient( "KPG_SECRET_WORD".$_SERVER['REMOTE_ADDR'] );
-	if (!empty($word)&&strlen($word)==5&&strtoupper($captcha)==strtoupper($word)) {
+	if (!empty($word)&&strlen($word)==5&&$captcha==$word) {
+	//echo "checking captcha $word = $captcha";
 		// made it exit with $_POST items all set
 		// increment the count
-		$stats=kpg_sp_get_stats();
-		$cnt=$stats['cntcap'];
-		$cnt++;
-		$stats['cntcap']=$cnt;
-		// save the stats
-		update_option('kpg_stop_sp_reg_stats',$stats);
 		// restore post
+		$ip=$_SERVER['REMOTE_ADDR'];
 		$pp=get_transient("KPG_CAPTCHA".$_SERVER['REMOTE_ADDR']);
 		delete_transient("KPG_CAPTCHA".$_SERVER['REMOTE_ADDR']);
 		// copy to the post
+		// add the current guy to the good cache and take him out of the bad cache
+		$stats=kpg_sp_get_stats();
+		$goodips=$stats['goodips'];
+		$badips=$stats['badips'];
+		$now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
+		$goodips[$ip]=$now;
+		unset($badips[$ip]);
+		$cnt=$stats['cntcap'];
+		$cnt++;
+		$stats['badips']=$badips;
+		$stats['goodips']=$goodips;
+		$stats['cntcap']=$cnt;
+		// save the stats
+		update_option('kpg_stop_sp_reg_stats',$stats);
 		$_POST=$pp;
+		global $kpg_check_sempahore;
+		$kpg_check_sempahore=true;
 		return;
 	}
+	//echo "failed $word=$captcha";
 		$stats=kpg_sp_get_stats();
 		$cnt=$stats['cntncap'];
 		$cnt++;

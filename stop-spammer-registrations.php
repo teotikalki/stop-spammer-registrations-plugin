@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammer Registrations Plugin
 Plugin URI: http://wordpress.org/plugins/stop-spammer-registrations-plugin/
 Description: The Stop Spammer Registrations Plugin checks against Spam Databases to to prevent spammers from registering or making comments.
-Version: 5.9.2
+Version: 5.9.3
 Author: Keith P. Graham
 
 This software is distributed in the hope that it will be useful,
@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) exit;
 
 // before going any further, do the mu stuff
 $muswitch='N';
-
+$kpg_check_sempahore=false;
 /*
 
 
@@ -608,12 +608,8 @@ function kpg_sfs_check_admin() {
 
 // this checks to see if there is an ip forwarded involved here and corrects the IP
 function kpg_get_ip() {
-	// HTTP_CF_CONNECTING_IP
-	$ip='';
-	if (array_key_exists('HTTP_CF_CONNECTING_IP',$_SERVER)) {
-		$ip=$_SERVER['HTTP_CF_CONNECTING_IP'];
-		if (!empty($ip)) return $ip;
-	} 
+	// took out cloudflare - ruined everything
+	
 	$ip=$_SERVER['REMOTE_ADDR'];
 	// Opera turbo? ["HTTP_X_FORWARDED_FOR"]
 	if (array_key_exists('HTTP_X_FORWARDED_FOR',$_SERVER)) {
@@ -811,6 +807,12 @@ function kpg_sp_rightnow() {
 	} else if (count($wlreq)>0) {
 		echo "<p><a style=\"font-style:italic;\" href=\"$me\">".count($wlreq)." users</a> have been denied access and requested that you add them to the white list";
 		echo"</p>";
+	}
+	// now we have to warn about using cloudflare.
+	if (array_key_exists('HTTP_CF_CONNECTING_IP',$_SERVER)&& !function_exists( 'cloudflare_init' )) {
+		echo "<p style=\"color:red;font-style::italic;\">
+		CloudFlare Remote IP address detected. Please install the <a href=\"http://wordpress.org/plugins/cloudflare/\">CloudFlare Plugin</a>.
+	</p>";
 	}
 	
 }
