@@ -238,8 +238,8 @@ if (strpos($sname,'?')!==false) $sname=substr($sname,0,strpos($sname,'?'));
 <div style="float:left;width:calc(100% - 245px);">
 <h3>Plugin Functions</h3>
 <ol>
-<li> <a href="?page=kpg_ss_summary">Summary</a>: This checks to see if there may be problems from your current incoming IP address and displays a summary of events.</li>
-<li> <a href="?page=kpg_ss_allowrequests">Allow Requests</a>: Displays users who were denied and
+<li> <a href="?page=stop_spammers">Summary</a>: This checks to see if there may be problems from your current incoming IP address and displays a summary of events.</li>
+<li> <a href="?page=ss_allowrequests">Allow Requests</a>: Displays users who were denied and
 filled out the form requesting access to your site.</li>
 <li> <a href="?page=ss_reports">Log Report</a>: Shows details of the most recent events detected by Stop Spammers.
 </li>
