@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammers
 Plugin URI: http://wordpress.org/plugins/stop-spammer-registrations-plugin/
 Description: The Stop Spammer Registrations Plugin effectively detects malicious events to to prevent spammers from registering or making comments.
-Version: 6.01
+Version: 6.02
 Author: Keith P. Graham
 
 This software is distributed in the hope that it will be useful,
@@ -12,7 +12,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 // networking requires a couple of globals
 
-define('KPG_SS_VERSION', '6.01');
+define('KPG_SS_VERSION', '6.02');
 define( 'KPG_SS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'KPG_SS_PLUGIN_FILE', plugin_dir_path( __FILE__ ) );
 
@@ -411,17 +411,19 @@ function get_post_variables() {
 	foreach ($search as $var=>$sa) {
 		foreach ($sa as $srch) {
 			foreach($p as $pkey=>$pval) {
-				if (strpos($pkey,$srch)!==false) {
-					if ($var=='email'&&strpos($pval,'@')!==false&&strrpos($pval,'.')>strpos($pval,'@')) { // only valid with @ before last dot sign and .
-						$ansa[$var]=$pval;
-						$emfound=true;
-						break;
-					} else { // no @ sign - save for now, hope for better
-						if (empty($ansa[$var])) $ansa[$var]=$pval;
+				if (is_string($pval)&&!is_array($pval)) { // woo commerce fix - overkill.
+					if (strpos($pkey,$srch)!==false) {
+						if ($var=='email'&&strpos($pval,'@')!==false&&strrpos($pval,'.')>strpos($pval,'@')) { // only valid with @ before last dot sign and .
+							$ansa[$var]=$pval;
+							$emfound=true;
+							break;
+						} else { // no @ sign - save for now, hope for better
+							if (empty($ansa[$var])) $ansa[$var]=$pval;
+						}
 					}
+					if ($var!='email' && $emfound) break; // keep checking email even if we have one - look for better
 				}
 			}
-			if ($var!='email' && $emfound) break; // keep checking email even if we have one - look for better
 		}
 	}
 	// sanitize input - some of this is stored in history and needs to be cleaned up
@@ -476,8 +478,8 @@ function kpg_new_user_ip($user_id) {
 	update_user_meta($user_id, 'signup_ip', $ip);
 }
 function kpg_sfs_ip_column_head($column_headers) {
-   $column_headers['signup_ip'] = 'User IP';
-    return $column_headers;
+	$column_headers['signup_ip'] = 'User IP';
+	return $column_headers;
 
 }
 function kpg_log_user_ip($user_login="", $user="") {

@@ -35,7 +35,6 @@ data-amount="250"
 data-name="Stop Spammers"
 data-label="Donate $2.50"
 data-description="Level 1 support"
-data-bitcoin="true"
 data-image="/128x128.png">
 </script>
 </form></td>
@@ -58,7 +57,6 @@ data-amount="999"
 data-name="Stop Spammers"
 data-label="Donate $9.99"
 data-description="Level 2 support"
-data-bitcoin="true"
 data-image="/128x128.png">
 </script>
 </form></td>
@@ -79,7 +77,6 @@ data-key="pk_test_5c7uNwCpdpUSNIvfXEEL1Dm9"
 data-amount="2999"
 data-name="Stop Spammers"
 data-description="Level 3 support"
-data-bitcoin="true"
 data-label="Donate $29.99"
 data-image="/128x128.png">
 </script>
