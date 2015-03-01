@@ -8,6 +8,7 @@ if(!current_user_can('manage_options')) {
 $now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
 $options=kpg_ss_get_options();
 extract($options);
+$chkcloudflare='Y'; // force back to on - always fix cloudflare if the plugin is not present and cloudflare detected.
 
 
 $nonce='';
@@ -29,7 +30,6 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 	'chkgoogle',
 	'chkaws',
 	'chkpaypal',
-	'chkcloudflare',
 	'chkgenallowlist',
 	'chkmiscallowlist',
 	'chkyahoomerchant'
@@ -80,14 +80,6 @@ You can prevent Google, PayPal and other services from ever being blocked.
 <legend><span style="font-weight:bold;font-size:1.2em" >Google</span></legend>
 <input name="chkgoogle" type="checkbox" value="Y" <?php if ($chkgoogle=='Y') echo  "checked=\"checked\"";?>/>
 DON'T TOUCH. Google is very important to most websites. This prevents google from being blocked.
-</fieldset>
-<br>
-
-<fieldset style="border:thin solid black;padding:6px;width:100%;">
-<legend><span style="font-weight:bold;font-size:1.2em" >CloudFlare</span></legend>
-<input name="chkcloudflare" type="checkbox" value="Y" <?php if ($chkcloudflare=='Y') echo  "checked=\"checked\"";?>/>
-If you use CloudFlare or may someday use CloudFlare keep this box checked. CloudFlare can cache the pages of your
-site and if you uncheck this, cloudflare may be caching "access denied" pages.
 </fieldset>
 <br>
 

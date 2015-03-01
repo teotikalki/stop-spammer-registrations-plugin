@@ -92,7 +92,7 @@ class kpg_ss_check_post extends be_module{
 		}
 		if ($reason===false) {
 			// check for a valid ip - if ip is valid we can do the ip checks
-			$actionvalid=array('chkvalidip','chkcloudflare');
+			$actionvalid=array('chkvalidip'); // took out the cloudflare exclusion
 			foreach ($actionvalid as $chk) {	
 				$reason=be_load($chk,$ip,$stats,$options,$post);
 				if ($reason!==false) {

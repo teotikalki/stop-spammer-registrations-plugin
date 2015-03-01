@@ -13,7 +13,7 @@ $now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
 
 // for session speed checks
 //if(!isset($_POST)||empty($_POST)) { // no post defined
-	//$_SESSION['kpg_stop_spammers_time']=time();
+//$_SESSION['kpg_stop_spammers_time']=time();
 //	if (! isset($_COOKIE['kpg_stop_spammers_time'])) { // if previous set do not reset
 //		setcookie( 'kpg_stop_spammers_time', strtotime("now"), strtotime('+1 min'));
 //	}
@@ -235,32 +235,32 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 
 
 <?php
-	// if there is a log file we can display it here
-	$dfile=KPG_SS_PLUGIN_FILE.'includes/.sfs_debug_output.txt';
-	if (file_exists($dfile)) {
-		if (array_key_exists('kpg_stop_spammers_control',$_POST)) $nonce=$_POST['kpg_stop_spammers_control'];
-		if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) { 
-			if (array_key_exists('killdebug',$_POST)) {
-				$f=unlink($dfile);
-				echo "<p>file deleted<p>";
-			}
+// if there is a log file we can display it here
+$dfile=KPG_SS_PLUGIN_FILE.'includes/.sfs_debug_output.txt';
+if (file_exists($dfile)) {
+	if (array_key_exists('kpg_stop_spammers_control',$_POST)) $nonce=$_POST['kpg_stop_spammers_control'];
+	if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) { 
+		if (array_key_exists('killdebug',$_POST)) {
+			$f=unlink($dfile);
+			echo "<p>file deleted<p>";
 		}
-		
 	}
-	if (file_exists($dfile)) {
-		// we have a file. We can view it or delete it.
-		$nonce="";
-		$to=get_option('admin_email');
-		$f=file_get_contents($dfile);
-		$ff=wordwrap($f,70,"\r\n");
+	
+}
+if (file_exists($dfile)) {
+	// we have a file. We can view it or delete it.
+	$nonce="";
+	$to=get_option('admin_email');
+	$f=file_get_contents($dfile);
+	$ff=wordwrap($f,70,"\r\n");
 
-?>
-<p>The plugin displays a log of errors that it has found. 
-It appears that you have generated some errors. 
-You can use this debug problems or notify the plugin author that the plugin has problems on your system.</p>
-<fieldset style="border:thin solid black;padding:6px;width:80%;margin-left:auto;margin-right:auto;">
-<legend><span style="font-weight:bold;font-size:1.2em" >Send Debug Report</span></legend>
-<p>This is an email form and should bring up your email client when clicked. If it doesn't you can copy report
+	?>
+	<p>The plugin displays a log of errors that it has found. 
+	It appears that you have generated some errors. 
+	You can use this debug problems or notify the plugin author that the plugin has problems on your system.</p>
+	<fieldset style="border:thin solid black;padding:6px;width:80%;margin-left:auto;margin-right:auto;">
+	<legend><span style="font-weight:bold;font-size:1.2em" >Send Debug Report</span></legend>
+	<p>This is an email form and should bring up your email client when clicked. If it doesn't you can copy report
 information and paste it into an email message and send to support@blogseye.com. This form will not work
 with all browsers and configurations.</p>
 <form method="get" target="_blank" action="mailto:support@blogseye.com">
@@ -304,6 +304,45 @@ $nonce=wp_create_nonce('kpgstopspam_update');
 <br style="clear:both;">
 <?php	    
 	
+	}
+	$ini='';
+	$pinf=true;
+	$ini=@ini_get('disable_functions');
+	if (!empty($ini)) {
+		$disabled = explode(',',$ini);
+		if (isArray($disabled) && in_array('phpinfo', $disabled)) {
+			$pinf=false;
+		}
+	} 
+	if ($pinf) {
+?>
+<a href="" onclick="document.getElementById('shpinf').style.display='block';return false;">show phpinfo</a>
+<?php
+
+ob_start();
+phpinfo();
+
+preg_match ('%<style type="text/css">(.*?)</style>.*?(<body>.*</body>)%s', ob_get_clean(), $matches);
+
+# $matches [1]; # Style information
+# $matches [2]; # Body information
+
+echo "<div class='phpinfodisplay' id=\"shpinf\" style=\"display:none;\"><style type='text/css'>\n",
+	join( "\n",
+		array_map(
+			create_function(
+				'$i',
+				'return ".phpinfodisplay " . preg_replace( "/,/", ",.phpinfodisplay ", $i );'
+				),
+			preg_split( '/\n/', $matches[1] )
+			)
+		),
+	"</style>\n",
+	$matches[2],
+	"\n</div>\n";
+
+
+		
 	}
 ?>
 

@@ -8,19 +8,19 @@ if(!current_user_can('manage_options')) {
 ?>
 
 <div class="wrap">
-  <h2>Maintain Options from Other Plugins</h2>
-  <p>Plugins often don't clean up their mess when they are uninstalled. Some malicious themes and plugins use WordPress options to store some information.  </p>
-  <p>This function allows you inspect and delete orphan or suspicious options and to change plugin options so that they don&acute;t autoload. </p>
-  <p>In WordPress, some options are loaded whenever Wordpress loads a page. These are marked as autoload options. This is done to speed up WordPress and prevent the programs from hitting the database every time some plugin needs to look up an option. Automatic loading of options at start-up makes WordPress fast, but it can also use up memory for options that will seldom or never be used. </p>
-  <p>You can safely switch options so that they don&acute;t load automatically. Probably the worst thing that will happen is that the page will paint a little slower because the option is retrieved separately from other options. The best thing that can happen is there is a lower demand on memory because the unused options are not loaded when WordPress starts loading a page. </p>
-  <p>When plugins are uninstalled they are supposed to clean up their options. Many options do not do any clean-up during uninstall. It is quite possible that you have many orphan options from plugins that you deleted long ago. These are autoloaded on every page, slowing down your pages and eating up memory. These options can be safely marked so that they will not autoload. If you are sure they are not needed you can delete them. </p>
-  <p>
-  <p>The change autoload column shows current autoload state. Yes means it is autoloading. No means that it is not.</p>
-  You can change the autoload settings or delete an option on the form below. Be aware that you can break some plugins by deleting their options. I do not show most of the built-in options used by WordPress. The list below should be just plugin options.
-  </p>
-  <p> It is far safer to change the autoload option value to &quot;no&quot; than to delete an option. Only delete an option if you are sure that it is from an uninstalled plugin. If you find your pages slowing down, turn the autoload option back to &quot;yes&quot;. </p>
-  <p>Options names are determined by the plugin author. Some are obvious, but some make no sense. You may have to do a little detective work to figure out where an option came from.</p>
-  <?php
+<h2>Maintain Options from Other Plugins</h2>
+<p>Plugins often don't clean up their mess when they are uninstalled. Some malicious themes and plugins use WordPress options to store some information.  </p>
+<p>This function allows you inspect and delete orphan or suspicious options and to change plugin options so that they don&acute;t autoload. </p>
+<p>In WordPress, some options are loaded whenever Wordpress loads a page. These are marked as autoload options. This is done to speed up WordPress and prevent the programs from hitting the database every time some plugin needs to look up an option. Automatic loading of options at start-up makes WordPress fast, but it can also use up memory for options that will seldom or never be used. </p>
+<p>You can safely switch options so that they don&acute;t load automatically. Probably the worst thing that will happen is that the page will paint a little slower because the option is retrieved separately from other options. The best thing that can happen is there is a lower demand on memory because the unused options are not loaded when WordPress starts loading a page. </p>
+<p>When plugins are uninstalled they are supposed to clean up their options. Many options do not do any clean-up during uninstall. It is quite possible that you have many orphan options from plugins that you deleted long ago. These are autoloaded on every page, slowing down your pages and eating up memory. These options can be safely marked so that they will not autoload. If you are sure they are not needed you can delete them. </p>
+<p>
+<p>The change autoload column shows current autoload state. Yes means it is autoloading. No means that it is not.</p>
+You can change the autoload settings or delete an option on the form below. Be aware that you can break some plugins by deleting their options. I do not show most of the built-in options used by WordPress. The list below should be just plugin options.
+</p>
+<p> It is far safer to change the autoload option value to &quot;no&quot; than to delete an option. Only delete an option if you are sure that it is from an uninstalled plugin. If you find your pages slowing down, turn the autoload option back to &quot;yes&quot;. </p>
+<p>Options names are determined by the plugin author. Some are obvious, but some make no sense. You may have to do a little detective work to figure out where an option came from.</p>
+<?php
 	global $wpdb;
 	$ptab=$wpdb->options;
 	
@@ -30,10 +30,10 @@ if(!current_user_can('manage_options')) {
 	//echo "\r\n\r\n-->";
 	if (array_key_exists('kpg_opt_control',$_POST)) $nonce=$_POST['kpg_opt_control'];
 	
-	if (!empty($nonce)&&wp_verify_nonce($nonce,'kpg_static_update')) {
+	if (!empty($nonce)&&wp_verify_nonce($nonce,'kpg_ss_update')) {
 		if (array_key_exists('view',$_POST)) {
-		    $op=$_POST['view'];
-		    $v=get_option($op);
+			$op=$_POST['view'];
+			$v=get_option($op);
 			if (is_serialized($v) && @unserialize($v)!==false) {
 				$v=@unserialize($v);
 			}
@@ -97,87 +97,172 @@ $sysops=array('_transient_',
 	$sql= "SELECT * from $ptab order by autoload,option_name"; 
 	$arows=$wpdb->get_results($sql,ARRAY_A);
 	// filter out the ones we don't like
-	//echo "<br/> $sql : size of options array ".$ptab ." = ".count($arows)."<br/>";
-	$rows=array();
-	foreach ($arows as $row) {
-	    $uop=true;
-		$name=$row['option_name'];
-		if (!in_array($name,$sysops)) {
-			// check for name like for transients
-			// _transient_ , _site_transient_
-			foreach($sysops as $op) {
-				if (strpos($name,$op)!==false) {
-					// hit a name like
-					$uop=false;
-					break;
-				}
+//echo "<br/> $sql : size of options array ".$ptab ." = ".count($arows)."<br/>";
+$rows=array();
+foreach ($arows as $row) {
+	$uop=true;
+	$name=$row['option_name'];
+	if (!in_array($name,$sysops)) {
+		// check for name like for transients
+		// _transient_ , _site_transient_
+		foreach($sysops as $op) {
+			if (strpos($name,$op)!==false) {
+				// hit a name like
+				$uop=false;
+				break;
 			}
-		} else {
-			$uop=false;
 		}
-		if ($uop) {
-			$rows[]=$row;
-		}
+	} else {
+		$uop=false;
 	}
+	if ($uop) {
+		$rows[]=$row;
+	}
+}
 //  $rows has the allowed options - all default and system options have been excluded	
 
-	$nonce=wp_create_nonce('kpg_static_update');
+$nonce=wp_create_nonce('kpg_ss_update');
 
 ?>
-  <form method="POST" name="DOIT2" action="">
-    <input type="hidden" name="kpg_opt_control" value="<?php echo $nonce;?>" />
-    <table bgcolor="#b0b0b0" cellspacing='1' cellpadding="4">
-      <thead>
-        <tr bgcolor="#ffffff">
-          <th>Option</th>
-          <th>Autoload</th>
-          <th>size</th>
-          <th>change autoload</th>
-          <th>delete</th>
-          <th>view contents</th>
-        </tr>
-      </thead>
-      <?php
-	foreach ( $rows as $row ) {
-		extract($row);
-		$sz=strlen($option_value);
-		$au=$autoload;
-		$sz=number_format($sz);
-		//if ($autoload=='no') $au='No';
-?>
-      <tr bgcolor="#ffffff">
-        <td align="center"><?php echo $option_name; ?></td>
-        <td align="center"><?php echo $autoload; ?></td>
-        <td align="center"><?php echo $sz; ?></td>
-        <td align="center"><input type="checkbox" value="<?php echo $autoload.'_'.$option_name; ?>" name="autol[]">
-          &nbsp;<?php echo $autoload;?></td>
-        <td align="center"><input type="checkbox" value="<?php echo $option_name; ?>" name="delo[]">
-        </td>
-        <td><button type="submit" name="view" value="<?php echo $option_name; ?>">view</button></td>
-      </tr>
-      <?php
+<form method="POST" name="DOIT2" action="">
+<input type="hidden" name="kpg_opt_control" value="<?php echo $nonce;?>" />
+<table bgcolor="#b0b0b0" cellspacing='1' cellpadding="4">
+<thead>
+<tr bgcolor="#ffffff">
+<th>Option</th>
+<th>Autoload</th>
+<th>size</th>
+<th>change autoload</th>
+<th>delete</th>
+<th>view contents</th>
+</tr>
+</thead>
+<?php
+foreach ( $rows as $row ) {
+	extract($row);
+	$sz=strlen($option_value);
+	$au=$autoload;
+	$sz=number_format($sz);
+	//if ($autoload=='no') $au='No';
+	?>
+	<tr bgcolor="#ffffff">
+	<td align="center"><?php echo $option_name; ?></td>
+	<td align="center"><?php echo $autoload; ?></td>
+	<td align="center"><?php echo $sz; ?></td>
+	<td align="center"><input type="checkbox" value="<?php echo $autoload.'_'.$option_name; ?>" name="autol[]">
+	&nbsp;<?php echo $autoload;?></td>
+	<td align="center"><input type="checkbox" value="<?php echo $option_name; ?>" name="delo[]">
+	</td>
+	<td><button type="submit" name="view" value="<?php echo $option_name; ?>">view</button></td>
+	</tr>
+	<?php
 
-	}	
-
-?>
-    </table>
-    <p class="submit">
-      <input class="button-primary" value="Update" type="submit" 
-	  onclick="return confirm('Are you sure? There is not undo for this.');">
-    </p>
-  </form>
-  <?php
-	$m1=memory_get_usage();
-	$m3=memory_get_peak_usage();
-	$m1=number_format($m1);
-	$m3=number_format($m3);
-    echo "<p>Memory Usage Current: $m1, Peak: $m3</p>";
-
+}	
 
 ?>
+</table>
+<p class="submit">
+<input class="button-primary" value="Update" type="submit" 
+onclick="return confirm('Are you sure? There is not undo for this.');">
+</p>
+</form>
+<?php
+$m1=memory_get_usage();
+$m3=memory_get_peak_usage();
+$m1=number_format($m1);
+$m3=number_format($m3);
+echo "<p>Memory Usage Current: $m1, Peak: $m3</p>";
+
+$nonce=wp_create_nonce('kpg_ss_update2');
+$showtransients=false; // change to true to clean up transients
+if (countTransients($blog_id)>0 && $showtransients) { // personal use - probably too dangerous for casual users.
+?>
+<hr>
+<p> Wordpress creates temporary objects in the database called transients. 
+Wordpress is not good about cleaning them up afterwards. You can clean these up safely and it might speed things up.
+</p>
+
+<form method="POST" name="DOIT2" action="">
+<input type="hidden" name="kpg_opt_tdel" value="<?php echo $nonce;?>" />
+<p class="submit">
+<input  class="button-primary" value="Delete Transients" type="submit" />
+</p>
+</form>
+<?php
+$nonce='';
+if (array_key_exists('kpg_opt_tdel',$_POST)) $nonce=$_POST['kpg_opt_tdel'];
+if (!empty($nonce)&&wp_verify_nonce($nonce,'kpg_ss_update2')) {
+	// doit!
+	deleteTransients($blog_id);		
+}
+
+
+
+?>
+<p>Currently there are <?php echo countTransients(); ?> found.</p>
+<?php
+}
+?>
+
 </div>
 <?php
 
+function countTransients() {
+	$blog_id=get_current_blog_id();
+	global $wpdb;
+	$optimeout = time() - 60;
+	$table = $wpdb->get_blog_prefix($blog_id) . 'options';
+	$count=0;
+ 	$sql = "
+			select count(*) from $table 
+			where
+				option_name like '\_transient\_timeout\_%'
+				or option_name like '\_site\_transient\_timeout\_%'
+				or option_name like 'displayed\_galleries\_%'
+				or option_name like 'displayed\_gallery\_rendering\_%'
+				or t1.option_name like '\_transient\_feed\_mod_%' 
+				or t1.option_name like '\_transient\__bbp\_%' 
+			and option_value < '$optimeout'
+		";
+ 	$sql = "
+			select count(*) from $table 
+			where instr(t1.option_name,'KPG_SECRET_WORD')>0
+	";
+
+	$count += $wpdb->get_var($sql);
+    if (empty($count)) $count="0";
+	return $count;
+}
+
+/**
+	* clear expired transients for current blog
+	* @param int $blog_id
+	*/
+function deleteTransients() {
+	$blog_id=get_current_blog_id();
+	global $wpdb;
+	$optimeout = time() - 60;
+	$table = $wpdb->get_blog_prefix($blog_id) . 'options';
+	$sql = "
+			delete from $table
+			where 
+				option_name like '\_transient\_timeout\_%'
+				or option_name like '\_site\_transient\_timeout\_%'
+				or option_name like 'displayed\_galleries\_%'
+				or option_name like 'displayed\_gallery\_rendering\_%'
+				or t1.option_name like '\_transient\_feed\_mod_%' 
+				or t1.option_name like '\_transient\__bbp\_%' 
+				or instr(t1.option_name,'KPG_SECRET_WORD')>0
+			and option_value < '$optimeout'
+		";
+	$wpdb->query($sql);
+	$sql = "
+			select count(*) from $table 
+			where instr(t1.option_name,'KPG_SECRET_WORD')>0
+	";
+	$wpdb->query($sql);
+
+}
 
 
 

@@ -13,6 +13,8 @@ if(!current_user_can('manage_options')) {
 
 <div class="wrap">
 <p>Programmers may write Add-Ons that extend this plugin.</p>
+<p>There are three sample addons available at <a href="http://www.blogseye.com/beta-test-plugins/" target="_blank">Blogseye.com</a>. The addon for Red Herring Forms, especially, seems to stop a lot of spam. I will be moving it to a premium site, soon, so download it now before it is gone.</p>
+<p>Add-ons are plugins that hook into the Stop Spammer plugin to add functionality.<p>
 <p>I have written a sample addon plugin that checks for Tor Exit points available on my site. This catches a couple of hits a day on my site.</p>
 <p>I have written several premium add-ons that will be available. 
 They extend reporting, allow updating of .htaccess files ip deny entries, and blocking certain types of exploit attempts not covered by the basic plugin.
@@ -21,8 +23,8 @@ I will provide links to these add-ons as soon as the plugin is complete and stab
 Reporting: This is an addon that collects all data on spam in a SQL tables and produces reports and graphs.<br>
 Export to Excel: Exports collected spam data to Excel<br>
 Red Herring Forms: I removed red herring forms from the plugin because they clashed with many themes. This will allow users to install a red herring form and honey pot links.<br>
-Scan for Spammers: Scan registered users for spam. This will run on a cron job in the background and produce a report.<br>
-I am researching using a digital sales plugin, or a pay site like Sellfy, CodeCanyon or WpEden for selling these addons.
+Scan for Spammers: Scan registered users for spam. This will run on a cron job in the background and produce a report.</p>
+<p>I am researching using a digital sales plugin, or a pay site like Sellfy, CodeCanyon or WpEden for selling these addons.
 </p>
 <?php
 // get a list of all the addons using the filter

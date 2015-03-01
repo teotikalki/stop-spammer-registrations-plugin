@@ -16,7 +16,7 @@ class be_module {
 		if (!is_array($haystack)) return false;
 		$needle=strtoupper($needle);
 		
-		foreach ($haystack as $search) {
+		foreach ($haystack as $search) { // haystack is a list of names or emails, possibly with wildcards
 			$reason=$search;
 			$search=trim(strtoupper($search));
 			if (empty($search)) continue; // in case there is a null in the list
@@ -25,9 +25,11 @@ class be_module {
 			} 
 			// four kinds of search, looking for an ip, cidr, wildcard or an email
 			// check for wildcard - both email and ip
-			if (strpos($search,'*')!==false) {
-				$search=substr($search,0,strpos($search,'*')-1);
-				if ($search=substr($needle,0,strlen($search))) return "$searchname:$reason";
+			if (strpos($search,'*')!==false || strpos($search,'?')!==false ) {
+				// new wild card search
+				if ($this->wildcard_match($search,$needle))  return "$searchname:$reason:$needle";			
+				//$search=substr($search,0,strpos($search,'*')-1);
+				//if ($search=substr($needle,0,strlen($search))) return "$searchname:$reason";
 			}
 			// check for partial both email and ip
 			if (strlen($needle)>strlen($search)) {
@@ -64,9 +66,10 @@ class be_module {
 			} 
 			// four kinds of search, looking for an ip, cidr, wildcard or an email
 			// check for wildcard - both email and ip
-			if (strpos($search,'*')!==false) {
-				$search=substr($search,0,strpos($search,'*'));
-				if ($search=substr($needle,0,strlen($search))) return "$searchname:$reason";
+			if (strpos($search,'*')!==false||strpos($search,'?')!==false) {
+				if ($this->wildcard_match($search,$needle)) return "$searchname:$reason:$needle";			
+				//$search=substr($search,0,strpos($search,'*'));
+				//if ($search=substr($needle,0,strlen($search))) return "$searchname:$reason";
 			}
 			// check for partial both email and ip
 			if (strlen($needle)>strlen($search)) {
@@ -131,7 +134,7 @@ class be_module {
 		return $s;
 	}
 	
-	function getafile($f,$method='GET') {
+	public function getafile($f,$method='GET') {
 		// try this using Wp_Http
 		if( !class_exists( 'WP_Http' ) )
 		include_once( ABSPATH . WPINC. '/class-http.php' );
@@ -155,12 +158,12 @@ class be_module {
 		return '';
 	}
 
-    public function getSname() {
+	public function getSname() {
 		// gets the module name from the url address line
 		$sname='';
 		if(isset($_SERVER['REQUEST_URI'])) $sname=$_SERVER["REQUEST_URI"];	
 		if (empty($sname)) {
-		    $_SERVER['REQUEST_URI'] = $_SERVER['SCRIPT_NAME'];
+			$_SERVER['REQUEST_URI'] = $_SERVER['SCRIPT_NAME'];
 			$sname=$_SERVER["SCRIPT_NAME"];	
 			if($_SERVER['QUERY_STRING']) {
 				$_SERVER['REQUEST_URI'] .= '?' . $_SERVER['QUERY_STRING'];
@@ -172,11 +175,45 @@ class be_module {
 		}
 		return $sname;
 	}
-	
-	//public function __destruct() {
-		// see when we are destructing
-	//	sfs_debug_msg('in destruct');
-	//}
+
+	// borrowed from andrewtch at
+	// 	https://github.com/andrewtch/phpwildcard/blob/master/wildcard_match.php
+	/**
+* Matches wilcards on string or array
+* $pattern in wilcarded pattern with ? counted as single character
+* and * as multiple characters
+* if $value is string, returns true/false
+* if $value is an array, returns matches strings from array
+* @param string $pattern
+* @param string $value
+* @return bool|array
+*/
+	public function wildcard_match($pattern, $value) {
+		if(is_array($value)) {
+			$return = array();
+			foreach($value as $string) {
+				if(wildcard_match($pattern, $string)) {
+					$return[] = $string;
+				}
+			}
+			return $return;
+		}
+		//split patters by *? but not \* \?
+		$pattern = preg_split('/((?<!\\\)\*)|((?<!\\\)\?)/', $pattern, null,
+		PREG_SPLIT_DELIM_CAPTURE|PREG_SPLIT_NO_EMPTY);
+		foreach($pattern as $key => $part) {
+			if($part == '?') {
+				$pattern[$key] = '.';
+			} elseif ($part == '*') {
+				$pattern[$key] = '.*';
+			} else {
+				$pattern[$key] = preg_quote($part);
+			}
+		}
+		$pattern = implode('', $pattern);
+		$pattern = '/^'.$pattern.'$/';
+		return preg_match($pattern, $value);
+	}	
 }
 
 ?>

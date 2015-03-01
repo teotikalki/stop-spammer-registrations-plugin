@@ -45,9 +45,9 @@ class kpg_ss_check_white extends be_module {
 		// checks the list of Allow List items according to the options being set
 		// if cloudflare or ip is local then the deny tests for ips are not done.
 		$actions=array(
+		'chkcloudflare', // moved back as first check because it fixes the ip if it is cloudflare
 		'chkadminlog',
 		'chkaws',
-		//'chkcloudflare', // handled in deny testing
 		'chkgcache',
 		'chkgenallowlist',
 		'chkgoogle',

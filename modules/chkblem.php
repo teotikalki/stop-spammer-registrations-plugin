@@ -8,8 +8,8 @@ class chkblem  extends be_module { // change name
 		$this->searchname='Deny List Email';
 		$email=$post['email'];
 		if (empty($email)) return false;
-		$gcache=$options['blist'];
-		return $this->searchList($email,$gcache);
+		$blist=$options['blist'];
+		return $this->searchList($email,$blist);
 	}
 }
 ?>

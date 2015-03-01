@@ -2,7 +2,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-class chkgooglesafe { 
+class chkgooglesafe extends be_module { 
 	public function process($ip,&$stats=array(),&$options=array(),&$post=array()) {
 		if (empty($stats)) return false;
 		if (!array_key_exists('googleapi',$stats)) return false;
@@ -33,12 +33,7 @@ class chkgooglesafe {
 			if (!empty($url)) {
 				$query="https://sb-ssl.google.com/safebrowsing/api/lookup?client=stop-spammer-plugin&apikey=$googleapi&appver=9.3&pver=3.0&url=$url";
 				// using file get contents or get using the https lookup?
-				if (function_exists('kpg_sfs_reg_getafile')) { // makes this wordpress safe?
-					$r=@kpg_sfs_reg_getafile($query);
-				} else {
-					// only works if url_open is set on
-					$r=file_get_contents($query);
-				}
+				$r=$this->getafile($query);
 				if (!empty($r)) {
 					if (strpos($r,'phishing')!==false||strpos($r,'malware')!==false) {
 						return 'Google Safe:'.$r;

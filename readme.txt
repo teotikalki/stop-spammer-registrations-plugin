@@ -3,7 +3,7 @@ Tags: spam, comment, registration, login
 Requires at least: 3.0
 Tested up to: 4.2-alpha
 Contributors: Keith Graham
-Stable tag: 6.02
+Stable tag: 6.03
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,19 @@ THEN
 4. Under the settings, review options that are enabled. The plugin will operate very well without changing any settings. You may wish to update Web Services APIs for reporting spam and change the captcha settings from the default OpenCapture.  
 
 == Changelog ==
+
+
+= 6.03 =
+* Added robust full wild card search for lists using * and ?
+* Restored link in registration email
+* Restored use of WP_Http for all web service file reads
+* Added PHPInfo to Diagnostics
+* Added delete transients option to Other WP Options
+* Changed from Ugly image to a more conventional one on admin panel
+* Fixed bug in link for SFS api checks.
+* Forced CloudFlare IP fixing if CloudFlare plugin not found. 
+It is still better to install CloudFlare plugin to get most recent IP list, but at least this way the plugin can check for bad ips.
+
 
 
 = 6.02 =

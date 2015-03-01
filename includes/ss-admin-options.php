@@ -85,6 +85,8 @@ function kpg_sp_rightnow() {
 }
 
 function kpg_ss_row($actions,$comment) {
+	$options=get_option('kpg_stop_sp_reg_options'); // for some reason the main call is not available?
+	$apikey=$options['apikey'];
 	$email=urlencode($comment->comment_author_email);
 	$ip=$comment->comment_author_IP;
 	$action="";
@@ -134,8 +136,6 @@ function kpg_ss_row($actions,$comment) {
 		$blog=$blog_id;
 	}
 	$ajaxurl=admin_url('admin-ajax.php');
-	$options=get_option('kpg_stop_sp_reg_options'); // for some reason the main call is not available?
-	$apikey=$options['apikey'];
 
 	if (!empty($apikey)) {
 		//$target="target=\"kpg_sfs_reg_if1\"";
@@ -223,7 +223,7 @@ function sfs_handle_ajax_sub($data) {
 	}
 	$hget="http://www.stopforumspam.com/add.php?ip_addr=$ip_addr&api_key=$apikey&email=$email&username=$uname&evidence=$evidence";
 	//echo $hget;
-	$ret=file_get_contents($hget);
+	$ret=kpg_read_file($hget);
 	
 
 	if (stripos($ret,'data submitted successfully')!==false) {

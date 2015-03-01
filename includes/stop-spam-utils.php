@@ -15,7 +15,30 @@ function kpg_append_file($filename,&$content) {
 	@chmod($file,0640); // read/write for owner and owners groups.
 	return true;
 }
-function kpg_read_file($filename) {
+function kpg_read_file($f,$method='GET') {
+		// try this using Wp_Http
+		if( !class_exists( 'WP_Http' ) )
+		include_once( ABSPATH . WPINC. '/class-http.php' );
+		$request = new WP_Http;
+		$parms=array();
+		$parms['timeout']=10; // bump timeout a little we are timing out in google
+		$parms['method']=$method;
+		$result = $request->request( $f ,$parms);
+		// see if there is anything there
+		if (empty($result)) return '';
+		
+		if (is_array($result)) {
+			$ansa=$result['body']; 
+			return $ansa;
+		}
+		if (is_object($result) ) {
+			$ansa='ERR: '.$result->get_error_message();
+			return $ansa; // return $ansa when debugging
+			//return '';
+		}
+		return '';
+}
+function kpg_read_filex($filename) {
 	// read file
 	$file=dirname(__FILE__).'/'.$filename;
 	if (file_exists($file)) {
@@ -23,6 +46,7 @@ function kpg_read_file($filename) {
 	}
 	return "File not found";
 }
+
 function kpg_file_exists($filename) {
 	$file=dirname(__FILE__).'/'.$filename;
 	if (!file_exists($file)) return false;

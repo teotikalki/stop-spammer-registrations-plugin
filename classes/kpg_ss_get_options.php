@@ -484,7 +484,7 @@ This site is protected by the Stop Spammer Registrations Plugin.<br/>"
 		if (!is_numeric($ansa['sfsfreq'])) $ansa['sfsfreq']=0;
 		if (!is_numeric($ansa['kpg_sp_good'])) $ansa['kpg_sp_good']=0;
 		if (!is_numeric(trim($ansa['logfilesize']))) $ansa['logfilesize']=0;
-
+        $ansa['chkcloudflare']='Y'; // force it true for now.
 		kpg_ss_set_options($ansa); // new version, need to set the new options
 		//sfs_debug_msg("in get options\r\n".print_r($ansa,true));		
 
