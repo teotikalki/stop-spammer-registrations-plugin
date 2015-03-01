@@ -35,6 +35,7 @@ class chkcloudflare extends be_module {
 			"2405:b500::/32",
 			"2405:8100::/32"
 		);
+		$cf_found=false;
 		if (strpos($ip,'.')!==false) {
 			// check the cloudflare ranges using cidr
 			$ipl=ip2long($ip);
@@ -50,22 +51,26 @@ class chkcloudflare extends be_module {
 				$ipr=$ipr & $mask;
 				//echo "$ipr - $ipl <br>";
 				if($ipl == $ipr)  {
-					goto cf_true; // I love it! I haven't coded a goto in over 25 years.
+					// goto is not supported in older versions of PHP
+					// goto cf_true; // I love it! I haven't coded a goto in over 25 years.
+					$cf_found=true;
+					break;
 				}
 		    }
-			return false;
 		} else if (strpos($ip,':')!==false && strlen($ip)>=9) {
 			$ip=strtoloser($ip); // not sure what apache sends us
 			foreach($ip6ranges as $ip6) {
 				// cheat - cf uses 32 bit masks so just use the first 9 characters
                 if (substr($ip6,0,9)==substr($ip,0,9)) {
-					goto cf_true;
+					//goto cf_true;
+					$cf_found=true;
+					break;
 				}
 			}
-			return false;
 		}
-		return false;
-cf_true:
+		if (!$cf_found) return false;
+		
+//cf_true:
 		// we need to use the ip borrowed from cloudflare
 		if ($_SERVER["HTTP_CF_CONNECTING_IP"]) {
 			$_SERVER["REMOTE_ADDR"] = $_SERVER["HTTP_CF_CONNECTING_IP"];

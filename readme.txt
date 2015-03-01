@@ -3,7 +3,7 @@ Tags: spam, comment, registration, login
 Requires at least: 3.0
 Tested up to: 4.2-alpha
 Contributors: Keith Graham
-Stable tag: 6.03
+Stable tag: 6.04
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ THEN
 
 == Changelog ==
 
+
+= 6.04 =
+* Removed goto in cloudflare check. It was a wonderful dream that turned into a nightmare when it turns out 5.2 PHP doesn't support the goto statement. It was the first goto that I've coded in high level language in 25 years and I wanted it to work.
 
 = 6.03 =
 * Added robust full wild card search for lists using * and ?
