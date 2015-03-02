@@ -175,7 +175,7 @@ echo "<p>Memory Usage Current: $m1, Peak: $m3</p>";
 
 $nonce=wp_create_nonce('kpg_ss_update2');
 $showtransients=false; // change to true to clean up transients
-if (countTransients($blog_id)>0 && $showtransients) { // personal use - probably too dangerous for casual users.
+if (countTransients()>0 && $showtransients) { // personal use - probably too dangerous for casual users.
 ?>
 <hr>
 <p> Wordpress creates temporary objects in the database called transients. 
@@ -193,7 +193,7 @@ $nonce='';
 if (array_key_exists('kpg_opt_tdel',$_POST)) $nonce=$_POST['kpg_opt_tdel'];
 if (!empty($nonce)&&wp_verify_nonce($nonce,'kpg_ss_update2')) {
 	// doit!
-	deleteTransients($blog_id);		
+	deleteTransients();		
 }
 
 

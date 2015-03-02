@@ -58,7 +58,7 @@ class chkcloudflare extends be_module {
 				}
 		    }
 		} else if (strpos($ip,':')!==false && strlen($ip)>=9) {
-			$ip=strtoloser($ip); // not sure what apache sends us
+			$ip=strtolower($ip); // not sure what apache sends us
 			foreach($ip6ranges as $ip6) {
 				// cheat - cf uses 32 bit masks so just use the first 9 characters
                 if (substr($ip6,0,9)==substr($ip,0,9)) {
