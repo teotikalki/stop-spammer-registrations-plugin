@@ -3,7 +3,7 @@ Tags: spam, comment, registration, login
 Requires at least: 3.0
 Tested up to: 4.2-alpha
 Contributors: Keith Graham
-Stable tag: 6.05
+Stable tag: 6.06
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
