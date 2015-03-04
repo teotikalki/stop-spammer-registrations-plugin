@@ -12,7 +12,9 @@ class chkspamwords{
         foreach($post as $key=>$data) {
 			if (!empty($data)) {
 				foreach($spamwords as $sw) {
-					if (stripos($data,$sw)!==false) return "spamword: $sw in $key";
+					if (stripos($data,$sw)!==false) {
+						return "spamword: $sw in $key";
+					}
 				}
 			}
 		}

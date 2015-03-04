@@ -61,17 +61,22 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 	}
 	
 	// check box setting
-	if (array_key_exists('chkspamwords',$_POST)) {
-		$chkspamwords=stripslashes($_POST['chkspamwords']);
-		$options['chkspamwords']=$chkspamwords;
-	}
-	if (array_key_exists('chkagent',$_POST)) {
-		$chkagent=stripslashes($_POST['chkagent']);
-		$options['chkagent']=$chkagent;
+	$optionlist= array(
+	'chkspamwords',
+	'chkbluserid',
+	'chkagent'
+	);
+	foreach ($optionlist as $check) {
+		$v='N';
+		if(array_key_exists($check,$_POST)) {
+			$v=$_POST[$check];
+			if ($v!='Y') $v='N';
+		} 
+		$options[$check]=$v;
 	}
 
 	kpg_ss_set_options($options);
-
+    extract($options);
 	
 }
 $nonce=wp_create_nonce('kpgstopspam_update');
@@ -79,12 +84,18 @@ $nonce=wp_create_nonce('kpgstopspam_update');
 ?>
 <div class="wrap">
 <h2>Stop Spammers Deny List and Deny lists</h2>
-<p>Put IP addresses or emails here that you want blocked. One email or IP to a line. These are checked after the Allow List so the Allow List overrides any blocking. You can mix email addresses and IP Numbers. You can use IPV4 or IPV6 numbers. You can use CIDR format to block a range (e.g. 1.2.3.4/16) or you can use wild cards (e.g. spammer@spam.* or 1.2.3.*).</p>
 <form method="post" action="">
 <input type="hidden" name="action" value="update" />
 <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
 <fieldset style="border:thin solid black;padding:6px;width:100%;">
 <legend><span style="font-weight:bold;font-size:1.2em" >Deny List</span></legend>
+<p>Put IP addresses or emails here that you want blocked. One email or IP to a line. 
+<p>You can mix email addresses and IP Numbers. You can use IPV4 or IPV6 numbers. You can use CIDR format to block a range (e.g. 1.2.3.4/16) or you can use wild cards (e.g. spammer@spam.* or 1.2.3.*).</p>
+<p>You can also use this to deny user ids. This is usually not useful as spammers can change the user id that they use. 
+To block userids in this list, check this box. 
+<input name="chkbluserid" type="checkbox" value="Y" <?php if ($chkbluserid=='Y') echo  "checked=\"checked\"";?>/></p>
+
+<p>These are checked after the Allow List so the Allow List overrides any blocking.</p>
 <textarea name="blist" cols="32" rows="8"><?php 
 foreach($blist as $p) {
 	echo $p."\r\n";

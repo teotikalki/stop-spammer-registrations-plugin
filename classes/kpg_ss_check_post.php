@@ -32,6 +32,7 @@ class kpg_ss_check_post extends be_module{
 			'chkagent',
 			'chkbbcode',
 			'chkblem',
+			'chkbluserid',
 			'chkdisp',
 			'chkexploits',
 			'chklong',

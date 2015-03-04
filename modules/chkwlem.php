@@ -8,8 +8,8 @@ class chkwlem extends be_module { // change name
 		$this->searchname='Allow List Email';
 		$email=$post['email'];
 		if (empty($email)) return false;
-		$gcache=$options['wlist'];
-		return $this->searchList($email,$gcache);
+		$wlist=$options['wlist'];
+		return $this->searchList($email,$wlist);
 	}
 }
 ?>

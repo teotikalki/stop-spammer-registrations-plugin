@@ -29,6 +29,7 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 	$optionlist= array(
 	'chkgoogle',
 	'chkaws',
+	'chkwluserid',
 	'chkpaypal',
 	'chkgenallowlist',
 	'chkmiscallowlist',
@@ -60,10 +61,16 @@ $nonce=wp_create_nonce('kpgstopspam_update');
 <input type="hidden" name="action" value="update" />
 <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
 
-<p>Put IP addresses or emails here that you don't want blocked. One email or IP to a line. These are checked first so the override any blocking.</p>
 
 <fieldset style="border:thin solid black;padding:6px;width:100%;">
 <legend><span style="font-weight:bold;font-size:1.2em" >Allow List</span></legend>
+<p>Put IP addresses or emails here that you don't want blocked. 
+One email or IP to a line. You can use wild cards here for emails.</p>
+<p>You may put user ids here, but this is dangerous because spammers can easily find a user's id from previous comments, and add comments using it.
+I don't recommend using this. Normally user id checking is turned off so you must check this box to use it.
+<input name="chkwluserid" type="checkbox" value="Y" <?php if ($chkwluserid=='Y') echo  "checked=\"checked\"";?>/></p>
+<p>These are checked first so they override any blocking.</p>
+
 <textarea name="wlist" cols="32" rows="8"><?php 
 for ($k=0;$k<count($wlist);$k++) {
 	echo $wlist[$k]."\r\n";

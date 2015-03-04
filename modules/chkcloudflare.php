@@ -72,7 +72,7 @@ class chkcloudflare extends be_module {
 		
 //cf_true:
 		// we need to use the ip borrowed from cloudflare
-		if ($_SERVER["HTTP_CF_CONNECTING_IP"]) {
+		if (array_key_exists('HTTP_CF_CONNECTING_IP',$_SERVER)) {
 			$_SERVER["REMOTE_ADDR"] = $_SERVER["HTTP_CF_CONNECTING_IP"];
 			return false;
 		}

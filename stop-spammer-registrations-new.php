@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammers
 Plugin URI: http://wordpress.org/plugins/stop-spammer-registrations-plugin/
 Description: The Stop Spammer Registrations Plugin effectively detects malicious events to to prevent spammers from registering or making comments.
-Version: 6.05
+Version: 6.06
 Author: Keith P. Graham
 
 This software is distributed in the hope that it will be useful,
@@ -12,7 +12,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 // networking requires a couple of globals
 
-define('KPG_SS_VERSION', '6.05');
+define('KPG_SS_VERSION', '6.06');
 define( 'KPG_SS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'KPG_SS_PLUGIN_FILE', plugin_dir_path( __FILE__ ) );
 
@@ -126,10 +126,12 @@ function kpg_ss_init() {
 		// check to see if we are doing a post with values
 		$post=get_post_variables();
 		if (!empty($post['email']) || !empty($post['author'])) { // must be a login or a comment which require minimum stuff 
+			//sfs_debug_msg('email or author '.print_r($post,true));
 			if(kpg_ss_check_white()!==false) return;	
+			//sfs_debug_msg('past white ');
 			kpg_ss_check_post(); // on POST check if we need to stop comments or logins
 		} else {
-			//sfs_debug_msg('no email or author '.print_r($post,true));
+			sfs_debug_msg('no email or author '.print_r($post,true));
 		}
 	} else {
 		// this is a get - check for get addons
@@ -374,6 +376,7 @@ function be_load($file,$ip,&$stats=array(),&$options=array(),&$post=array()) {
 	}
 	require_once($fd);
 	// this loads a be_module class
+	//sfs_debug_msg("loading $fd");
 	$class=new $file();
 	$result=$class->process($ip,$stats,$options,$post);
 	$class=null;
@@ -400,14 +403,45 @@ function get_post_variables() {
 		return $ansa;
 	}
 	$search=array(
-	'email'=>array('email','input_','address'),
-	'author'=>array('author','log','_id','user','signup_for','name'),
+	'email'=>array('email','address'), // 'input_' = woo forms
+	'author'=>array('author','log','user','signup_for','name','_id'),
 	'pwd'=>array('psw','pwd','pass','secret'),
 	'comment'=>array('comment','message','body','excerpt'),
 	'subject'=>array('subj','topic'),
 	'url'=>array('url','blog_name','blogname')
 	);
 	$emfound=false;
+	// rewrite this
+	foreach ($search as $var=>$sa) {
+		foreach ($sa as $srch) {
+			foreach($p as $pkey=>$pval) {
+				// see if the things in $srch live in post
+				if (stripos($pkey,$srch)!==false) {
+					// got a hit
+					$ansa[$var]="$pval";
+					break;
+				}
+			}
+			if (!empty($ansa[$var])) break;
+		}
+		if (empty($ansa[$var]) && $var=='email' ) {  // empty email
+			// did not get a hit so we need to try again and look for something that looks like an email
+ 			foreach($p as $pkey=>$pval) {
+				if (stripos($pkey,'input_')) {
+					// might have an email
+					if(strpos($pval,'@')!==false&&strrpos($pval,'.')>strpos($pval,'@')) {
+						// close enough
+						$ansa[$var]=$pval;
+						break;
+					}
+				}
+			}
+		} 
+	}
+	
+	
+/*	
+	
 	foreach ($search as $var=>$sa) {
 		foreach ($sa as $srch) {
 			foreach($p as $pkey=>$pval) {
@@ -426,10 +460,11 @@ function get_post_variables() {
 			}
 		}
 	}
+	*/
 	// sanitize input - some of this is stored in history and needs to be cleaned up
 	foreach($ansa as $key=>$value) {
 		// clean the variables even more
-		$ansa[$key]=really_clean(sanitize_text_field($value)); // really clean gets rid of high value characters
+		$ansa[$key]=sanitize_text_field($value); // really clean gets rid of high value characters
 	}
 	if (strlen($ansa['email'])>80) $ansa['email']=substr($ansa['email'],0,77).'...';
 	if (strlen($ansa['author'])>80) $ansa['author']=substr($ansa['author'],0,77).'...';

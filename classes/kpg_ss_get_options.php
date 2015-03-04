@@ -21,6 +21,7 @@ class kpg_ss_get_options {
 		'chkscripts'=>'Y',
 		'chkvalidip'=>'Y',
 		'chkwlem'=>'Y',
+		'chkwluserid'=>'N',
 		'chkwlist'=>'Y',
 		'chkyahoomerchant'=>'Y'
 		);	
@@ -33,6 +34,7 @@ class kpg_ss_get_options {
 		'chkamazon'=>'N',
 		'chkbcache'=>'Y',
 		'chkblem'=>'Y',
+		'chkbluserid'=>'N',
 		'chkblip'=>'Y',
 		'chkbotscout'=>'Y',
 		'chkdisp'=>'Y',

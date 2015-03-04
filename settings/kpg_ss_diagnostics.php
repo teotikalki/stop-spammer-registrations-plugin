@@ -73,6 +73,7 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 		'chkscripts',
 		'chkvalidip',
 		'chkwlem',
+		'chkwluserid',
 		'chkwlist',
 		'chkyahoomerchant'
 		);
@@ -96,6 +97,7 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 		'chkbbcode',
 		'chkbcache',
 		'chkblem',
+		'chkbluserid',
 		'chkblip',
 		'chkbotscout',
 		'chkdisp',
@@ -310,7 +312,7 @@ $nonce=wp_create_nonce('kpgstopspam_update');
 	$ini=@ini_get('disable_functions');
 	if (!empty($ini)) {
 		$disabled = explode(',',$ini);
-		if (isArray($disabled) && in_array('phpinfo', $disabled)) {
+		if (is_array($disabled) && in_array('phpinfo', $disabled)) {
 			$pinf=false;
 		}
 	} 

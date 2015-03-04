@@ -29,9 +29,15 @@ THEN
 
 == Changelog ==
 
+= 6.06 =
+* Fixed a mistake that caused the plugin to stop checking some post variables
+* Fixed bug in diagnostics when phpinfo is not allowed
+* added a function deny or allow userids. This is dangerous and not very useful, but can be done. A user requested the feature.
+* removed cloudflare warning message for now, since the plugin mirrors the CF plugin.
 
 = 6.05 =
 * Bad mistake in cloudflare module fixed. Breaks on IPv6 checks
+* Added Easter egg to summary screen to change the total count and date.
 
 = 6.04 =
 * Removed goto in cloudflare check. It was a wonderful dream that turned into a nightmare when it turns out 5.2 PHP doesn't support the goto statement. It was the first goto that I've coded in high level language in 25 years and I wanted it to work.

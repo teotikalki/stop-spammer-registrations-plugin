@@ -27,6 +27,7 @@ class kpg_ss_get_stats  {
 		'cntchkscripts'=>0,
 		'cntchkvalidip'=>0,
 		'cntchkwlem'=>0,
+		'cntchkwluserid'=>0,
 		'cntchkwlist'=>0,
 		'cntchkyahoomerchant'=>0
 	);	
@@ -41,6 +42,7 @@ class kpg_ss_get_stats  {
 		'cntchkakismet'=>0,
 		'cntchkbcache'=>0,
 		'cntchkblem'=>0,
+		'cntchkuserid'=>0,
 		'cntchkblip'=>0,
 		'cntchkbotscout'=>0,
 		'cntchkdisp'=>0,

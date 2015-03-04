@@ -56,6 +56,7 @@ class kpg_ss_check_white extends be_module {
 		'chkscripts',
 		//'chkvalidip', // handled in deny testing
 		'chkwlem',
+		'chkwluserid',
 		'chkwlist',
 		'chkyahoomerchant'
 		);
@@ -64,7 +65,7 @@ class kpg_ss_check_white extends be_module {
 				$reason=be_load($chk,$ip,$stats,$options,$post);
 				if ($reason!==false) {
 					// need to log a passed hit on post here.
-					kpg_ss_log_good($ip,$reason,$chk);					
+					kpg_ss_log_good($ip,$reason,$chk);	
 					return $reason;
 				}
 			} else {

@@ -22,6 +22,7 @@ $counters=array(
 'cntchkscripts'=>'pass scripts',
 'cntchkvalidip'=>'pass uncheckable ip',
 'cntchkwlem'=>'Allow List email',
+'cntchkuserid'=>'Allow userid/author',
 'cntchkwlist'=>'pass Allow List ip',
 'cntchkyahoomerchant'=>'pass Yahoo merchant',
 'cntchk404'=>'404 exploit attempt',
@@ -33,6 +34,7 @@ $counters=array(
 'cntchkaws'=>'Amazon AWS allow',
 'cntchkbcache'=>'bad cache',
 'cntchkblem'=>'Deny List email',
+'cntchkuserid'=>'Deny userid/author',
 'cntchkblip'=>'Deny List ip',
 'cntchkbotscout'=>'botscout',
 'cntchkdisp'=>'disposable email',
@@ -88,6 +90,7 @@ if (wp_verify_nonce($nonce,'kpgstopspam_update')) {
 	}
 	if (array_key_exists('update_total',$_POST)) {
 		$stats['spmcount']=$_POST['spmcount'];
+		$stats['spmdate']=$_POST['spmdate'];
 		kpg_ss_set_stats($stats);
 		extract($stats); // extract again to get the new options
 	}
@@ -112,7 +115,8 @@ if ($current_user_name=='admin') {
 	<a href=\"https://wordpress.org/support/topic/how-to-change-admin-username?replies=4\" target=\"_blank\">How to Change Admin Username</a>
 	</p>";
 }
-if (array_key_exists('HTTP_CF_CONNECTING_IP',$_SERVER)&& !function_exists( 'cloudflare_init' ) &&!defined('W3TC') ){
+$showcf=false; // hidethis for now.
+if ($showcf && array_key_exists('HTTP_CF_CONNECTING_IP',$_SERVER)&& !function_exists( 'cloudflare_init' ) &&!defined('W3TC') ){
 	echo "<p style=\"color:red;font-style::italic;\">
 	CloudFlare Remote IP address detected. Please install the <a href=\"http://wordpress.org/plugins/cloudflare/\" target=\"_blank\">CloudFlare Plugin</a>.
 	This plugin works best with the CloudFlare plugin when yout website is using CloudFlare.
@@ -133,7 +137,8 @@ if ($spmcount>0) {
 	<form method="post" action="">
 	<input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
 	<input type="hidden" name="update_total" value="update total" />
-	<input type="text" name="spmcount" value="<?php echo $spmcount;?>" />
+	Count:<input type="text" name="spmcount" value="<?php echo $spmcount;?>" /><br>
+	Date: <input type="text" name="spmdate" value="<?php echo $spmdate;?>" /><br>
 	<p class="submit" style="clear:both;">
 	<input class="button-primary" value="update total spam" type="submit" />
 	</p>
