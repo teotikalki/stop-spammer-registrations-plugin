@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammers
 Plugin URI: http://wordpress.org/plugins/stop-spammer-registrations-plugin/
 Description: The Stop Spammer Registrations Plugin effectively detects malicious events to to prevent spammers from registering or making comments.
-Version: 6.06
+Version: 6.07
 Author: Keith P. Graham
 
 This software is distributed in the hope that it will be useful,
@@ -12,7 +12,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 // networking requires a couple of globals
 
-define('KPG_SS_VERSION', '6.06');
+define('KPG_SS_VERSION', '6.07');
 define( 'KPG_SS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'KPG_SS_PLUGIN_FILE', plugin_dir_path( __FILE__ ) );
 
@@ -125,13 +125,17 @@ function kpg_ss_init() {
 		// don' check if ip is google, etc
 		// check to see if we are doing a post with values
 		$post=get_post_variables();
-		if (!empty($post['email']) || !empty($post['author'])) { // must be a login or a comment which require minimum stuff 
+		if (!empty($post['email']) || !empty($post['author'])|| !empty($post['comment'])) { // must be a login or a comment which require minimum stuff 
 			//sfs_debug_msg('email or author '.print_r($post,true));
-			if(kpg_ss_check_white()!==false) return;	
+			$reason=kpg_ss_check_white();
+			if($reason!==false) {
+				//sfs_debug_msg("return from white $reason");
+				return;	
+			}
 			//sfs_debug_msg('past white ');
 			kpg_ss_check_post(); // on POST check if we need to stop comments or logins
 		} else {
-			sfs_debug_msg('no email or author '.print_r($post,true));
+			//sfs_debug_msg('no email or author '.print_r($post,true));
 		}
 	} else {
 		// this is a get - check for get addons
@@ -150,7 +154,7 @@ function kpg_ss_init() {
 					$reason=be_load($add,kpg_get_ip(),$stats,$options);
 					if ($reason!==false) {
 						// need to log a passed hit on post here.
-						kpg_ss_log_bad($ip,$reason,$add[1],$add);					
+						kpg_ss_log_bad(kpg_get_ip(),$reason,$add[1],$add);					
 						return;
 					}
 				}

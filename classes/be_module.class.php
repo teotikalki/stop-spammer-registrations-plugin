@@ -14,29 +14,17 @@ class be_module {
 		// simple search array no key
 		$searchname=$this->searchname;
 		if (!is_array($haystack)) return false;
-		$needle=strtoupper($needle);
-		
+		$needle=strtolower($needle);
+		if (empty($needle)) return false;
 		foreach ($haystack as $search) { // haystack is a list of names or emails, possibly with wildcards
+			$search=trim(strtolower($search));
 			$reason=$search;
-			$search=trim(strtoupper($search));
 			if (empty($search)) continue; // in case there is a null in the list
 			if ($needle==$search) {
 				return "$searchname:$needle";
 			} 
 			// four kinds of search, looking for an ip, cidr, wildcard or an email
-			// check for wildcard - both email and ip
-			if (strpos($search,'*')!==false || strpos($search,'?')!==false ) {
-				// new wild card search
-				if ($this->wildcard_match($search,$needle))  return "$searchname:$reason:$needle";			
-				//$search=substr($search,0,strpos($search,'*')-1);
-				//if ($search=substr($needle,0,strlen($search))) return "$searchname:$reason";
-			}
-			// check for partial both email and ip
-			if (strlen($needle)>strlen($search)) {
-				$n=substr($needle,0,strlen($search));
-				if ($n==$search) return "$searchname:$reason";
-			}
-			if (substr_count($needle,'.')==3 && strpos($search,'/')!==false ) {
+			if (substr_count($needle,'.')==3 && strpos($search,'.')!==false && strpos($search,'/')!==false ) {
 				// searching for an cidr in the list
 				list($ip,$bits)=explode('/',$search);
 				$n=ip2long($needle);
@@ -47,6 +35,18 @@ class be_module {
 				$s=$s |$num;
 				$n=$n |$num;
 				if ($s==$n) return "$searchname:$reason";
+				continue;
+			}
+			// check for wildcard - both email and ip
+			if (strpos($search,'*')!==false || strpos($search,'?')!==false ) {
+				// new wild card search
+				if ($this->wildcard_match($search,$needle))  return "$searchname:$reason:$needle";			
+				continue;
+			}
+			// check for partial both email and ip
+			if (strlen($needle)>strlen($search)) {
+				$n=substr($needle,0,strlen($search));
+				if ($n==$search) return "$searchname:$reason";
 			}
 		}	
 		return false;
@@ -57,9 +57,9 @@ class be_module {
 		// the wlist array is of the form $time->ip
 		$searchname=$this->searchname;
 		if (!is_array($haystack)) return false;
-		$needle=strtoupper($needle);
+		$needle=strtolower($needle);
 		foreach ($haystack as $search=>$reason) {
-			$search=trim(strtoupper($search));
+			$search=trim(strtolower($search));
 			if (empty($search)) continue; // in case there is a null in the list
 			if ($needle==$search) {
 				return "$searchname:$needle";
@@ -106,7 +106,7 @@ class be_module {
 				if (strpos($ips,'.')===false&&strpos($ips,':')===false) { // new numstr format
 					if ($ipt<$ips) return false;
 					if ($ipt>=$ips&&$ipt<=$ipe) {
-						return "Country block: ".$this->searchname;
+						return $this->searchname.': '.$ip;
 					}
 				} else if (strpos($ips,':')!==false) { // IPV6
 					if ($ip>=$ips && $ip<=$ipe) {

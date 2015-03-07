@@ -16,10 +16,10 @@ class kpg_ss_check_post extends be_module{
 		if (!empty($addons)&&is_array($addons)) {
 			foreach($addons as $add) {
 				if (!empty($add)&&is_array($add)) {
-					$reason=be_load($add,$ip,$stats,$options,$post);
+					$reason=be_load($add,kpg_get_ip(),$stats,$options,$post);
 					if ($reason!==false) {
 						// need to log a passed hit on post here.
-						kpg_ss_log_bad($ip,$reason,$add[1],$add);
+						kpg_ss_log_bad(kpg_get_ip(),$reason,$add[1],$add);
 						exit();
 					}
 				}
@@ -85,7 +85,7 @@ class kpg_ss_check_post extends be_module{
 		
 		foreach ($noipactions as $chk) {	
 			if ($options[$chk]=='Y') {
-				$reason=be_load($chk,$ip,$stats,$options,$post);
+				$reason=be_load($chk,kpg_get_ip(),$stats,$options,$post);
 				if ($reason!==false) {
 					break;
 				}
@@ -95,7 +95,7 @@ class kpg_ss_check_post extends be_module{
 			// check for a valid ip - if ip is valid we can do the ip checks
 			$actionvalid=array('chkvalidip'); // took out the cloudflare exclusion
 			foreach ($actionvalid as $chk) {	
-				$reason=be_load($chk,$ip,$stats,$options,$post);
+				$reason=be_load($chk,kpg_get_ip(),$stats,$options,$post);
 				if ($reason!==false) {
 					break;
 				}
@@ -106,7 +106,7 @@ class kpg_ss_check_post extends be_module{
 		if ($reason===false) 
 		foreach ($actions as $chk) {	
 			if ($options[$chk]=='Y') {
-				$reason=be_load($chk,$ip,$stats,$options,$post);
+				$reason=be_load($chk,kpg_get_ip(),$stats,$options,$post);
 				if ($reason!==false) {
 					break;
 				}
@@ -115,7 +115,7 @@ class kpg_ss_check_post extends be_module{
 		//sfs_debug_msg("check post $ip, ".print_r($post,true));
 		if (array_key_exists('email',$post) && $post['email']=='tester@tester.com') {
 			$post['reason']= "testing IP - will always be blocked"; // use to test plugin
-			be_load('kpg_ss_challenge',$ip,$stats,$options,$post);
+			be_load('kpg_ss_challenge',kpg_get_ip(),$stats,$options,$post);
 			return;
 		}
 		// these are the deny after addons
@@ -126,7 +126,7 @@ class kpg_ss_check_post extends be_module{
 		if ($reason===false) return false;
 		// here because we have a spammer that's been caught
         
-		kpg_ss_log_bad($ip,$reason,$chk);
+		kpg_ss_log_bad(kpg_get_ip(),$reason,$chk);
 		
 		exit;
 	}

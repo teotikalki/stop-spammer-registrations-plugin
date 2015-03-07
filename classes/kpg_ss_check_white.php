@@ -7,20 +7,25 @@ class kpg_ss_check_white extends be_module {
 	public function process($ip,&$stats=array(),&$options=array(),&$post=array()) {
 		$email=$post['email'];
 		//$p=print_r($post,true);
-		if ($post['email']=='tester@tester.com') {
-			return false; // use to test plugin
-		}
+		//if ($post['email']=='tester@tester.com') {
+			//return false; // use to test plugin
+		//}
 		
 		// can't ever block local server because of cron jobs
-		
+		$ip=kpg_get_ip(); // we are losing ip occasionally
 		$lip=$_SERVER["SERVER_ADDR"];
-		if ($ip==$lip) return 'ip same as server:'.$ip;
+		if ($ip==$lip) {
+			//kpg_ss_log_good(kpg_get_ip(),'ip same as server:'.$ip,'chkvalidip');
+			//return 'ip same as server:'.$ip;
+		}
 		// we can do this with ip4 addresses - check if same /24 subnet
 		$j=strrpos($ip,'.');
 		if ($j!==false) {
 			$k=strrpos($lip,'.');
 			if ($k!==false) {
-				if (substr($ip,0,$j)==substr($lip,0,$k)) return 'ip same /24 subnet as server'.$ip;
+				//if (substr($ip,0,$j)==substr($lip,0,$k)) 
+				//kpg_ss_log_good(kpg_get_ip(),'ip same /24 subnet as server'.$ip,'chkvalidip');
+				//return 'ip same /24 subnet as server'.$ip;
 			}
 		}
 		// for addons
@@ -36,7 +41,7 @@ class kpg_ss_check_white extends be_module {
 					$reason=be_load($add);
 					if ($reason!==false) {
 						// need to log a passed hit on post here.
-						kpg_ss_log_good($ip,$reason,$add[1],$add);					
+						kpg_ss_log_good(kpg_get_ip(),$reason,$add[1],$add);	// aded get ip because it might be altered				
 						return $reason;
 					}
 				}
@@ -62,10 +67,10 @@ class kpg_ss_check_white extends be_module {
 		);
 		foreach ($actions as $chk) {	
 			if ($options[$chk]=='Y') {
-				$reason=be_load($chk,$ip,$stats,$options,$post);
+				$reason=be_load($chk,kpg_get_ip(),$stats,$options,$post);
 				if ($reason!==false) {
 					// need to log a passed hit on post here.
-					kpg_ss_log_good($ip,$reason,$chk);	
+					kpg_ss_log_good(kpg_get_ip(),$reason,$chk);	
 					return $reason;
 				}
 			} else {

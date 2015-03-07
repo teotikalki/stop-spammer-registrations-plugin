@@ -10,8 +10,9 @@ class chkcloudflare extends be_module {
 // if we detect cloudflare and can't fix it we can't really do anything about it. Just block it.
 // cloudflare will be whitelisted in the generated white list.
 	public function process($ip,&$stats=array(),&$options=array(),&$post=array()) {
+		//return false;
 		if (function_exists('cloudflare_init')) return false; // no sense proceeding, cloudflare is on the case.
-		// we would normally whitelist if cloudflare plugin is not active and we detect cloudflare ip - here were are fixing that
+		if (!array_key_exists('HTTP_CF_CONNECTING_IP',$_SERVER)) return false;		// we would normally whitelist if cloudflare plugin is not active and we detect cloudflare ip - here were are fixing that
 		// ranges last update 2/27/2015
 		$ip4ranges = array(
 			"199.27.128.0/21",
@@ -39,18 +40,14 @@ class chkcloudflare extends be_module {
 		if (strpos($ip,'.')!==false) {
 			// check the cloudflare ranges using cidr
 			$ipl=ip2long($ip);
-			if(long2ip($ipl)!=$ip) {
-				//echo "bad ip";
-				return false;
-			}
 			foreach($ip4ranges as $ip4) {
 				list($range, $bits) = explode('/', $ip4, 2);
 				$ipr=ip2long($range);
 				$mask = -1 << (32 - $bits);
-				$ipl=$ipl & $mask;
+				$ipt=$ipl & $mask;
 				$ipr=$ipr & $mask;
 				//echo "$ipr - $ipl <br>";
-				if($ipl == $ipr)  {
+				if($ipt == $ipr)  {
 					// goto is not supported in older versions of PHP
 					// goto cf_true; // I love it! I haven't coded a goto in over 25 years.
 					$cf_found=true;
@@ -73,8 +70,10 @@ class chkcloudflare extends be_module {
 //cf_true:
 		// we need to use the ip borrowed from cloudflare
 		if (array_key_exists('HTTP_CF_CONNECTING_IP',$_SERVER)) {
-			$_SERVER["REMOTE_ADDR"] = $_SERVER["HTTP_CF_CONNECTING_IP"];
-			return false;
+			if (array_key_exists('REMOTE_ADDR',$_SERVER)) {
+				$_SERVER["REMOTE_ADDR"] = $_SERVER["HTTP_CF_CONNECTING_IP"];
+				return false;
+			}
 		}
 		return false;
 	}

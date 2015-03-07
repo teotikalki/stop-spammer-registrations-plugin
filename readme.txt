@@ -3,7 +3,7 @@ Tags: spam, comment, registration, login
 Requires at least: 3.0
 Tested up to: 4.2-alpha
 Contributors: Keith Graham
-Stable tag: 6.06
+Stable tag: 6.07
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,12 @@ THEN
 4. Under the settings, review options that are enabled. The plugin will operate very well without changing any settings. You may wish to update Web Services APIs for reporting spam and change the captcha settings from the default OpenCapture.  
 
 == Changelog ==
+
+= 6.07 =
+* Fixed a bug in white listing
+* Fixed a bug in checking ip address
+* restored automatic cloudflare ip updating
+
 
 = 6.06 =
 * Fixed a mistake that caused the plugin to stop checking some post variables

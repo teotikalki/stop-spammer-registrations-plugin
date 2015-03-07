@@ -8,17 +8,17 @@ class chktld { // change name
 		if (!array_key_exists('email',$post)) return false;
 		$email=$post['email'];
 		if (empty($email)) return false;
-		if (strpos($email,'@')===false) return false;
+		//if (strpos($email,'@')===false) return false;
 		if (strpos($email,'.')===false) return false;
 		$tld=$options['badTLDs'];
 		if (empty($tld)) return false;
 		$t=explode('.',$email);
 		$tt=$t[count($t)-1];
-		$tt='.'.strtoupper($tt);
+		$tt='.'.strtolower($tt);
 		
 		// look in tlds for the tld in the email
 		foreach($tld as $ft) {
-			$ft=strtoupper(trim($ft));
+			$ft=strtolower(trim($ft));
 			if (empty($ft)) continue;
 			if ($ft==$tt) return "TLD blocked: $email:$ft";
 		}
