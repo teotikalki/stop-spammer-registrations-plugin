@@ -7,7 +7,7 @@ Stable tag: 6.08
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-The Stop Spammers Plugin blocks spammers from leaving comments or logging in. Prevents robots from registering and protects sites against malicious attacks.
+The Stop Spammers Plugin blocks spammers from leaving comments or logging in. Prevents robots from registering and protects sites from attacks.
 
 == Description == 
 Stop Spammers is an aggressive website defence against comment spam and login attempts. It is capable of performing more than 20 different checks for malicious events and can block spammers from over 100 different countries. 
