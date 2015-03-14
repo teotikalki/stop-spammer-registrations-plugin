@@ -1,5 +1,5 @@
 <?php
-// generated Monday 16th of February 2015 07:12:28 PM
+// generated Saturday 14th of March 2015 07:26:17 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkAfrica extends be_module {
@@ -100,7 +100,7 @@ class chkAfrica extends be_module {
 	array('197068000000','197069000000'),
 	array('197083000000','197084000000'),
 	array('197085000000','197086000000'),
-	array('197087000000','197089000000'),
+	array('197087000000','197088000000'),
 	array('197096000000','197097000000'),
 	array('197118000000','197119000000'),
 	array('197129000000','197137000000'),

@@ -328,7 +328,9 @@ function kpg_ss_scan_for_eval() {
 	// scan content completely
 	// WP_CONTENT_DIR is supposed to have the content dir
 	$phparray=array();
-	$phparray=kpg_ss_scan_for_eval_recurse(WP_CONTENT_DIR.'/..',$phparray);
+	// use get_home_path()
+	//$phparray=kpg_ss_scan_for_eval_recurse(WP_CONTENT_DIR.'/..',$phparray);
+	$phparray=kpg_ss_scan_for_eval_recurse(get_home_path(),$phparray);
 	// phparray should have a list of all of the PHP files
 	$disp=false;
 	echo "Files: <ol>";
@@ -354,9 +356,17 @@ function kpg_ss_scan_for_eval() {
 
 // recursive walk of directory structure.
 function kpg_ss_scan_for_eval_recurse($dir,$phparray) {
-	if (!is_dir($dir))  return $phparray;
-
-	if ($dh = opendir($dir)) {
+	
+	if (!@is_dir($dir))  return $phparray;
+    //if (substr($dir,0,1)='.') return $phparray;
+	$dh=null;
+	try {
+		$dh=opendir($dir);
+	} catch (Exception $e) {
+		return $phparray;
+	}
+	
+	if ($dh!==false) {
 		while (($file = readdir($dh)) !== false) {
 			if (is_dir($dir .'/'. $file)) {
 				if ($file!='.' && $file!='..' ) {

@@ -1,5 +1,5 @@
 <?php
-// generated Monday 16th of February 2015 07:12:46 PM
+// generated Saturday 14th of March 2015 07:26:33 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkBZ extends be_module {

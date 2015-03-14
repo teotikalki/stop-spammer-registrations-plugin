@@ -1,12 +1,14 @@
 <?php
-// generated Monday 16th of February 2015 07:14:10 PM
+// generated Saturday 14th of March 2015 07:27:35 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkSX extends be_module {
 	public $searchname='Sint Maarten';
 	public $searchlist=array(
 	array('190102000000','190102032000'),
-	array('190124216000','190124220000')
+	array('190124216000','190124220000'),
+	array('190185080000','190185088000'),
+	array('201220000000','201220016000')
 	);
 }
 ?>

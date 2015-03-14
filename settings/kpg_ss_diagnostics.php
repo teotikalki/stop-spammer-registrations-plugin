@@ -158,6 +158,11 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 		'chkNZ','chkOM','chkPA','chkPE','chkPG','chkPH','chkPK','chkPL','chkPR','chkPS','chkPT','chkPW','chkPY','chkQA','chkRO','chkRS','chkRU','chkSA','chkSE','chkSG','chkSI','chkSK','chkSV','chkSX','chkSY','chkTH',
 		'chkTJ','chkTM','chkTR','chkTT','chkTW','chkUA','chkUK','chkUS','chkUY','chkUZ','chkVC','chkVE','chkVN',
 		'chkYE','chkZA');
+		
+		//KE - Kenya
+		//chkMA missing
+		//SC - Seychelles
+		
 		$m1=memory_get_usage(true);
 		$m2=memory_get_peak_usage(true);
 		echo "<br>Memory used, peak: $m1, $m2<br>";

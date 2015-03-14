@@ -1,11 +1,13 @@
 <?php
-// generated Monday 16th of February 2015 07:14:10 PM
+// generated Saturday 14th of March 2015 07:27:35 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkSY extends be_module {
 	public $searchname='Syria';
 	public $searchlist=array(
+	array('005000064000','005000128000'),
 	array('005000192000','005001000000'),
+	array('005155128000','005155192000'),
 	array('031009000000','031009128000'),
 	array('046161192000','046162000000'),
 	array('078110096000','078110112000'),

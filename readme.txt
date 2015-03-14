@@ -1,13 +1,13 @@
-=== Stop Spammers ===
+=== Stop Spammers Spam Prevention ===
 Tags: spam, comment, registration, login
 Requires at least: 3.0
-Tested up to: 4.2-alpha
+Tested up to: 4.2
 Contributors: Keith Graham
-Stable tag: 6.07
+Stable tag: 6.08
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-The Stop Spammers Plugin blocks spammers from leaving comments or logging in.
+The Stop Spammers Plugin blocks spammers from leaving comments or logging in. Prevents robots from registering and protects sites against malicious attacks.
 
 == Description == 
 Stop Spammers is an aggressive website defence against comment spam and login attempts. It is capable of performing more than 20 different checks for malicious events and can block spammers from over 100 different countries. 
@@ -28,6 +28,13 @@ THEN
 4. Under the settings, review options that are enabled. The plugin will operate very well without changing any settings. You may wish to update Web Services APIs for reporting spam and change the captcha settings from the default OpenCapture.  
 
 == Changelog ==
+
+= 6.08 =
+* Responded to complaints about admin menu - now it is boring.
+* Fixed issue in Threat Scan for unexpected directories or symlinks that threw errors in opendir();
+* Added keyword SPAM to plugin name. It was not coming up in plugin searches.
+* Added a month's worth of Spammers from the Stop Forum Spam lists. Regenerated all countries spammer lists.
+* Fixed bug in IP wildcard checks.
 
 = 6.07 =
 * Fixed a bug in white listing

@@ -35,7 +35,7 @@ class be_module {
 				$s=$s |$num;
 				$n=$n |$num;
 				if ($s==$n) return "$searchname:$reason";
-				continue;
+				//continue;
 			}
 			// check for wildcard - both email and ip
 			if (strpos($search,'*')!==false || strpos($search,'?')!==false ) {

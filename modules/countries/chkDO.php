@@ -1,17 +1,21 @@
 <?php
-// generated Monday 16th of February 2015 07:12:58 PM
+// generated Saturday 14th of March 2015 07:26:41 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkDO extends be_module {
 	public $searchname='Dominican Republic';
 	public $searchlist=array(
 	array('064032064000','064032128000'),
+	array('148000000000','148001000000'),
 	array('179043192000','179043208000'),
 	array('179052000000','179054000000'),
 	array('181036000000','181036001000'),
 	array('181037128000','181038000000'),
+	array('186001127000','186001127128'),
 	array('186006000000','186008000000'),
+	array('186120128000','186121000000'),
 	array('186149000000','186151000000'),
+	array('190008032000','190008048000'),
 	array('190094000000','190094032000'),
 	array('190122116128','190122117000'),
 	array('190166128000','190168000000'),

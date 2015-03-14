@@ -23,7 +23,7 @@ function kpg_ss_admin_menu_l() {
 	add_submenu_page(
 	'stop_spammers', // plugins parent
 	"Stop Spammers Summary", //$page_title,
-	"&nbsp;&bull; Summary", //$menu_title,
+	"Summary", //$menu_title,
 	'manage_options', //$capability,
 	'stop_spammers', //$menu_slug,
 	'kpg_ss_summary' // $function
@@ -33,7 +33,7 @@ function kpg_ss_admin_menu_l() {
 	add_submenu_page(
 	'stop_spammers', // plugins parent
 	"Allow Requests", //$page_title,
-	"&nbsp;&bull; Allow Requests", //$menu_title,
+	"Allow Requests", //$menu_title,
 	'manage_options', //$capability,
 	'ss_allowrequests', //$menu_slug,
 	'kpg_ss_allowreq' // $function
@@ -41,7 +41,7 @@ function kpg_ss_admin_menu_l() {
 	add_submenu_page(
 	'stop_spammers', // plugins parent
 	"Log Report", //$page_title,
-	'&nbsp;&bull; Log Report', //$menu_title,
+	'Log Report', //$menu_title,
 	'manage_options', //$capability,
 	'ss_reports', //$menu_slug,
 	'kpg_ss_reports' // function
@@ -49,7 +49,7 @@ function kpg_ss_admin_menu_l() {
 	add_submenu_page(
 	'stop_spammers', // plugins parent
 	"Cache", //$page_title,
-	'&nbsp;&bull; Cache', //$menu_title,
+	'Cache', //$menu_title,
 	'manage_options', //$capability,
 	'ss_cache', //$menu_slug,
 	'kpg_ss_cache' // function
@@ -59,7 +59,7 @@ function kpg_ss_admin_menu_l() {
 		add_submenu_page(
 		'stop_spammers', // plugins parent
 		"Stop Spammers Network", //$page_title,
-		'&nbsp;&bull; Network', //$menu_title,
+		'Network', //$menu_title,
 		'manage_options', //$capability,
 		'ss_network', //$menu_slug,
 		'kpg_ss_network'
@@ -68,7 +68,7 @@ function kpg_ss_admin_menu_l() {
 	add_submenu_page(
 	'stop_spammers', // plugins parent
 	"Spam and Login protection options", //$page_title,
-	'&nbsp;&bull; Protection options', //$menu_title,
+	'Protection options', //$menu_title,
 	'manage_options', //$capability,
 	'ss_options', //$menu_slug,
 	'kpg_ss_options' // function
@@ -76,7 +76,7 @@ function kpg_ss_admin_menu_l() {
 	add_submenu_page(
 	'stop_spammers', // plugins parent
 	"Stop Spammers Allow Lists", //$page_title,
-	'&nbsp;&bull; Allow Lists', //$menu_title,
+	'Allow Lists', //$menu_title,
 	'manage_options', //$capability,
 	'ss_allow_list', //$menu_slug,
 	'kpg_ss_allowlist_settings' // function
@@ -84,7 +84,7 @@ function kpg_ss_admin_menu_l() {
 	add_submenu_page(
 	'stop_spammers', // plugins parent
 	"Stop Spammers Block Lists", //$page_title,
-	'&nbsp;&bull; Block Lists', //$menu_title,
+	'Block Lists', //$menu_title,
 	'manage_options', //$capability,
 	'ss_deny_list', //$menu_slug,
 	'kpg_ss_denylist_settings' // function
@@ -92,7 +92,7 @@ function kpg_ss_admin_menu_l() {
 	add_submenu_page(
 	'stop_spammers', // plugins parent
 	"Stop Spammers Web Services and API Settings", //$page_title,
-	'&nbsp;&bull; Web Services', //$menu_title,
+	'Web Services', //$menu_title,
 	'manage_options', //$capability,
 	'kpg_ss_webservices_settings', //$menu_slug,
 	'kpg_ss_webservices_settings'
@@ -100,7 +100,7 @@ function kpg_ss_admin_menu_l() {
 	add_submenu_page(
 	'stop_spammers', // plugins parent
 	"Challenge and Deny Options", //$page_title,
-	'&nbsp;&bull; Challenge &amp; Deny', //$menu_title,
+	'Challenge &amp; Deny', //$menu_title,
 	'manage_options', //$capability,
 	'ss_challenge', //$menu_slug,
 	'kpg_ss_challenges' // function
@@ -108,7 +108,7 @@ function kpg_ss_admin_menu_l() {
 	add_submenu_page(
 	'stop_spammers', // plugins parent
 	"Threat Scan", //$page_title,
-	'&nbsp;&bull; Threat Scan', //$menu_title,
+	'Threat Scan', //$menu_title,
 	'manage_options', //$capability,
 	'ss_threat_scan', //$menu_slug,
 	'kpg_ss_threat_scan' // function
@@ -116,7 +116,7 @@ function kpg_ss_admin_menu_l() {
 	add_submenu_page(
 	'stop_spammers', // plugins parent
 	"Other WordPress Options Maintenance", //$page_title,
-	'&nbsp;&bull; Other WP Options', //$menu_title,
+	'Other WP Options', //$menu_title,
 	'manage_options', //$capability,
 	'ss_option_maint', //$menu_slug,
 	'kpg_ss_option_maint' // function
@@ -125,7 +125,7 @@ function kpg_ss_admin_menu_l() {
 	add_submenu_page(
 	'stop_spammers', // plugins parent
 	"Plugin Diagnostics", //$page_title,
-	'&nbsp;&bull; Diagnostics', //$menu_title,
+	'Diagnostics', //$menu_title,
 	'manage_options', //$capability,
 	'ss_diagnostics', //$menu_slug,
 	'kpg_ss_diagnostics' // function
@@ -133,7 +133,7 @@ function kpg_ss_admin_menu_l() {
 	add_submenu_page(
 	'stop_spammers', // plugins parent
 	"Add Ons", //$page_title,
-	'&nbsp;&bull; Addons', //$menu_title,
+	'Addons', //$menu_title,
 	'manage_options', //$capability,
 	'ss_addons', //$menu_slug,
 	'kpg_ss_addons' // function
@@ -141,7 +141,7 @@ function kpg_ss_admin_menu_l() {
 	add_submenu_page(
 	'stop_spammers', // plugins parent
 	"Keep This Plugin Alive", //$page_title,
-	'<span style="font-weight:bold;color:lightsteelblue;font-size:1.1em;"><span style="color:red;">&nbsp;&bull;</span> Contribute!</span>', //$menu_title,
+	'<span style="font-weight:bold;">Contribute!</span>', //$menu_title,
 	'manage_options', //$capability,
 	'ss_contribute', //$menu_slug,
 	'kpg_ss_contribute' // function

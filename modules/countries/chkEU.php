@@ -1,5 +1,5 @@
 <?php
-// generated Monday 16th of February 2015 07:13:02 PM
+// generated Saturday 14th of March 2015 07:26:45 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkEU extends be_module {
@@ -15,10 +15,12 @@ class chkEU extends be_module {
 	array('109206166000','109206168000'),
 	array('141101064000','141101065000'),
 	array('141101075000','141101076000'),
+	array('176103128000','176103160000'),
 	array('185040180000','185040181000'),
 	array('193105154000','193105155000'),
 	array('193106032000','193106036000'),
 	array('193200150000','193200151000'),
+	array('195242214000','195242216000'),
 	array('213238168000','213238176000')
 	);
 }
