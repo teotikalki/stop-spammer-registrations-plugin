@@ -175,7 +175,7 @@ echo "<p>Memory Usage Current: $m1, Peak: $m3</p>";
 
 $nonce=wp_create_nonce('kpg_ss_update2');
 $showtransients=false; // change to true to clean up transients
-if (countTransients()>0 && $showtransients) { // personal use - probably too dangerous for casual users.
+if ($showtransients && countTransients()>0  ) { // personal use - probably too dangerous for casual users.
 ?>
 <hr>
 <p> Wordpress creates temporary objects in the database called transients. 

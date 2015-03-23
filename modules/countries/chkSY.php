@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:27:35 PM
+// generated Sunday 22nd of March 2015 02:03:26 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkSY extends be_module {
@@ -9,6 +9,7 @@ class chkSY extends be_module {
 	array('005000192000','005001000000'),
 	array('005155128000','005155192000'),
 	array('031009000000','031009128000'),
+	array('046053000000','046053064000'),
 	array('046161192000','046162000000'),
 	array('078110096000','078110112000'),
 	array('078155064000','078155096000'),

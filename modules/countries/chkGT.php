@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:26:52 PM
+// generated Sunday 22nd of March 2015 02:02:39 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkGT extends be_module {
@@ -11,6 +11,7 @@ class chkGT extends be_module {
 	array('190004000000','190004032000'),
 	array('190056000000','190057000000'),
 	array('190106196000','190106198000'),
+	array('190106200000','190106202000'),
 	array('190106203232','190106203236'),
 	array('190106208032','190106208036'),
 	array('190106215248','190106216000'),

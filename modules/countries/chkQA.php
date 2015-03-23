@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:27:26 PM
+// generated Sunday 22nd of March 2015 02:03:16 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkQA extends be_module {
@@ -8,6 +8,7 @@ class chkQA extends be_module {
 	array('005175151000','005175152000'),
 	array('037208128000','037208144000'),
 	array('037210128000','037210160000'),
+	array('037211212000','037211216000'),
 	array('078100000000','078101048000'),
 	array('080076160000','080076168000'),
 	array('089211096000','089211128000'),

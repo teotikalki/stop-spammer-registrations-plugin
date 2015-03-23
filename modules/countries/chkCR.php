@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:26:38 PM
+// generated Sunday 22nd of March 2015 02:02:23 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkCR extends be_module {
@@ -11,6 +11,7 @@ class chkCR extends be_module {
 	array('186015000000','186015128000'),
 	array('186026112000','186026128000'),
 	array('186176120000','186176124000'),
+	array('186176128000','186176160000'),
 	array('186179064000','186179080000'),
 	array('190005212000','190005216000'),
 	array('190007208000','190007224000'),

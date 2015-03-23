@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:26:42 PM
+// generated Sunday 22nd of March 2015 02:02:28 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkEC extends be_module {
@@ -59,6 +59,8 @@ class chkEC extends be_module {
 	array('200006020000','200006021000'),
 	array('200007201000','200007201128'),
 	array('200007202000','200007202128'),
+	array('200024192000','200024224000'),
+	array('200055224000','200055240000'),
 	array('200055248000','200056000000'),
 	array('200063192000','200063213128'),
 	array('200090152000','200090160000'),

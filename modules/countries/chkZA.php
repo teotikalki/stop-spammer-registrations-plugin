@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:27:48 PM
+// generated Sunday 22nd of March 2015 02:03:40 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkZA extends be_module {
@@ -7,6 +7,7 @@ class chkZA extends be_module {
 	public $searchlist=array(
 	array('005189200000','005189201000'),
 	array('105000000000','105016000000'),
+	array('105208000000','105224000000'),
 	array('105226000000','105228000000'),
 	array('105229000000','105230000000'),
 	array('137158000000','137159000000'),

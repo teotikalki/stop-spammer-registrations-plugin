@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:26:55 PM
+// generated Sunday 22nd of March 2015 02:02:42 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkHR extends be_module {
@@ -10,8 +10,7 @@ class chkHR extends be_module {
 	array('031147000000','031148000000'),
 	array('031217000000','031217128000'),
 	array('037060128000','037060132000'),
-	array('078000000000','078001000000'),
-	array('078002000000','078003000000'),
+	array('078000000000','078003000000'),
 	array('085010048000','085010064000'),
 	array('088207000000','088207128000'),
 	array('089017000000','089017004000'),

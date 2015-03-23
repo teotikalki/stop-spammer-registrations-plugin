@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:26:41 PM
+// generated Sunday 22nd of March 2015 02:02:27 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkDO extends be_module {
@@ -7,6 +7,7 @@ class chkDO extends be_module {
 	public $searchlist=array(
 	array('064032064000','064032128000'),
 	array('148000000000','148001000000'),
+	array('152166000000','152167000000'),
 	array('179043192000','179043208000'),
 	array('179052000000','179054000000'),
 	array('181036000000','181036001000'),
@@ -22,7 +23,7 @@ class chkDO extends be_module {
 	array('200026168000','200026169000'),
 	array('200026172176','200026172184'),
 	array('200088113216','200088113224'),
-	array('200088128000','200088192000')
+	array('200088128000','200089000000')
 	);
 }
 ?>

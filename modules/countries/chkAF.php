@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:26:19 PM
+// generated Sunday 22nd of March 2015 02:02:04 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkAF extends be_module {
@@ -13,7 +13,8 @@ class chkAF extends be_module {
 	array('103235176000','103235180000'),
 	array('180094068000','180094072000'),
 	array('180094077000','180094078000'),
-	array('180094085000','180094086000'),
+	array('180094084000','180094086000'),
+	array('180094091000','180094092000'),
 	array('180222142000','180222143000'),
 	array('203215032000','203215048000')
 	);

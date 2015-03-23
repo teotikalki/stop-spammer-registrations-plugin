@@ -1,11 +1,11 @@
 <?php
-// generated Saturday 14th of March 2015 07:26:18 PM
+// generated Sunday 22nd of March 2015 02:02:03 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkAE extends be_module {
 	public $searchname='United Arab Emirates';
 	public $searchlist=array(
-	array('002049000000','002050064000'),
+	array('002049000000','002050128000'),
 	array('002050142000','002050192000'),
 	array('002051000000','002051192000'),
 	array('002051200000','002051216000'),
@@ -17,6 +17,7 @@ class chkAE extends be_module {
 	array('005032064000','005032096000'),
 	array('005107000000','005108000000'),
 	array('031215000000','031215128000'),
+	array('080227064000','080227096000'),
 	array('083110000000','083111000000'),
 	array('086096000000','086100000000'),
 	array('087200224000','087201000000'),

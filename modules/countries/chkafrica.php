@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:26:17 PM
+// generated Sunday 22nd of March 2015 02:02:02 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkAfrica extends be_module {

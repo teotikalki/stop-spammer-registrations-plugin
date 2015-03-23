@@ -47,7 +47,7 @@ Email: <input name="email" type="text" value="<?php echo $email; ?>"><br>
 Author/User: <input name="author" type="text" value="<?php echo $author; ?>"><br>
 Subject: <input name="subject" type="text" value="<?php echo $subject; ?>"><br>
 Comment: <textarea name="body"><?php echo $body; ?></textarea><br>
-</form>
+
 <div style="width:50%;float:left;">
 <p class="submit"><input name="testopt" class="button-primary" value="Test Options" type="submit" /></p>
 </div>
@@ -240,7 +240,7 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 
 
 
-
+</form>
 <?php
 // if there is a log file we can display it here
 $dfile=KPG_SS_PLUGIN_FILE.'includes/.sfs_debug_output.txt';

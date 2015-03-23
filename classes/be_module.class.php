@@ -40,7 +40,7 @@ class be_module {
 			// check for wildcard - both email and ip
 			if (strpos($search,'*')!==false || strpos($search,'?')!==false ) {
 				// new wild card search
-				if ($this->wildcard_match($search,$needle))  return "$searchname:$reason:$needle";			
+				if (be_module::wildcard_match($search,$needle))  return "$searchname:$reason:$needle";			
 				continue;
 			}
 			// check for partial both email and ip
@@ -67,7 +67,7 @@ class be_module {
 			// four kinds of search, looking for an ip, cidr, wildcard or an email
 			// check for wildcard - both email and ip
 			if (strpos($search,'*')!==false||strpos($search,'?')!==false) {
-				if ($this->wildcard_match($search,$needle)) return "$searchname:$reason:$needle";			
+				if (be_module::wildcard_match($search,$needle)) return "$searchname:$reason:$needle";			
 				//$search=substr($search,0,strpos($search,'*'));
 				//if ($search=substr($needle,0,strlen($search))) return "$searchname:$reason";
 			}
@@ -97,11 +97,36 @@ class be_module {
 	public $searchname='';
 	public $searchlist=array();
 	public function process($ip,&$stats=array(),&$options=array(),&$post=array())  {
-		$ipt=$this->ip2numstr($ip);
+		return be_module::ipListMatch($ip);
+	}
+	public static function ip2numstr($ip) {
+		if(long2ip(ip2long($ip))!=$ip) return false;
+		list($b1,$b2,$b3,$b4)=explode('.',$ip);
+		$b1=str_pad($b1,3,'0',STR_PAD_LEFT);
+		$b2=str_pad($b2,3,'0',STR_PAD_LEFT);
+		$b3=str_pad($b3,3,'0',STR_PAD_LEFT);
+		$b4=str_pad($b4,3,'0',STR_PAD_LEFT);
+		$s=$b1.$b2.$b3.$b4;
+		return $s;
+	}
+	public function ipListMatch($ip)  {
+		// does a match agains a list of ip addresses
+		$ipt=be_module::ip2numstr($ip);
 		foreach($this->searchlist as $c) {
 			if (!is_array($c)) {
-				$this->searchname=$c;
-			} else {
+				// this might be a cidr
+				if (substr_count($c,'.')==3) {
+					if (strpos($c,'/')!==false) {
+						// cidr
+						$c=be_module::cidr2ip($c);
+					} else {
+						// single ip
+						$c=array($c,$c);
+					} 
+				}
+				if (!is_array($c))$this->searchname=$c;
+			} 
+			if (is_array($c)) {
 				list($ips,$ipe)=$c;
 				if (strpos($ips,'.')===false&&strpos($ips,':')===false) { // new numstr format
 					if ($ipt<$ips) return false;
@@ -113,9 +138,13 @@ class be_module {
 						return $this->searchname.': '.$ip;
 					} 
 				} else {
-					$ips=$this->ip2numstr($ips);
-					$ipe=$this->ip2numstr($ipe);
+					$ips=be_module::ip2numstr($ips);
+					$ipe=be_module::ip2numstr($ipe);
 					if ($ipt>=$ips && $ipt<=$ipe) {
+						if ( is_array($ip)) {
+							echo "array in ip: ".print_r($ip,true)."<br>";
+							$ip=$ip[0];
+						}
 						return $this->searchname.': '.$ip;
 					} 
 				}
@@ -123,18 +152,7 @@ class be_module {
 		}
 		return false;
 	}
-	function ip2numstr($ip) {
-		if(long2ip(ip2long($ip))!=$ip) return false;
-		list($b1,$b2,$b3,$b4)=explode('.',$ip);
-		$b1=str_pad($b1,3,'0',STR_PAD_LEFT);
-		$b2=str_pad($b2,3,'0',STR_PAD_LEFT);
-		$b3=str_pad($b3,3,'0',STR_PAD_LEFT);
-		$b4=str_pad($b4,3,'0',STR_PAD_LEFT);
-		$s=$b1.$b2.$b3.$b4;
-		return $s;
-	}
-	
-	public function getafile($f,$method='GET') {
+	public static function getafile($f,$method='GET') {
 		// try this using Wp_Http
 		if( !class_exists( 'WP_Http' ) )
 		include_once( ABSPATH . WPINC. '/class-http.php' );
@@ -158,7 +176,7 @@ class be_module {
 		return '';
 	}
 
-	public function getSname() {
+	public static function getSname() {
 		// gets the module name from the url address line
 		$sname='';
 		if(isset($_SERVER['REQUEST_URI'])) $sname=$_SERVER["REQUEST_URI"];	
@@ -188,7 +206,7 @@ class be_module {
 * @param string $value
 * @return bool|array
 */
-	public function wildcard_match($pattern, $value) {
+	public static function wildcard_match($pattern, $value) {
 		if(is_array($value)) {
 			$return = array();
 			foreach($value as $string) {
@@ -214,6 +232,67 @@ class be_module {
 		$pattern = '/^'.$pattern.'$/';
 		return preg_match($pattern, $value);
 	}	
+	public static function cidr2ip($cidr) { // returns numstr
+		if (strpos($cidr,'/')===false) return false;
+		list($ip,$bits) = explode('/', $cidr);
+		//echo "1) Bad end $ip, $bits,<br>";
+		$ip=be_module::fixip($ip); // incase the wrong number of dots
+		//echo "2) Bad end $ip, $bits,<br>";
+		if ($ip===false) return false;
+		$start=$ip;
+		$end = ip2long($ip);
+		$end=sprintf("%u", $end);
+		$end1=$end+0;
+		$num = pow(2, 32 - $bits)-1;
+		//echo "4) Bad end $num,<br>";
+		$end=($end+0) | $num;
+		$end=$end+1;
+		//$pend=long2ip($end);
+		//echo "3) Bad end $pend,<br>";
+		$end2=long2ip($end);
+		if ($end=='128.0.0.0') {
+			//echo "Bad end $ip, $bits,$end, $end1, $end2, $num)<br>";
+		}
+		$start=be_module::cidrStart2str($start,$bits);
+		return array($start, $end2);
+	}
+
+	public static function cidr2str($ipl,$bits) {
+		// finds end range for a numstr input
+		$ipl=ip2long($ipl);
+		$ipl=sprintf("%u", $ipl);
+		$num = pow(2, 32 - $bits) -1;
+		$ipl=$ipl+0;
+		$ipl=$ipl | $num;
+		$ipl++;
+		return long2ip($ipl);
+	}
+	public static function fixip($ip) {
+		// checks ip for right number of zeros
+		$ip=trim($ip);
+		if (empty($ip)) return false;
+		if (strpos($ip,'.')===false) return false;
+		if (count(explode('.',$ip))==2) $ip.='.0.0';
+		if (count(explode('.',$ip))==3) $ip.='.0';
+		if(long2ip(ip2long($ip))!=$ip) return false;
+		return $ip;
+	}
+	public static function cidrStart2str($ipl,$bits) {
+		// finds end range for a numstr input
+		$ipl=ip2long($ipl);
+		$ipl=sprintf("%u", $ipl);
+		$num = pow(2, 32 - $bits) -1;
+		//echo decbin($num).'<br>';
+		$ipl=$ipl+0;
+		//echo decbin($ipl).'<br>';
+		$z=pow(2,33)-1;
+		//echo 'z'.decbin($z).'<br>';
+		$z=$num^$z; // 10000000000000000000000000000 xor 0000000000000000000011111 = 011111111111111111111111100000
+		//echo 'z2'.decbin($z).'<br>';
+		$ipl=$ipl & $z;
+		return long2ip($ipl);
+	}	
+
 }
 
 ?>

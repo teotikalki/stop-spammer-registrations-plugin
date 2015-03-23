@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:27:02 PM
+// generated Sunday 22nd of March 2015 02:02:49 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkKH extends be_module {
@@ -18,6 +18,7 @@ class chkKH extends be_module {
 	array('103244248000','103244252000'),
 	array('110074192000','110074224000'),
 	array('111090188000','111090190000'),
+	array('111118144000','111118160000'),
 	array('113130124000','113130128000'),
 	array('114134185000','114134186000'),
 	array('116212129000','116212130000'),

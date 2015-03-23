@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:27:44 PM
+// generated Sunday 22nd of March 2015 02:03:35 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkUZ extends be_module {
@@ -9,6 +9,7 @@ class chkUZ extends be_module {
 	array('089146120000','089146124000'),
 	array('089236192000','089237000000'),
 	array('091240012000','091240016000'),
+	array('094141073000','094141074000'),
 	array('094141084000','094141085000'),
 	array('178218200000','178218208000'),
 	array('188113192000','188113224000'),

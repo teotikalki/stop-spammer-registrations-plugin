@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:27:07 PM
+// generated Sunday 22nd of March 2015 02:02:56 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkLU extends be_module {
@@ -13,6 +13,8 @@ class chkLU extends be_module {
 	array('083099000000','083099128000'),
 	array('085093192000','085093224000'),
 	array('087254096000','087254128000'),
+	array('088207128000','088208000000'),
+	array('091214044000','091214048000'),
 	array('094242192000','094243000000'),
 	array('095141029000','095141030000'),
 	array('128127109000','128127110000'),

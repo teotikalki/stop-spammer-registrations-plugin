@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:26:25 PM
+// generated Sunday 22nd of March 2015 02:02:09 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkBA extends be_module {
@@ -12,6 +12,7 @@ class chkBA extends be_module {
 	array('031223128000','031223160000'),
 	array('037203096000','037203124000'),
 	array('046035128000','046035160000'),
+	array('046036160000','046036192000'),
 	array('046239032000','046239048000'),
 	array('062068096000','062068104000'),
 	array('062068112000','062068114000'),

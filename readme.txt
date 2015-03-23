@@ -3,18 +3,25 @@ Tags: spam, comment, registration, login
 Requires at least: 3.0
 Tested up to: 4.2
 Contributors: Keith Graham
-Stable tag: 6.08
+Stable tag: 6.09
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-The Stop Spammers Plugin blocks spammers from leaving comments or logging in. Prevents robots from registering and protects sites from attacks.
+The Stop Spammers Plugin blocks spammers from leaving comments or logging in. Prevents robots from registering and protects sites against malicious attacks.
 
 == Description == 
 Stop Spammers is an aggressive website defence against comment spam and login attempts. It is capable of performing more than 20 different checks for malicious events and can block spammers from over 100 different countries. 
-Much of the code in this plugin is dedicated to allowing good users access to comments with many "allow" features to prevent having false positives when checking spam.
+
 There are 12 pages of options that can be used to configure the plugin to your needs.
+
+There are free add-ons available that check some special cases.
+
 In cases where spam is detected, users are offered a second chance to post their comments or login. Denied requests are presented with a captcha screen in order to prevent users from being blocked. The captcha can be configures as OpenCaptcha, Google reCaptcha, or SolveMedia Captcha. The Captcha will only appear when a user is denied access as a spammer.
+
 The plugin is designed to work with other plugins like Gravity Forms. It looks at any FORM POST such as BBPress or other addons that use access controls. THe plugin implements a fuzzy search for email and user ids in order to check for spam.
+
+Much of the code in this plugin is dedicated to allowing good users access to comments with many "allow" features to prevent having false positives when checking spam.
+
 The Stop Spammers Plugin has been under development since 2010.
 
  
@@ -28,6 +35,15 @@ THEN
 4. Under the settings, review options that are enabled. The plugin will operate very well without changing any settings. You may wish to update Web Services APIs for reporting spam and change the captcha settings from the default OpenCapture.  
 
 == Changelog ==
+
+= 6.09 =
+* IIs 7 and IIs 6 and some hosts fixes for SERVER_ADDR not found
+* Fix for Manage Plugin Options to prevent transient checks. (I may restore the transient checks in a future version.)
+* Add WorldPay to misc allow list.
+* Updated Country spam list and Generated Allow List.
+* Fixed bug in finding values in POST. Sometimes returned an array.
+* Removed Stripe from Donation page. 
+* TLD now looks at all post fields. If author, url, subject or comment ends in dot-tld it is denied. Woo forms sometimes confuses what is the email, so this will test more things for email. It is better though to try *@*.xxx in the deny list, than trying to use TLDs when a plugin uses non standard form field names.
 
 = 6.08 =
 * Responded to complaints about admin menu - now it is boring.

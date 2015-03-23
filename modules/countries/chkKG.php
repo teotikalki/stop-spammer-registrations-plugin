@@ -1,11 +1,12 @@
 <?php
-// generated Saturday 14th of March 2015 07:27:01 PM
+// generated Sunday 22nd of March 2015 02:02:49 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkKG extends be_module {
 	public $searchname='Kyrgyzstan';
 	public $searchlist=array(
 	array('005057008000','005057009000'),
+	array('031192255000','031193000000'),
 	array('037143128000','037143136000'),
 	array('037218128000','037218192000'),
 	array('081088192000','081088208000'),
@@ -18,6 +19,7 @@ class chkKG extends be_module {
 	array('158181192000','158182000000'),
 	array('195114248000','195115000000'),
 	array('212002224000','212003000000'),
+	array('212042103000','212042104000'),
 	array('212042116000','212042117000'),
 	array('212042118000','212042119000'),
 	array('212097000000','212097001000'),

@@ -1,5 +1,5 @@
 <?php
-// generated Saturday 14th of March 2015 07:27:25 PM
+// generated Sunday 22nd of March 2015 02:03:15 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkPT extends be_module {
@@ -37,6 +37,7 @@ class chkPT extends be_module {
 	array('089154000000','089154064000'),
 	array('089154192000','089155000000'),
 	array('089155128000','089155192000'),
+	array('089180000000','089180032000'),
 	array('089180128000','089180160000'),
 	array('089181032000','089181064000'),
 	array('089214000000','089215000000'),
