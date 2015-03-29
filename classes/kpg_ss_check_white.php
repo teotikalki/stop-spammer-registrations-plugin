@@ -13,21 +13,6 @@ class kpg_ss_check_white extends be_module {
 		
 		// can't ever block local server because of cron jobs
 		$ip=kpg_get_ip(); // we are losing ip occasionally
-		$lip=$_SERVER["SERVER_ADDR"];
-		if ($ip==$lip) {
-			//kpg_ss_log_good(kpg_get_ip(),'ip same as server:'.$ip,'chkvalidip');
-			//return 'ip same as server:'.$ip;
-		}
-		// we can do this with ip4 addresses - check if same /24 subnet
-		$j=strrpos($ip,'.');
-		if ($j!==false) {
-			$k=strrpos($lip,'.');
-			if ($k!==false) {
-				//if (substr($ip,0,$j)==substr($lip,0,$k)) 
-				//kpg_ss_log_good(kpg_get_ip(),'ip same /24 subnet as server'.$ip,'chkvalidip');
-				//return 'ip same /24 subnet as server'.$ip;
-			}
-		}
 		// for addons
 		$addons=array();
 		$addons=apply_filters('kpg_ss_addons_allow',$addons);

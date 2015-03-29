@@ -27,6 +27,7 @@ if (!empty($nonce) && wp_verify_nonce($nonce,'kpgstopspam_update')) {
 	'chkreferer',
 	'chkdisp',
 	'chklong',
+	'chkmulti',
 	'chksession',
 	'chk404',
 	'chkexploits',

@@ -38,16 +38,16 @@ class kpg_ss_challenge extends be_module{
 		// nonce is in a field named kn - this is not to confuse with other forms that may be coming in
 		$nonce='';
 		$msg=''; // this is the body message for failed captchas, notifies and requests
-		if (!empty($_POST)&&array_key_exists('kn',$_POST)&&array_key_exists('km',$_POST)&&array_key_exists('ke',$_POST)) {
+		if (!empty($_POST)&&array_key_exists('kn',$_POST)) {
 			//sfs_debug_msg('second time');
 			$nonce=$_POST['kn'];
 			// get the post items
-			$ke=sanitize_text_field($_POST['ke']);
-			$km=sanitize_text_field($_POST['km']);
+			if (array_key_exists('ke',$_POST)) $ke=sanitize_text_field($_POST['ke']);
+			if (array_key_exists('km',$_POST)) $km=sanitize_text_field($_POST['km']);
 			if (strlen($km)>80) $km=substr($km,0,77).'...';
-			$kr=sanitize_text_field($_POST['kr']);
-			$ka=sanitize_text_field($_POST['ka']);
-			$kp=$_POST['kp']; // serialized post
+			if (array_key_exists('kr',$_POST)) $kr=sanitize_text_field($_POST['kr']);
+			if (array_key_exists('ka',$_POST)) $ka=sanitize_text_field($_POST['ka']);
+			if (array_key_exists('kp',$_POST)) $kp=$_POST['kp']; // serialized post
 			if (!empty($nonce)&&wp_verify_nonce($nonce,'kpg_stopspam_deny')) {
 				//sfs_debug_msg('nonce is good');
 				// have a form return.
@@ -78,7 +78,7 @@ class kpg_ss_challenge extends be_module{
 						$fff.=sanitize_text_field($_POST['code']);
 						$fff.='&img=';
 						$fff.=sanitize_text_field($_POST['img']);
-						$sn=file_get_contents($fff);
+						$sn=kpg_read_file($fff);
 						if($sn=='pass') {
 							// restore the post
 							//$kp=base64_encode(serialize($_POST));
@@ -102,9 +102,9 @@ class kpg_ss_challenge extends be_module{
 							$msg="Recaptcha Keys are not set.";
 						} else {
 							$g=$_REQUEST['g-recaptcha-response'];
-							$url="https://www.google.com/recaptcha/api/siteverify";
+							//$url="https://www.google.com/recaptcha/api/siteverify";
 							$url="https://www.google.com/recaptcha/api/siteverify?secret=$recaptchaapisecret&response=$g&remoteip=$ip";
-							$resp=file_get_contents($url);
+							$resp=kpg_read_file($url);
 							////sfs_debug_msg("recaptcha '$g', '$ip' '$resp' - \r\n".print_r($_POST,true));
 							if (strpos($resp,'"success": true')!==false) { // found success
 								//$kp=base64_encode(serialize($_POST));
@@ -127,28 +127,57 @@ class kpg_ss_challenge extends be_module{
 						$solvmediaapiverify=$options['solvmediaapiverify'];
 						$adcopy_challenge=$_REQUEST['adcopy_challenge'];
 						$adcopy_response=$_REQUEST['adcopy_response'];
-						$ip='127.0.0.1';
+						//$ip='127.0.0.1';
 						
 						$postdata = http_build_query(
 						array(
-						'privatekey' => $solvmediaapiverify,
-						'challenge' => $adcopy_challenge,
-						'response' => $adcopy_response,
-						'remoteip' => $ip
-						)
+							'privatekey' => $solvmediaapiverify,
+							'challenge' => $adcopy_challenge,
+							'response' => $adcopy_response,
+							'remoteip' => $ip
+							)
 						);
 
 						$opts = array('http' =>
-						array(
-						'method'  => 'POST',
-						'header'  => 'Content-type: application/x-www-form-urlencoded',
-						'content' => $postdata
-						)
+							array(
+							'method'  => 'POST',
+							'header'  => 'Content-type: application/x-www-form-urlencoded',
+							'content' => $postdata
+							)
 						);
 
-						$context  = stream_context_create($opts);
-
-						$result = file_get_contents('http://verify.solvemedia.com/papi/verify/', false, $context);  
+						//$context  = stream_context_create($opts);
+						// need to rewrite this post with the wp class
+						
+						
+						/**********************************************
+							try to use the sp function
+						**********************************************/
+						$body=array(
+							'privatekey' => $solvmediaapiverify,
+							'challenge' => $adcopy_challenge,
+							'response' => $adcopy_response,
+							'remoteip' => $ip
+						);
+						$args = array(
+							'user-agent'  => 'WordPress/' . '4.2' . '; ' . get_bloginfo( 'url' ),
+							'blocking'    => true,
+							'headers'     => array('Content-type: application/x-www-form-urlencoded'),
+							'method' => 'POST',
+							'timeout' => 45,
+							'redirection' => 5,
+							'httpversion' => '1.0',
+							'body' => $body,
+							'cookies' => array()
+						);
+						$url='http://verify.solvemedia.com/papi/verify/';
+						$resultarray= wp_remote_post( $url, $args );
+						$result=$resultarray['body'];
+						
+						
+						//$result = 
+						//file_get_contents('http://verify.solvemedia.com/papi/verify/', 
+						//false, $context);  
 
 						if (strpos($result,'true')!==false) {
 							$_POST=unserialize(base64_decode($kp));
@@ -189,15 +218,18 @@ class kpg_ss_challenge extends be_module{
 					break;					
 				}
 			} // nonce check - not a valid nonce on form submit yet the value is there - what do we do?
-				//sfs_debug_msg('leaving second time');
+			//sfs_debug_msg('leaving second time');
 		} else {
 			// first time through
+			//print_r($post);
+			//print_r($_POST);
 			$ke=$post['email'];
 			$km='';
-			$kr=$post['reason'];
+			$kr="";
+			//if (array_key_exists('reason',$post)) $kr=$post['reason'];
 			$ka=$post['author'];
 			$kp=base64_encode(serialize($_POST));
-				//sfs_debug_msg('first time getting post stuff');
+			//sfs_debug_msg('first time getting post stuff');
 		}
 		//sfs_debug_msg('creating form data');
 		// made it here - we display the screens
@@ -220,10 +252,10 @@ class kpg_ss_challenge extends be_module{
 </form>
 
 ";
-	$not='';
-	if ($wlreq=='Y') {
-		// halfhearted attempt to hide which field is the email field.
-		$not="
+		$not='';
+		if ($wlreq=='Y') {
+			// halfhearted attempt to hide which field is the email field.
+			$not="
 <fieldset style=\"border:thin solid black;padding:6px;width:100%;\">
 <legend><span style=\"font-weight:bold;font-size:1.2em\" >Allow Request</span></legend>
 <p>You have been blocked from entering information on this blog. In order to prevent this from happening in the future you
@@ -233,7 +265,7 @@ may ask the owner to add your network address to a list that allows you full acc
 message <!-- not email -->:<br><textarea name=\"km\"></textarea>
 </fieldset>
 ";	
-	}
+		}
 		$captop="
 <fieldset style=\"border:thin solid black;padding:6px;width:100%;\">
 <legend><span style=\"font-weight:bold;font-size:1.2em\" >Please prove you are not a Robot</span></legend>
@@ -335,7 +367,7 @@ Enter the code: <input type=text name=code value='' size='35' />
 		";
 		wp_die($ansa,"Stop Spammers",array('response' => 200));
 		exit();
-	
+		
 		
 
 	}
@@ -376,7 +408,7 @@ Some spam robots are already filling out the request form with a bogus explanati
 
 
 Stop Spammers Plugin";
-$message=wordwrap($message, 70, "\r\n");
+			$message=wordwrap($message, 70, "\r\n");
 			$headers = 'From: '.get_option('admin_email'). "\r\n";
 			wp_mail( $to, $subject, $message,$headers );
 			$rejectmessage="<h2>Mail sent, thank you</h2>";

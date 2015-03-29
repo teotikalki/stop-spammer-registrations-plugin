@@ -3,11 +3,11 @@ Tags: spam, comment, registration, login
 Requires at least: 3.0
 Tested up to: 4.2
 Contributors: Keith Graham
-Stable tag: 6.09
+Stable tag: 6.10
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-The Stop Spammers Plugin blocks spammers from leaving comments or logging in. Prevents robots from registering and protects sites against malicious attacks.
+The Stop Spammers Plugin blocks spammers from leaving comments or logging in. Protects sites from robot registrations and malicious attacks.
 
 == Description == 
 Stop Spammers is an aggressive website defence against comment spam and login attempts. It is capable of performing more than 20 different checks for malicious events and can block spammers from over 100 different countries. 
@@ -35,6 +35,13 @@ THEN
 4. Under the settings, review options that are enabled. The plugin will operate very well without changing any settings. You may wish to update Web Services APIs for reporting spam and change the captcha settings from the default OpenCapture.  
 
 == Changelog ==
+
+= 6.10 =
+* Fixed bug in check multi hits option.
+* Fixed problem with server_addr variable in checking of allow lists.
+* Johan Schiff sent me some nice improvements to the TLD check which I included. It supports complex sub-domains now in addition to simple TLDs.
+* Another fix to threat scan trying to follow symbolic links.
+* Fixed captcha processing on sites that cannot use URL open functions. 
 
 = 6.09 =
 * IIs 7 and IIs 6 and some hosts fixes for SERVER_ADDR not found

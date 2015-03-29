@@ -1,5 +1,9 @@
 <?php
 // changed to look for the ending tld in all fields
+
+// Thanks to Johan Schiff for hacking up some cool improvements to this module.
+
+
 if (!defined('ABSPATH')) exit;
 
 class chktld { // change name
@@ -14,15 +18,17 @@ class chktld { // change name
 				if (empty($key)) continue;
 				if (strpos($value,'.')===false) continue;
 				$ft=strtolower(trim($ft));
-				if (empty($ft)) continue;
+				$dlvl=substr_count($ft,'.');
+				if ($dlvl==0) continue;
+				//if (empty($ft)) continue;
 				//echo "2 $key, $value, $ft<br>";
 				$t=explode('.',$value);			
-				$tt=$t[count($t)-1];
+				$tt=implode(array_slice($t,count($t)-$dlvl,$dlvl), '.');
 				$tt='.'.trim(strtolower($tt));
 				if ($ft==$tt) return "TLD blocked: $key:$value:$ft";
 			}
 		}
-	
+		
 		return false;
 	}
 }

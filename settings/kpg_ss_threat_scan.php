@@ -330,7 +330,7 @@ function kpg_ss_scan_for_eval() {
 	$phparray=array();
 	// use get_home_path()
 	//$phparray=kpg_ss_scan_for_eval_recurse(WP_CONTENT_DIR.'/..',$phparray);
-	$phparray=kpg_ss_scan_for_eval_recurse(get_home_path(),$phparray);
+	$phparray=kpg_ss_scan_for_eval_recurse(realpath(get_home_path()),$phparray);
 	// phparray should have a list of all of the PHP files
 	$disp=false;
 	echo "Files: <ol>";
@@ -360,15 +360,18 @@ function kpg_ss_scan_for_eval_recurse($dir,$phparray) {
 	if (!@is_dir($dir))  return $phparray;
     //if (substr($dir,0,1)='.') return $phparray;
 	$dh=null;
+	// can't protect this - turn off the error capture for a moment.
+	sfs_errorsonoff('off');
 	try {
-		$dh=opendir($dir);
+		$dh=@opendir($dir);
 	} catch (Exception $e) {
+		sfs_errorsonoff();
 		return $phparray;
 	}
-	
-	if ($dh!==false) {
+	sfs_errorsonoff();
+	if ($dh!==null && $dh!==false) {
 		while (($file = readdir($dh)) !== false) {
-			if (is_dir($dir .'/'. $file)) {
+			if (@is_dir($dir .'/'. $file)) {
 				if ($file!='.' && $file!='..' ) {
 					$phparray=kpg_ss_scan_for_eval_recurse($dir .'/'. $file,$phparray);
 				}

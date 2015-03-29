@@ -142,7 +142,10 @@ This is a string search so that all you have to enter is enough of the agent to 
 <legend><span style="font-weight:bold;font-size:1.2em" >Blocked TLDs</span></legend>
 Enter the TLD name including the '.' e.g. .XXX<br>
 <b>This only works for email addresses entered by the user.</b><br>
-This will block all comments and registrations that use this TLD in domains domain for emails.<br>
+This will block all comments and registrations that use this TLD in domains for emails.<br>
+If you have a problem with a more complex sub-domains you can also use this to check anything after the first period. 
+This is not for stopping domains, though. Entering '.xxx.ru' will stop 'user@mail.xxx.ru',
+but it will not stop 'user@xxx.ru'. 
 Blocked TLDs (One TLD per line not case sensitive):<br>
 <textarea name="badTLDs" cols="32" rows="8"><?php
 foreach($badTLDs as $p) {
