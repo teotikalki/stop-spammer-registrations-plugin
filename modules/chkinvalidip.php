@@ -12,13 +12,10 @@ class chkinvalidip {
 					return 'invalid ip: '.$ip;
 				}
 			}
-		
-		
-		// check ip4 for local private ip addresses
-		//224.0.0.0 through 239.255.255.255
-		if($ip>='224.0.0.0'&&$ip<='239.255.255.255') return 'IPv4 Multicast Address Space Registry';
+		$ips=be_module::ip2numstr($ip);
+		if($ips>='224000000000'&&$ips<='239255255255') return 'IPv4 Multicast Address Space Registry';
 		// Reserved for future use >=240.0.0.0
-		if($ip>='240.0.0.0'&&$ip<='255.255.255.255') return 'Reserved for future use';
+		if($ips>='240000000000'&&$ips<='255255255255') return 'Reserved for future use';
 		return false;
 	}
 }

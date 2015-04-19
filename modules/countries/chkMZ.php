@@ -1,11 +1,13 @@
 <?php
-// generated Sunday 22nd of March 2015 02:03:05 PM
+// generated Saturday 11th of April 2015 04:12:53 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkMZ extends be_module {
 	public $searchname='Mozambique';
 	public $searchlist=array(
-	array('197235032000','197235064000')
+	array('197218192000','197218224000'),
+	array('197235032000','197235064000'),
+	array('197249064000','197249128000')
 	);
 }
 ?>

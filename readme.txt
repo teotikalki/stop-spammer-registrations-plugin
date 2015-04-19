@@ -3,7 +3,7 @@ Tags: spam, comment, registration, login
 Requires at least: 3.0
 Tested up to: 4.2
 Contributors: Keith Graham
-Stable tag: 6.10
+Stable tag: 6.11
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,12 +36,28 @@ THEN
 
 == Changelog ==
 
+= 6.11 =
+* Fix Akismet conflict with white list. Akismet positives should be checked against the white list before reporting.
+* Fixed another bug in Threat Scan where the file open failed trying to read a file with bad permissions.
+* Added additional checks to threat scan based on an articles at: https://blog.sucuri.net
+* Added a more complex exclude list to threat scan.
+* Fixed OpenCaptcha so that it can display the HTTP image on HTTPS sites without a warning. Catchas require the host to enable curl libraries.
+* This plugin and WP Jetpack plugin Login Protection clash. You get a blank screen if you use both. The plugin disables itself if JetPack Login Protection is installed.
+* Rebuilt all spammer by country modules. Deleted Africa. Now African countries are reported by lacnic.net, so my programs to extract CIDRS from Stop Forum Spam lists works for Africa now. New Countries added. This fixed a bug where I spelled Africa wrong.
+* Admin checks at login are for any user containing the word 'admin' anywhere in login id. Changed from lower case "admin" only. 
+* I now show failed password because I think it is important to see the dictionary attacks with many passwords. I may make an option for this in case some admins suffer from "fat fingers" and mistype their passwords frequently.
+* Fixed an error in options. The "Check credentials on all login attempts" and "Deny login attempts using 'admin' userid" were switched. The first one checks to the credentials of all login attempts. The second denies users who try to login with ids with the string 'admin', but the id doesn't exist.
+* Fixed range check in invalid IP check. Was returning false positives.
+* Conflict with eMember plugin. Stop Spammers disables itself (for login checks) if eMember is installed.
+
+
 = 6.10 =
 * Fixed bug in check multi hits option.
 * Fixed problem with server_addr variable in checking of allow lists.
 * Johan Schiff sent me some nice improvements to the TLD check which I included. It supports complex sub-domains now in addition to simple TLDs.
 * Another fix to threat scan trying to follow symbolic links.
-* Fixed captcha processing on sites that cannot use URL open functions. 
+* Fixed captcha processing on sites that cannot use URL open functions.
+* Checks for WP eMember login in order to prevent conflict on logins. 
 
 = 6.09 =
 * IIs 7 and IIs 6 and some hosts fixes for SERVER_ADDR not found

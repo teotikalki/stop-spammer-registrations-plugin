@@ -3,6 +3,7 @@ if (!defined('ABSPATH')) exit;
 
 class kpg_ss_challenge extends be_module{ 
 	public function process($ip,&$stats=array(),&$options=array(),&$post=array()) {
+		
 		// it looks like I am not getting my stats and options correctly
 		
 		//sfs_debug_msg('Made it into challenge');
@@ -285,10 +286,14 @@ message <!-- not email -->:<br><textarea name=\"km\"></textarea>
 			$height = "80";
 			$width  = "240";
 			$img    = "$date$rand-$height-$width.jpgx";
+			$imgloc='http://www.opencaptcha.com/img/';
+			$root=site_url();
+			$imgloc=site_url().'?ocimg=';
+//http://localhost/wordpress?ocimg=20150410628305005-80-240.jpgx			
 			$cap="
 <br>
 <hr/>
-<img src='http://www.opencaptcha.com/img/$img' height='$height' alt='captcha' width='$width' border='0' />
+<img src='$imgloc$img' height='$height' alt='captcha' width='$width' border='0' />
 <input type='hidden' name='img' value='$img'><br>
 Enter the code: <input type=text name=code value='' size='35' />
 ";

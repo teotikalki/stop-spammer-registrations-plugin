@@ -66,11 +66,19 @@ INSTR(LCASE(post_author), '<script') +
 INSTR(LCASE(post_title), '<script') +
 INSTR(LCASE(post_name), '<script') +
 INSTR(LCASE(guid), '<script') +
+
 INSTR(LCASE(post_author), 'eval(') +
 INSTR(LCASE(post_title), 'eval(') +
 INSTR(LCASE(post_name), 'eval(') +
 INSTR(LCASE(guid), 'eval(') +
 INSTR(LCASE(post_content), 'eval(') +
+
+INSTR(LCASE(post_author), 'eval (') +
+INSTR(LCASE(post_title), 'eval (') +
+INSTR(LCASE(post_name), 'eval (') +
+INSTR(LCASE(guid), 'eval (') +
+IINSTR(LCASE(post_content), 'eval (') +
+
 INSTR(LCASE(post_content), 'document.write(unescape(') +
 INSTR(LCASE(post_content), 'try{window.onload') +
 INSTR(LCASE(post_content), 'setAttribute(\'src\'') +
@@ -97,6 +105,12 @@ INSTR(LCASE(document.write(string.fromcharcode), 'script') >0
 			if (strpos(strtolower($myrow->guid),'eval(')!==false) $reason.="guid:eval() "; 
 			if (strpos(strtolower($myrow->post_content),'eval(')!==false) $reason.="post_content:eval() "; 
 			
+			if (strpos(strtolower($myrow->post_author),'eval (')!==false) $reason.="post_author:eval() "; 
+			if (strpos(strtolower($myrow->post_title),'eval (')!==false) $reason.="post_title:eval() "; 
+			if (strpos(strtolower($myrow->post_name),'eval (')!==false) $reason.="post_name:eval() "; 
+			if (strpos(strtolower($myrow->guid),'eval (')!==false) $reason.="guid:eval() "; 
+			if (strpos(strtolower($myrow->post_content),'eval (')!==false) $reason.="post_content:eval() "; 
+			
 			if (strpos(strtolower($myrow->post_content),'document.write(unescape(')!==false) $reason.="post_content:document.write(unescape( "; 
 			if (strpos(strtolower($myrow->post_content),'try{window.onload')!==false) $reason.="post_content:try{window.onload "; 
 			if (strpos(strtolower($myrow->post_content),"setAttribute('src'")!==false) $reason.="post_content:setAttribute('src' "; 
@@ -121,12 +135,20 @@ INSTR(LCASE(comment_author_url), '<script') +
 INSTR(LCASE(comment_agent), '<script') +
 INSTR(LCASE(comment_author), '<script') +
 INSTR(LCASE(comment_author_email), '<script') +
+
 INSTR(LCASE(comment_author_url), 'eval(') +
 INSTR(LCASE(comment_agent), 'eval(') +
 INSTR(LCASE(comment_author), 'eval(') +
 INSTR(LCASE(comment_author_email), 'eval(') +
+
+INSTR(LCASE(comment_author_url), 'eval (') +
+INSTR(LCASE(comment_agent), 'eval (') +
+INSTR(LCASE(comment_author), 'eval (') +
+INSTR(LCASE(comment_author_email), 'eval (') +
+
 INSTR(LCASE(comment_content), '<script') +
 INSTR(LCASE(comment_content), 'eval(') +
+INSTR(LCASE(comment_content), 'eval (') +
 INSTR(LCASE(comment_content), 'document.write(unescape(') +
 INSTR(LCASE(comment_content), 'try{window.onload') +
 INSTR(LCASE(comment_content), 'setAttribute(\'src\'') +
@@ -148,6 +170,12 @@ INSTR(LCASE(comment_author_url), 'javascript:') >0
 			if (strpos(strtolower($myrow->comment_author),'eval(')!==false) $reason.="comment_author:eval() "; 
 			if (strpos(strtolower($myrow->comment_author_email),'eval(')!==false) $reason.="comment_author_email:eval() "; 
 			if (strpos(strtolower($myrow->comment_content),'eval(')!==false) $reason.="comment_content:eval() "; 
+			
+			if (strpos(strtolower($myrow->comment_author_url),'eval (')!==false) $reason.="comment_author_url:eval() "; 
+			if (strpos(strtolower($myrow->comment_agent),'eval (')!==false) $reason.="comment_agent:eval() "; 
+			if (strpos(strtolower($myrow->comment_author),'eval (')!==false) $reason.="comment_author:eval() "; 
+			if (strpos(strtolower($myrow->comment_author_email),'eval (')!==false) $reason.="comment_author_email:eval() "; 
+			if (strpos(strtolower($myrow->comment_content),'eval (')!==false) $reason.="comment_content:eval() "; 
 			
 			if (strpos(strtolower($myrow->comment_content),'document.write(unescape(')!==false) $reason.="comment_content:document.write(unescape( ";
 			if (strpos(strtolower($myrow->comment_content),'try{window.onload')!==false) $reason.="comment_content:try{window.onload ";
@@ -174,11 +202,19 @@ INSTR(LCASE(link_image), '<script') +
 INSTR(LCASE(link_description), '<script') +
 INSTR(LCASE(link_notes), '<script') +
 INSTR(LCASE(link_rss), '<script') +
+
 INSTR(LCASE(link_url), 'eval(') +
 INSTR(LCASE(link_image), 'eval(') +
 INSTR(LCASE(link_description), 'eval(') +
 INSTR(LCASE(link_notes), 'eval(') +
 INSTR(LCASE(link_rss), 'eval(') +
+
+INSTR(LCASE(link_url), 'eval (') +
+INSTR(LCASE(link_image), 'eval (') +
+INSTR(LCASE(link_description), 'eval (') +
+INSTR(LCASE(link_notes), 'eval (') +
+INSTR(LCASE(link_rss), 'eval (') +
+
 INSTR(LCASE(link_url), 'javascript:') >0
 ";
 
@@ -197,6 +233,12 @@ INSTR(LCASE(link_url), 'javascript:') >0
 			if (strpos(strtolower($myrow->link_description),'eval(')!==false) $reason.="link_description:eval() "; 
 			if (strpos(strtolower($myrow->link_notes),'eval(')!==false) $reason.="link_notes:eval() "; 
 			if (strpos(strtolower($myrow->link_rss),'eval(')!==false) $reason.="link_rss:eval() "; 
+			
+			if (strpos(strtolower($myrow->link_url),'eval (')!==false) $reason.="link_url:eval() "; 
+			if (strpos(strtolower($myrow->link_image),'eval (')!==false) $reason.="link_image:eval() "; 
+			if (strpos(strtolower($myrow->link_description),'eval (')!==false) $reason.="link_description:eval() "; 
+			if (strpos(strtolower($myrow->link_notes),'eval (')!==false) $reason.="link_notes:eval() "; 
+			if (strpos(strtolower($myrow->link_rss),'eval (')!==false) $reason.="link_rss:eval() "; 
 
 			if (strpos(strtolower($myrow->link_url),'javascript:')!==false) $reason.="link_url:javascript: "; 
 			
@@ -218,11 +260,19 @@ INSTR(LCASE(user_nicename), '<script') +
 INSTR(LCASE(user_email), '<script') +
 INSTR(LCASE(user_url), '<script') +
 INSTR(LCASE(display_name), '<script') +
+
 INSTR(user_login, 'eval(') +
 INSTR(user_nicename, 'eval(') +
 INSTR(user_email, 'eval(') +
 INSTR(user_url, 'eval(') +
 INSTR(display_name, 'eval(') +
+
+INSTR(user_login, 'eval (') +
+INSTR(user_nicename, 'eval (') +
+INSTR(user_email, 'eval (') +
+INSTR(user_url, 'eval (') +
+INSTR(display_name, 'eval (') +
+
 INSTR(LCASE(user_url), 'javascript:') +
 INSTR(LCASE(user_email), 'javascript:')>0
 ";
@@ -243,6 +293,12 @@ INSTR(LCASE(user_email), 'javascript:')>0
 			if (strpos(strtolower($myrow->user_url),'eval(')!==false) $reason.="user_url:eval() "; 
 			if (strpos(strtolower($myrow->display_name),'eval(')!==false) $reason.="display_name:eval() "; 
 			
+			if (strpos(strtolower($myrow->user_login),'eval (')!==false) $reason.="user_login:eval() "; 
+			if (strpos(strtolower($myrow->user_nicename),'eval (')!==false) $reason.="user_nicename:eval() "; 
+			if (strpos(strtolower($myrow->user_email),'eval (')!==false) $reason.="user_email:eval() "; 
+			if (strpos(strtolower($myrow->user_url),'eval (')!==false) $reason.="user_url:eval() "; 
+			if (strpos(strtolower($myrow->display_name),'eval (')!==false) $reason.="display_name:eval() "; 
+			
 			if (strpos(strtolower($myrow->user_email),'javascript:')!==false) $reason.="user_email:javascript: "; 
 			if (strpos(strtolower($myrow->user_url),'javascript:')!==false) $reason.="user_url:javascript: "; 
 			echo "found possible problems in Users ($reason) ID:". $myrow->ID.'<br/>';
@@ -259,13 +315,17 @@ INSTR(LCASE(user_email), 'javascript:')>0
 	flush();
 	$badguys=array(
 		'eval('=>'eval function found',
+		'eval ('=>'eval function found',
 		'networkads'=>'unexpected network ads reference',
 		'document.write(unescape('=>'javascript document write unescape',
 		'try{window.onload'=>'javascript onload event',
 		'escape(document['=>'javascript checking document array',
 		'escape(navigator['=>'javascript checking navigator',
 		'document.write(string.fromcharcode'=>'obsfucated javascript write',
-		'(base64'.'_decode'.'(gzun'.'compress'=>'base64 decode with gzip uncompress',
+		'(base64'.'_decode'=>'base64 decode to hide code',
+		'(gz'.'inflate'=>'gzip inflate often used to hide code',
+		'UA-27917097-1'=>'Bogus Google Analytics code'
+		
 	);
 
 	$sql="select option_id,option_value,option_name
@@ -391,22 +451,29 @@ function kpg_ss_look_in_file($file) {
 	// don't look in this plugin because it finds too much stuff
 	// only look for .php files - no more javascript
 	if (strpos($file,'.php')===false) return false;
-	$handle=fopen($file,'r');
+	$handle=@fopen($file,'r');
+	if ($handle===false) return array();
 	$ansa=array();
 	$n=0;
 	$idx=0;
 	$badguys=array(
 		'eval(',
+		'eval (',
 		'document.write(unescape(',
 		'try{window.onload',
 		'escape(document[',
 		'escape(navigator[',
 		"setAttribute('src'",
 		'document.write(string.fromcharcode',
-		'(base64'.'_decode'.'(gzun'.'compress',
-		'if(!isset($GLOBALS['."\\'\\a\\e\\0"
+		'base64'.'_decode',
+		'gzun'.'compress',
+		'gz'.'inflate',
+		'preg_replace("/.*/e","\x',
+		'if(!isset($GLOBALS['."\\'\\a\\e\\0",
+		'passssword',
+		'Bruteforce protection'
 	);
-	while (!feof($handle)) {
+	while (!@feof($handle)) {
 		$line=fgets($handle);
 		$line=htmlentities($line);
 		$n++;
@@ -466,32 +533,55 @@ function kpg_ss_make_red($needle,$haystack) {
 	return $s;
 }	
 function kpg_ss_ok_list($file,$line) {
-	$dontreport=array( // list of occurences in WP which are expected and the line number (floor base 100
-	'/stop-spammer-registrations-new.php'=>340,
-	'/stop-spammer-registrations.php'=>340,
-	'modules/chkexploits.php'=>0,
-	'wp-admin/includes/class-pclzip.php'=>4000,
-	'wp-includes/class-json.php'=>0,
-	'JSON/JSON.php '=>0,
-	'wp-includes/compat.php'=>40,
-	'wp-includes/functions.php'=>180,
-	'wp-includes/pluggable.php'=>1350,
-	'wp-includes/SimplePie/Sanitize.php'=>300,
-	'wp-admin/press-this.php'=>200,
-	'p-admin/press-this.php'=>400,
-	// 4.1 wordpress moved some stuff and added session.php execute.
-	'p-includes/pluggable.php'=>1700,
-	'wp-includes/session.php'=>40
-
+	// more advanced excluder file=>array(start,end,start,end,start,end
+	// start and end are loose to allow for varuous versions - hope that they don't hide some bad code
+	$exclude=array(
+	'class-pclzip.php'=>array(3700,4300),
+	'wp-admin/includes/file.php'=>array(450,550),	
+	'wp-admin/press-this.php'=>array(200,250,400,450),
+	'jetpack/class.jetpack.php'=>array(5000,5100),
+	'jetpack/locales.php'=>array(25,75),
+	'custom-css/preprocessors/lessc.inc.php'=>array(25,75,1500,1600),
+	'preprocessors/scss.inc.php'=>array(800,900,1800,1900),
+	'kpg_ss_challenge.php'=>array(0,300),
+	'modules/chkexploits.php'=>array(10,30),	
+	'wp-includes/class-http.php'=>array(2000,2300),	
+	'class-IXR.php'=>array(300,350),	
+	'all-in-one-seo-pack/JSON.php'=>array(10,30),	
+	'all-in-one-seo-pack/OAuth.php'=>array(240,300),	
+	'all-in-one-seo-pack/aioseop_sitemap.php'=>array(500,600),	
+	'wp-includes/class-json.php'=>array(10,30),
+	'p-includes/class-smtp.php'=>array(300,400),
+	'wp-includes/class-snoopy.php'=>array(650,700),
+	'wp-includes/class-feed.php'=>array(100,150),
+	'wp-includes/class-wp-customize-widgets.php'=>array(1100,1250),
+	'wp-includes/compat.php'=>array(40,60),
+	'/jsonwrapper/JSON/JSON.php'=>array(10,30),
+	'wp-includes/functions.php'=>array(200,250),
+	'wp-includes/ID3/module.audio-video.quicktime.php'=>array(450,550),
+	'wp-includes/ID3/module.audio.ogg.php'=>array(550,650),
+	'wp-includes/ID3/module.tag.id3v2.php'=>array(550,650),
+	'wp-includes/pluggable.php'=>array(1750,1850),
+	'wp-includes/session.php'=>array(25,75),
+	'wp-includes/SimplePie/File.php'=>array(200,300),
+	'wp-includes/SimplePie/gzdecode.php'=>array(300,350),
+	'wp-includes/SimplePie/Sanitize.php'=>array(225,275,300,350),
+	'stop-spammer-registrations-new.php'=>array(250,400)
+	
 	);
 	
-	foreach($dontreport as $f=>$ln) {
-		if (strpos($file,$f)!==false) {
-			//echo "checking $file, $f for $line and '$ln'<br>";
-			if($line>=$ln && $line<=($ln+100)) return false;
+	foreach($exclude as $f=>$ln) {
+		if (stripos($file,$f)!==false) {
+			// found a file
+			for ($j=0;$j<count($ln)/2;$j++) {
+				$t1=$ln[$j*2];
+				$t2=$ln[($j*2)+1];
+				//echo "checking $file, $f for $line and '$ln'<br>";
+				if($line>=$t1 && $line<=$t2) return false;
+			}
 		}
 	}
-	if (strpos($file,'stop-spammers') !== false) return false;
+	//if (strpos($file,'stop-spammers') !== false) return false;
 	return true;
 }	
 

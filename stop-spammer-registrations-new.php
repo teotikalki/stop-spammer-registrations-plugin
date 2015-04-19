@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammers Spam Control
 Plugin URI: http://wordpress.org/plugins/stop-spammer-registrations-plugin/
 Description: The Stop Spammers Plugin blocks spammers from leaving comments or logging in. Protects sites from robot registrations and malicious attacks.
-Version: 6.10
+Version: 6.11
 Author: Keith P. Graham
 
 This software is distributed in the hope that it will be useful,
@@ -12,7 +12,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 // networking requires a couple of globals
 
-define('KPG_SS_VERSION', '6.10');
+define('KPG_SS_VERSION', '6.11');
 define( 'KPG_SS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'KPG_SS_PLUGIN_FILE', plugin_dir_path( __FILE__ ) );
 
@@ -58,14 +58,30 @@ How it works:
 10 on captcha success add to good cache, remove from bad cache, update counters, log success.
 
 */
-//if (empty($_POST)) echo "in plugin and post is empty<br><br>";
 
 function kpg_ss_init() {
 	remove_action('init','kpg_ss_init'); 
+	// incompatible with a jetpack submit
+	if ($_POST!=null&&array_key_exists('jetpack_protect_num',$_POST)) return;
+	// emember trying to log in - disable plugin for emember logins.
+	if (function_exists('wp_emember_is_member_logged_in')) { 
+		// only emember function I could find after 30 econds of googling.
+		if (!empty($_POST)&&array_key_exists('login_pwd',$_POST)) return;
+	}
+
 	// set up the akismet hit
 	add_action('akismet_spam_caught','kpg_ss_log_akismet'); //hook akismet spam
 	$muswitch='N';
-	
+	// fcheck to see if this is an opencpatcha image request - we need this to get the image
+	if ($_GET!=null&&array_key_exists('ocimg',$_GET)) {
+		// returns the image
+		$s=$_GET['ocimg'];
+		header('Content-Type: image/jpeg');
+		$response=wp_remote_get('http://www.opencaptcha.com/img/'.$s);
+		echo wp_remote_retrieve_body($response);
+		exit();
+	}
+
 	if (function_exists('is_multisite') && is_multisite()) {
 		$muswitch='Y';
 		// check the muswitch option
@@ -85,7 +101,8 @@ function kpg_ss_init() {
 	} else {
 		define('KPG_SS_MU', $muswitch);
 	}
-	// now, if it is not mu
+	
+
 	if (function_exists('is_user_logged_in')) { 
 		// check to see if we need to hook the settings
 		// load the settings if logged in
@@ -103,6 +120,11 @@ function kpg_ss_init() {
 		add_action('user_register', 'kpg_new_user_ip');
 		add_action('wp_login', 'kpg_log_user_ip', 10, 2);
 	}
+	// don't do anything else if the emember is logged in
+	if (function_exists('wp_emember_is_member_logged_in')) { 
+		if (wp_emember_is_member_logged_in()) return;
+	}
+
 	if (isset($_POST) && !empty($_POST)) {
 		// see if we are returning from a deny
 		if (array_key_exists('kpg_deny',$_POST)&&array_key_exists('kn',$_POST )) {
@@ -292,6 +314,10 @@ function kpg_ss_log_akismet() {
 	$options=kpg_ss_get_options();
 	$stats=kpg_ss_get_stats();
 	if ($options['chkakismet']!='Y') return false;
+	// check white lists first
+	$reason=kpg_ss_check_white();
+	if ($reason!==false) return;
+	// not on allow lists
 	$post=get_post_variables();
 	$post['reason']='from Akismet';
 	$post['chk']='chkakismet';

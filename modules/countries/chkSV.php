@@ -1,5 +1,5 @@
 <?php
-// generated Sunday 22nd of March 2015 02:03:25 PM
+// generated Saturday 11th of April 2015 04:13:15 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkSV extends be_module {
@@ -11,9 +11,11 @@ class chkSV extends be_module {
 	array('190053128000','190053192000'),
 	array('190062000000','190063000000'),
 	array('190086000000','190088000000'),
-	array('190120027080','190120027088'),
+	array('190120016000','190120027088'),
 	array('190120031232','190120031240'),
-	array('200030131032','200030131064')
+	array('200030131032','200030131064'),
+	array('200031160000','200031176000'),
+	array('200085000000','200085016000')
 	);
 }
 ?>

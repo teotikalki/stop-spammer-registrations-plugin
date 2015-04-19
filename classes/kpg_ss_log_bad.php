@@ -39,16 +39,15 @@ class kpg_ss_log_bad extends be_module{
 		$kpg_sp_hist=$options['kpg_sp_hist'];
 
 		while (count($hist)>$kpg_sp_hist) array_shift($hist);
+		if (!empty($pwd)) $author=$author.'/'.$pwd;
 		$hist[$now]=array($ip,$email,$author,$sname,$reason,$blog);
 		
 		
 		$stats['hist']=$hist;
-		if ($email!="tester@tester.com") {
-			if (array_key_exists('addon',$post)) {
-				kpg_ss_set_stats($stats,$post['addon']);
-			} else {
-				kpg_ss_set_stats($stats);
-			}
+		if (array_key_exists('addon',$post)) {
+			kpg_ss_set_stats($stats,$post['addon']);
+		} else {
+			kpg_ss_set_stats($stats);
 		}
 		
 		// we can report the spam to addons here

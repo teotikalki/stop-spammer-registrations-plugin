@@ -29,55 +29,37 @@ class kpg_ss_check_post extends be_module{
 		
 		// here on a post only so it will not check GET vars.
 		$noipactions=array( // these don't need the ip to detect spam
-			'chkagent',
-			'chkbbcode',
-			'chkblem',
-			'chkbluserid',
-			'chkdisp',
-			'chkexploits',
-			'chklong',
-			'chkreferer',
-			'chksession',
-			'chkspamwords',
-			'chktld',
-			'chkaccept',
-			'chkadmin',
+		'chkagent',
+		'chkbbcode',
+		'chkblem',
+		'chkbluserid',
+		'chkdisp',
+		'chkexploits',
+		'chklong',
+		'chkreferer',
+		'chksession',
+		'chkspamwords',
+		'chktld',
+		'chkaccept',
+		'chkadmin',
 		);
 		$actions=array( // these require an ip that can be trusted.
-			'chkamazon',
-			'chkbcache',
-			'chkblip',
-			'chkdisp',
-			'chkhosting',
-			'chkinvalidip',
-			'chkubiquity',
-			'chkmulti',
-			'chkgooglesafe',
-			'chkafrica','chkAD','chkAE','chkAF','chkAL','chkAM','chkAR',
-			'chkAT','chkAU','chkAX','chkAZ','chkBA','chkBB','chkBD',
-			'chkBE','chkBG','chkBH','chkBN','chkBO','chkBR','chkBS',
-			'chkBY','chkBZ','chkCA','chkCD','chkCH','chkCL','chkCN',
-			'chkCO','chkCR','chkCU','chkCW','chkCY','chkCZ','chkDE',
-			'chkDK','chkDO','chkDZ','chkEC','chkEE','chkES','chkEU',
-			'chkFI','chkFJ','chkFR','chkGB','chkGE','chkGF','chkGI',
-			'chkGP','chkGR','chkGT','chkGU','chkGY','chkHK','chkHN',
-			'chkHR','chkHT','chkHU','chkID','chkIE','chkIL','chkIN',
-			'chkIQ','chkIR','chkIS','chkIT','chkJM','chkJO','chkJP',
-			'chkKG','chkKH','chkKR','chkKW','chkKY','chkKZ','chkLA',
-			'chkLB','chkLK','chkLT','chkLU','chkLV','chkMD','chkMK',
-			'chkMM','chkMN','chkMO','chkMP','chkMQ','chkMT','chkMV',
-			'chkMX','chkMY','chkNC','chkNI','chkNL','chkNO','chkNP',
-			'chkNZ','chkOM','chkPA','chkPE','chkPG','chkPH','chkPK',
-			'chkPL','chkPR','chkPS','chkPT','chkPW','chkPY','chkQA',
-			'chkRO','chkRS','chkRU','chkSA','chkSE','chkSG','chkSI',
-			'chkSK','chkSV','chkSX','chkSY','chkTH','chkTJ','chkTM',
-			'chkTR','chkTT','chkTW','chkUA','chkUK','chkUS','chkUY',
-			'chkUZ','chkVC','chkVE','chkVN','chkYE','chkBF','chkMA','chkME','chkZA',
-			'chksfs', // io checks last these can take a few seconds.
-			'chkhoney',
-			'chkbotscout',
-			'chkdnsbl'
-			// check countries
+		'chkamazon',
+		'chkbcache',
+		'chkblip',
+		'chkdisp',
+		'chkhosting',
+		'chkinvalidip',
+		'chkubiquity',
+		'chkmulti',
+		'chkgooglesafe',
+		'chkAD','chkAE','chkAF','chkAL','chkAM','chkAR','chkAT','chkAU','chkAX','chkAZ','chkBA','chkBB','chkBD','chkBE','chkBG','chkBH','chkBN','chkBO','chkBR','chkBS','chkBY','chkBZ','chkCA','chkCD','chkCH','chkCL','chkCN','chkCO','chkCR','chkCU','chkCW','chkCY','chkCZ','chkDE','chkDK','chkDO','chkDZ','chkEC','chkEE','chkES','chkEU','chkFI','chkFJ','chkFR','chkGB','chkGE','chkGF','chkGI','chkGP','chkGR','chkGT','chkGU','chkGY','chkHK','chkHN','chkHR','chkHT','chkHU','chkID','chkIE','chkIL','chkIN','chkIQ','chkIR','chkIS','chkIT','chkJM','chkJO','chkJP','chkKE','chkKG','chkKH','chkKR','chkKW','chkKY','chkKZ','chkLA','chkLB','chkLK','chkLT','chkLU','chkLV','chkMD','chkME','chkMK','chkMM','chkMN','chkMO','chkMP','chkMQ','chkMT','chkMV','chkMX','chkMY','chkNC','chkNI','chkNL','chkNO','chkNP','chkNZ','chkOM','chkPA','chkPE','chkPG','chkPH','chkPK','chkPL','chkPR','chkPS','chkPT','chkPW','chkPY','chkQA','chkRO','chkRS','chkRU','chkSA','chkSC','chkSE','chkSG','chkSI','chkSK','chkSV','chkSX','chkSY','chkTH','chkTJ','chkTM','chkTR','chkTT','chkTW','chkUA','chkUK','chkUS','chkUY','chkUZ','chkVC','chkVE','chkVN','chkYE',
+
+		'chksfs', // io checks last these can take a few seconds.
+		'chkhoney',
+		'chkbotscout',
+		'chkdnsbl'
+		// check countries
 		);
 		$chk='';
 		// start with the no ip list
@@ -125,7 +107,7 @@ class kpg_ss_check_post extends be_module{
 
 		if ($reason===false) return false;
 		// here because we have a spammer that's been caught
-        
+		
 		kpg_ss_log_bad(kpg_get_ip(),$reason,$chk);
 		
 		exit;

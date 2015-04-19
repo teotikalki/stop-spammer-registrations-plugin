@@ -1,5 +1,5 @@
 <?php
-// generated Sunday 22nd of March 2015 02:02:46 PM
+// generated Saturday 11th of April 2015 04:12:30 PM
 if (!defined('ABSPATH')) exit;
 			
 class chkIS extends be_module {
@@ -14,6 +14,7 @@ class chkIS extends be_module {
 	array('082145208000','082145224000'),
 	array('082221096000','082221160000'),
 	array('085220000000','085220128000'),
+	array('089160128000','089161000000'),
 	array('093095072000','093095080000'),
 	array('093095224000','093095232000'),
 	array('130208000000','130209000000'),
