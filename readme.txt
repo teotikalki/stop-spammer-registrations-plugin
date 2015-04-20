@@ -3,7 +3,7 @@ Tags: spam, comment, registration, login
 Requires at least: 3.0
 Tested up to: 4.2
 Contributors: Keith Graham
-Stable tag: 6.11
+Stable tag: 6.12
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -35,6 +35,9 @@ THEN
 4. Under the settings, review options that are enabled. The plugin will operate very well without changing any settings. You may wish to update Web Services APIs for reporting spam and change the captcha settings from the default OpenCapture.  
 
 == Changelog ==
+
+= 6.12 =
+* Removed a pregreplace backdoor signature from threat scan. Securi thinks that my search for the string is the actual string, so it reported the plugin as malware. I will release immediately.
 
 = 6.11 =
 * Fix Akismet conflict with white list. Akismet positives should be checked against the white list before reporting.

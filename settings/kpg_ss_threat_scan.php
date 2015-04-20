@@ -468,7 +468,6 @@ function kpg_ss_look_in_file($file) {
 		'base64'.'_decode',
 		'gzun'.'compress',
 		'gz'.'inflate',
-		'preg_replace("/.*/e","\x',
 		'if(!isset($GLOBALS['."\\'\\a\\e\\0",
 		'passssword',
 		'Bruteforce protection'

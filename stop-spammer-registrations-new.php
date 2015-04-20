@@ -3,7 +3,7 @@
 Plugin Name: Stop Spammers Spam Control
 Plugin URI: http://wordpress.org/plugins/stop-spammer-registrations-plugin/
 Description: The Stop Spammers Plugin blocks spammers from leaving comments or logging in. Protects sites from robot registrations and malicious attacks.
-Version: 6.11
+Version: 6.12
 Author: Keith P. Graham
 
 This software is distributed in the hope that it will be useful,
@@ -12,7 +12,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 */
 // networking requires a couple of globals
 
-define('KPG_SS_VERSION', '6.11');
+define('KPG_SS_VERSION', '6.12');
 define( 'KPG_SS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'KPG_SS_PLUGIN_FILE', plugin_dir_path( __FILE__ ) );
 
