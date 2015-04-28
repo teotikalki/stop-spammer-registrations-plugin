@@ -20,7 +20,7 @@ $now=date('Y/m/d H:i:s',time() + ( get_option( 'gmt_offset' ) * 3600 ));
 //}
 
 $ip=kpg_get_ip();
-
+$hip=$_SERVER['SERVER_ADDR'];
 $email='';
 $author='';
 $subject='';
@@ -42,7 +42,7 @@ $nonce=wp_create_nonce('kpgstopspam_update');
 <input type="hidden" name="kpg_stop_spammers_control" value="<?php echo $nonce;?>" />
 <fieldset style="border:thin solid black;padding:6px;width:100%;">
 <legend><span style="font-weight:bold;font-size:1.2em" >Option Testing</span></legend>
-IP address: <input name="ip" type="text" value="<?php echo $ip; ?>"><br>
+IP address: <input name="ip" type="text" value="<?php echo $ip; ?>"> (Your Server address is <?php echo $hip;?>)<br>
 Email: <input name="email" type="text" value="<?php echo $email; ?>"><br>
 Author/User: <input name="author" type="text" value="<?php echo $author; ?>"><br>
 Subject: <input name="subject" type="text" value="<?php echo $subject; ?>"><br>
