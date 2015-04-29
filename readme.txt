@@ -1,13 +1,13 @@
 === Stop Spammers Spam Prevention ===
 Tags: spam, comment, registration, login
-Tags: akismet, all-in-one, antispam, anti-spam, block spam, captcha, comment, comment spam, comments, contact, contact form, contact forms, form, forms, javascript, login, multisite, protection, register, registration, registration spam, security, signup, signup spam, spam, spam blocker, spam filter, trackback, trackbacks, user registration spam, widget
+Tags: akismet, all-in-one, antispam, anti-spam, block spam, captcha, comment, comment spam, comments, contact, contact form, contact forms, form, forms, javascript, login, multisite, protection, register, registration, registration spam, security, signup, signup spam, spam, spam blocker, spam filter, trackback, trackbacks, user registration spam, widget, spam, spam, spam, spam, spam, lovely spam, wonderful spam, lovely spam, wonderful spam
 Tested up to: 4.2
 Contributors: Keith Graham
 Stable tag: trunk
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-Aggressive anti-spam plugin that eliminates comment spam, trackback spam, contact form spam and registration spam, and protects against malicious attacks.
+Aggressive anti-spam plugin that eliminates comment spam, trackback spam, contact form spam and registration spam. Protects against malicious attacks.
 
 == Description == 
 Stop Spammers is an aggressive website defence against comment spam and login attempts. It is capable of performing more than 20 different checks for malicious events and can block spammers from over 100 different countries. 
