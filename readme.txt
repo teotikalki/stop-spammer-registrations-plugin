@@ -10,17 +10,15 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Aggressive anti-spam plugin that eliminates comment spam, trackback spam, contact form spam and registration spam. Protects against malicious attacks.
 
 == Description == 
-Stop Spammers is an aggressive website defence against comment spam and login attempts. It is capable of performing more than 20 different checks for malicious events and can block spammers from over 100 different countries. 
+Stop Spammers is an aggressive website spam defence against comment spam and login attempts. It is capable of performing more than 20 different checks for spam and malicious events and can block spam from over 100 different countries. 
 
 There are 12 pages of options that can be used to configure the plugin to your needs.
-
-There are free add-ons available that check some special cases.
 
 In cases where spam is detected, users are offered a second chance to post their comments or login. Denied requests are presented with a captcha screen in order to prevent users from being blocked. The captcha can be configures as OpenCaptcha, Google reCaptcha, or SolveMedia Captcha. The Captcha will only appear when a user is denied access as a spammer.
 
 The plugin is designed to work with other plugins like Gravity Forms. It looks at any FORM POST such as BBPress or other addons that use access controls. THe plugin implements a fuzzy search for email and user ids in order to check for spam.
 
-Much of the code in this plugin is dedicated to allowing good users access to comments with many "allow" features to prevent having false positives when checking spam.
+There are free add-ons available that check some special cases.
 
 The Stop Spammers Plugin has been under development since 2010.
 
@@ -175,5 +173,4 @@ I am slowing down maintenance on this plugin. I don't have time to work on it. D
 == Support ==
 
 2/21/2015: I found that I cannot handle support other than try to fix problems when pointed out. If you are locked out of your website, delete the plugin and don't use it again. If you find it is too aggressive then start un-checking boxes in the configuration until it works. My sites are hosted on SiteGround.com. I pay for this service, and the plugin works perfectly. I can recommend www.SiteGround.com wholeheartedly. If you self-host or you are on a free or cheap hosting company that uses a proxy server or does not implement basic PHP functions then you cannot use this plugin.
-
 
